@@ -74,32 +74,39 @@ export default function App() {
   // Handle Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        const userSnap = await getDoc(userRef);
-        
-        let profile: UserProfile;
-        if (userSnap.exists()) {
-          profile = userSnap.data() as UserProfile;
-          if (profile.email === 'obym.ppngroup@gmail.com' && profile.role !== 'admin') {
-            profile.role = 'admin';
-            await updateDoc(userRef, { role: 'admin' });
+      try {
+        if (firebaseUser) {
+          const userRef = doc(db, 'users', firebaseUser.uid);
+          const userSnap = await getDoc(userRef);
+          
+          let profile: UserProfile;
+          if (userSnap.exists()) {
+            profile = userSnap.data() as UserProfile;
+            if (profile.email === 'obym.ppngroup@gmail.com' && profile.role !== 'admin') {
+              profile.role = 'admin';
+              await updateDoc(userRef, { role: 'admin' });
+            }
+          } else {
+            // Default to client if not exists
+            profile = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || 'no-email@example.com',
+              name: firebaseUser.displayName || 'User',
+              role: firebaseUser.email === 'obym.ppngroup@gmail.com' ? 'admin' : 'client'
+            };
+            await setDoc(userRef, profile);
           }
+          setUser(profile);
         } else {
-          // Default to client if not exists
-          profile = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email || '',
-            name: firebaseUser.displayName || 'User',
-            role: firebaseUser.email === 'obym.ppngroup@gmail.com' ? 'admin' : 'client'
-          };
-          await setDoc(userRef, profile);
+          setUser(null);
         }
-        setUser(profile);
-      } else {
+      } catch (error: any) {
+        console.error("Error in auth state change:", error);
+        alert("Gagal memuat profil: " + (error.message || "Terjadi kesalahan"));
         setUser(null);
+      } finally {
+        setIsAuthReady(true);
       }
-      setIsAuthReady(true);
     });
     return () => unsubscribe();
   }, []);
@@ -151,8 +158,9 @@ export default function App() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed", error);
+      alert("Login gagal: " + (error.message || "Terjadi kesalahan"));
     }
   };
 
@@ -274,7 +282,14 @@ export default function App() {
   };
 
   if (!isAuthReady) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-100">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          <p className="text-slate-600 font-medium">Memuat aplikasi...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {

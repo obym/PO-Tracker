@@ -56,21 +56,21 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && (
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin') ||
-        (request.auth.token.email == "obym.ppngroup@gmail.com" && request.auth.token.email_verified == true)
+        ('email' in request.auth.token && request.auth.token.email == "obym.ppngroup@gmail.com") ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('role', '') == 'admin')
       );
     }
     
     function isDriver() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'driver';
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('role', '') == 'driver';
     }
     
     function isKitchen() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'kitchen';
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('role', '') == 'kitchen';
     }
     
     function isClient() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'client';
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('role', '') == 'client';
     }
     
     function hasRequiredFields(fields) {
@@ -127,7 +127,7 @@ service cloud.firestore {
     match /users/{userId} {
       // Anyone authenticated can read users (needed for admin to see clients, clients to see drivers etc, or just restrict to admin and self)
       // Let's restrict to admin or self for privacy.
-      allow read: if isAuthenticated() && (isAdmin() || isOwner(userId));
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
       
       // Allow user to create their own profile. Default role must be 'client' unless created by admin.
       allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) &&
