@@ -41,6 +41,8 @@ interface UserProfile {
   email: string;
   name: string;
   role: 'admin' | 'driver' | 'client' | 'kitchen';
+  phone?: string;
+  address?: string;
 }
 
 const statusConfig = {
@@ -63,6 +65,7 @@ export default function App() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isNewOpen, setIsNewOpen] = useState(false);
   const [isUserManageOpen, setIsUserManageOpen] = useState(false);
+  const [isNewClientOpen, setIsNewClientOpen] = useState(false);
 
   // New PO Form State
   const [newClientId, setNewClientId] = useState('');
@@ -70,6 +73,11 @@ export default function App() {
   const [newItems, setNewItems] = useState<Omit<OrderItem, 'id' | 'isOrdered' | 'isAtKitchen' | 'isDelivered' | 'isReceived'>[]>([
     { name: '', quantity: 1, unit: 'pcs', supplier: '' }
   ]);
+
+  // New Client Form State
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientPhone, setNewClientPhone] = useState('');
+  const [newClientAddress, setNewClientAddress] = useState('');
 
   // Handle Auth
   useEffect(() => {
@@ -188,6 +196,36 @@ export default function App() {
     } catch (error) {
       console.error("Error updating user role:", error);
       alert("Gagal mengupdate role. Periksa koneksi atau hak akses Anda.");
+    }
+  };
+
+  const handleCreateClient = async () => {
+    if (!newClientName) {
+      alert('Mohon lengkapi nama klien.');
+      return;
+    }
+
+    try {
+      // Generate a simple unique ID for manually created clients
+      const newUid = `client-${Date.now()}`;
+      const newClient: UserProfile = {
+        uid: newUid,
+        name: newClientName,
+        email: `${newUid}@no-email.com`, // Dummy email since it's required by the schema
+        role: 'client',
+        phone: newClientPhone,
+        address: newClientAddress
+      };
+
+      await setDoc(doc(db, 'users', newUid), newClient);
+      setIsNewClientOpen(false);
+      setNewClientName('');
+      setNewClientPhone('');
+      setNewClientAddress('');
+      alert('Klien berhasil ditambahkan!');
+    } catch (error) {
+      console.error("Error creating client:", error);
+      alert("Gagal menambahkan klien. Pastikan Anda memiliki akses Admin.");
     }
   };
 
@@ -528,7 +566,57 @@ export default function App() {
             )}
 
             {user.role === 'admin' && (
-              <Dialog open={isUserManageOpen} onOpenChange={setIsUserManageOpen}>
+              <>
+                <Dialog open={isNewClientOpen} onOpenChange={setIsNewClientOpen}>
+                  <DialogTrigger render={<Button variant="outline" className="ml-2 bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Tambah Klien
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Tambah Klien Baru</DialogTitle>
+                      <DialogDescription>
+                        Masukkan data klien baru.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="clientName">Nama Klien</Label>
+                        <Input 
+                          id="clientName" 
+                          placeholder="Contoh: PT. Maju Jaya" 
+                          value={newClientName}
+                          onChange={(e) => setNewClientName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="clientPhone">Nomor Telepon</Label>
+                        <Input 
+                          id="clientPhone" 
+                          type="tel"
+                          placeholder="Contoh: 081234567890" 
+                          value={newClientPhone}
+                          onChange={(e) => setNewClientPhone(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="clientAddress">Alamat</Label>
+                        <Input 
+                          id="clientAddress" 
+                          placeholder="Contoh: Jl. Sudirman No. 123, Jakarta" 
+                          value={newClientAddress}
+                          onChange={(e) => setNewClientAddress(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsNewClientOpen(false)}>Batal</Button>
+                      <Button onClick={handleCreateClient} className="bg-indigo-600 hover:bg-indigo-700">Simpan Klien</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={isUserManageOpen} onOpenChange={setIsUserManageOpen}>
                 <DialogTrigger render={<Button variant="outline" className="ml-2 bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
                   <UserIcon className="w-4 h-4 mr-2" />
                   Kelola Pengguna
@@ -585,7 +673,7 @@ export default function App() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-
+              </>
             )}
 
             <div className="flex items-center gap-3 ml-4 pl-4 border-l border-slate-200">
