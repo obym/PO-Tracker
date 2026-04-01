@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ShoppingCart, Clock, LogOut, User as UserIcon } from 'lucide-react';
+import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { auth, db } from './firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, setDoc, getDoc, onSnapshot, query, where, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, onSnapshot, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
 
 // --- Types ---
 type OrderStatus = 'PO_RECEIVED' | 'ORDERING' | 'AT_KITCHEN' | 'DELIVERING' | 'COMPLETED';
@@ -66,6 +66,7 @@ export default function App() {
   const [isNewOpen, setIsNewOpen] = useState(false);
   const [isUserManageOpen, setIsUserManageOpen] = useState(false);
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   // New PO Form State
   const [newClientId, setNewClientId] = useState('');
@@ -196,6 +197,17 @@ export default function App() {
     } catch (error) {
       console.error("Error updating user role:", error);
       alert("Gagal mengupdate role. Periksa koneksi atau hak akses Anda.");
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'users', userToDelete));
+      setUserToDelete(null);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      alert("Gagal menghapus pengguna. Pastikan Anda memiliki akses Admin.");
     }
   };
 
@@ -636,7 +648,8 @@ export default function App() {
                           <TableRow>
                             <TableHead className="text-base">Nama</TableHead>
                             <TableHead className="text-base">Email</TableHead>
-                            <TableHead className="w-[250px] text-base">Role</TableHead>
+                            <TableHead className="w-[200px] text-base">Role</TableHead>
+                            <TableHead className="w-[80px] text-center text-base">Aksi</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -656,11 +669,21 @@ export default function App() {
                                   <option value="client">Client</option>
                                 </select>
                               </TableCell>
+                              <TableCell className="text-center">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => setUserToDelete(u.uid)}
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           ))}
                           {allUsers.length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={3} className="text-center text-slate-500 py-4">Memuat data pengguna...</TableCell>
+                              <TableCell colSpan={4} className="text-center text-slate-500 py-4">Memuat data pengguna...</TableCell>
                             </TableRow>
                           )}
                         </TableBody>
@@ -670,6 +693,21 @@ export default function App() {
                   
                   <DialogFooter>
                     <Button onClick={() => setIsUserManageOpen(false)} className="bg-slate-800 hover:bg-slate-900">Tutup</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Konfirmasi Hapus Pengguna</DialogTitle>
+                    <DialogDescription>
+                      Apakah Anda yakin ingin menghapus pengguna ini? Tindakan ini tidak dapat dibatalkan.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="mt-4">
+                    <Button variant="outline" onClick={() => setUserToDelete(null)}>Batal</Button>
+                    <Button variant="destructive" onClick={handleDeleteUser}>Hapus Pengguna</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
