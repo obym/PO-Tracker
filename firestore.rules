@@ -99,7 +99,9 @@ service cloud.firestore {
              data.email is string && isValidEmail(data.email) && data.email.size() < 100 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.role in ['admin', 'driver', 'client', 'kitchen'] &&
-             (!('clientId' in data) || (data.clientId is string && data.clientId.size() < 100));
+             (!('clientId' in data) || (data.clientId is string && data.clientId.size() < 100)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() < 50)) &&
+             (!('address' in data) || (data.address is string && data.address.size() < 500));
     }
     
     function isValidPurchaseOrder(data) {
@@ -130,8 +132,8 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
       
       // Allow user to create their own profile. Default role must be 'client' unless created by admin.
-      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) &&
-                    (isAdmin() || request.resource.data.role == 'client');
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) &&
+                    (isAdmin() || (isOwner(userId) && request.resource.data.role == 'client'));
                     
       // Allow update. Users can't change their own role unless they are admin.
       allow update: if isAuthenticated() && isValidUser(request.resource.data) &&
