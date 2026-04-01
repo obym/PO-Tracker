@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2 } from 'lucide-react';
+import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +75,13 @@ export default function App() {
   const [newItems, setNewItems] = useState<Omit<OrderItem, 'id' | 'isOrdered' | 'isAtKitchen' | 'isDelivered' | 'isReceived'>[]>([
     { name: '', quantity: 1, unit: 'pcs', supplier: '', unitPrice: 0 }
   ]);
+
+  // Edit PO Form State
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingPO, setEditingPO] = useState<PurchaseOrder | null>(null);
+  const [editClientId, setEditClientId] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editItems, setEditItems] = useState<OrderItem[]>([]);
 
   // New Client Form State
   const [newClientName, setNewClientName] = useState('');
@@ -273,10 +280,56 @@ export default function App() {
       setIsNewOpen(false);
       setNewClientId('');
       setNewNotes('');
-      setNewItems([{ name: '', quantity: 1, unit: 'pcs', supplier: '' }]);
+      setNewItems([{ name: '', quantity: 1, unit: 'pcs', supplier: '', unitPrice: 0 }]);
     } catch (error) {
       console.error("Error creating PO:", error);
       alert("Gagal membuat PO. Pastikan Anda memiliki akses Admin.");
+    }
+  };
+
+  const openEditPO = (po: PurchaseOrder) => {
+    setEditingPO(po);
+    setEditClientId(po.clientId);
+    setEditNotes(po.notes);
+    setEditItems(po.items);
+    setIsEditOpen(true);
+  };
+
+  const handleEditItemChange = (index: number, field: keyof OrderItem, value: any) => {
+    const updated = [...editItems];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditItems(updated);
+  };
+
+  const handleAddEditItem = () => {
+    setEditItems([...editItems, { 
+      id: `i-${Date.now()}-${editItems.length}`, 
+      name: '', quantity: 1, unit: 'pcs', supplier: '', unitPrice: 0,
+      isOrdered: false, isAtKitchen: false, isDelivered: false, isReceived: false 
+    }]);
+  };
+
+  const handleRemoveEditItem = (index: number) => {
+    setEditItems(editItems.filter((_, i) => i !== index));
+  };
+
+  const handleUpdatePO = async () => {
+    if (!editingPO || editItems.length === 0 || editItems.some(i => !i.name || !i.supplier)) {
+      alert('Mohon lengkapi semua field yang wajib.');
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, 'purchaseOrders', editingPO.id), {
+        notes: editNotes,
+        items: editItems
+      });
+      setIsEditOpen(false);
+      setEditingPO(null);
+      alert('PO berhasil diperbarui!');
+    } catch (error) {
+      console.error("Error updating PO:", error);
+      alert("Gagal memperbarui PO. Pastikan Anda memiliki akses.");
     }
   };
 
@@ -459,6 +512,7 @@ export default function App() {
             </div>
             
             {user.role === 'admin' && (
+              <>
               <Dialog open={isNewOpen} onOpenChange={setIsNewOpen}>
                 <DialogTrigger render={<Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm" />}>
                   <Plus className="w-4 h-4 mr-2" />
@@ -586,7 +640,135 @@ export default function App() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+              </>
             )}
+
+            <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+              <DialogContent className="max-w-4xl sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Edit Purchase Order</DialogTitle>
+                    <DialogDescription>
+                      Ubah detail PO. Klien tidak dapat diubah setelah PO dibuat.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="grid gap-6 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="editClientSelect">Klien</Label>
+                        <Input 
+                          id="editClientSelect"
+                          value={editingPO?.clientName || ''}
+                          disabled
+                          className="bg-slate-100"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editNotes">Catatan Tambahan</Label>
+                        <Input 
+                          id="editNotes" 
+                          placeholder="Contoh: Kirim pagi hari" 
+                          value={editNotes}
+                          onChange={(e) => setEditNotes(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-base">Daftar Barang <span className="text-red-500">*</span></Label>
+                        <Button type="button" variant="outline" size="sm" onClick={handleAddEditItem}>
+                          <Plus className="w-4 h-4 mr-2" /> Tambah Barang
+                        </Button>
+                      </div>
+                      
+                      <div className="border rounded-md overflow-x-auto">
+                        <Table className="min-w-[800px]">
+                          <TableHeader className="bg-slate-50">
+                            <TableRow>
+                              <TableHead>Nama Barang</TableHead>
+                              <TableHead className="w-[100px]">Qty</TableHead>
+                              <TableHead className="w-[120px]">Satuan</TableHead>
+                              <TableHead className="w-[150px]">Harga Satuan</TableHead>
+                              <TableHead>Supplier</TableHead>
+                              <TableHead className="w-[50px]"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {editItems.map((item, index) => (
+                              <TableRow key={index}>
+                                <TableCell className="p-2">
+                                  <Input 
+                                    placeholder="Nama barang" 
+                                    value={item.name}
+                                    onChange={(e) => handleEditItemChange(index, 'name', e.target.value)}
+                                  />
+                                </TableCell>
+                                <TableCell className="p-2">
+                                  <Input 
+                                    type="number" 
+                                    min="1"
+                                    value={item.quantity}
+                                    onChange={(e) => handleEditItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
+                                  />
+                                </TableCell>
+                                <TableCell className="p-2">
+                                  <select 
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    value={item.unit}
+                                    onChange={(e) => handleEditItemChange(index, 'unit', e.target.value)}
+                                  >
+                                    <option value="pcs">pcs</option>
+                                    <option value="kg">kg</option>
+                                    <option value="gram">gram</option>
+                                    <option value="liter">liter</option>
+                                    <option value="box">box</option>
+                                    <option value="pack">pack</option>
+                                    <option value="ikat">ikat</option>
+                                  </select>
+                                </TableCell>
+                                <TableCell className="p-2">
+                                  <Input 
+                                    type="number" 
+                                    min="0"
+                                    placeholder="0"
+                                    value={item.unitPrice || ''}
+                                    onChange={(e) => handleEditItemChange(index, 'unitPrice', parseInt(e.target.value) || 0)}
+                                  />
+                                </TableCell>
+                                <TableCell className="p-2">
+                                  <Input 
+                                    placeholder="Nama supplier" 
+                                    value={item.supplier}
+                                    onChange={(e) => handleEditItemChange(index, 'supplier', e.target.value)}
+                                  />
+                                </TableCell>
+                                <TableCell className="p-2 text-center">
+                                  <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => handleRemoveEditItem(index)}
+                                    disabled={editItems.length === 1}
+                                  >
+                                    &times;
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsEditOpen(false)}>Batal</Button>
+                    <Button onClick={handleUpdatePO} className="bg-indigo-600 hover:bg-indigo-700">Update PO</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
             {user.role === 'admin' && (
               <>
@@ -762,6 +944,9 @@ export default function App() {
                       {statusConfig[selectedOrder.status].label}
                     </Badge>
                   </DialogTitle>
+                  <Button variant="outline" size="sm" onClick={() => openEditPO(selectedOrder)}>
+                    <Edit className="w-4 h-4 mr-2" /> Edit PO
+                  </Button>
                 </div>
                 <DialogDescription className="text-slate-500 mt-1">
                   Diterima pada {new Date(selectedOrder.date).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })}
