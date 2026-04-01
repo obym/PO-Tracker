@@ -1,0 +1,160 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (matches auth.uid)
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - email: string (required)
+    //   - name: string (required)
+    //   - role: string (required, enum: ['admin', 'driver', 'client'])
+    //   - clientId: string (optional)
+    //
+    // Collection: purchaseOrders
+    // Document ID: {orderId}
+    // Fields:
+    //   - id: string (required, immutable)
+    //   - clientId: string (required, immutable)
+    //   - clientName: string (required, immutable)
+    //   - date: string (required, immutable)
+    //   - status: string (required, enum: ['PO_RECEIVED', 'ORDERING', 'AT_KITCHEN', 'DELIVERING', 'COMPLETED'])
+    //   - notes: string (required)
+    //   - items: list of objects (required)
+    //     - id: string
+    //     - name: string
+    //     - quantity: number
+    //     - unit: string
+    //     - supplier: string
+    //     - isOrdered: boolean
+    //     - isAtKitchen: boolean
+    //     - isDelivered: boolean
+    //     - isReceived: boolean
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin') ||
+        (request.auth.token.email == "obym.ppngroup@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+    
+    function isDriver() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'driver';
+    }
+    
+    function isKitchen() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'kitchen';
+    }
+    
+    function isClient() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'client';
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+    
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email', 'name', 'role']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
+             data.email is string && isValidEmail(data.email) && data.email.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.role in ['admin', 'driver', 'client', 'kitchen'] &&
+             (!('clientId' in data) || (data.clientId is string && data.clientId.size() < 100));
+    }
+    
+    function isValidPurchaseOrder(data) {
+      return hasRequiredFields(['id', 'clientId', 'clientName', 'date', 'status', 'notes', 'items']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.clientId is string && data.clientId.size() > 0 && data.clientId.size() < 100 &&
+             data.clientName is string && data.clientName.size() > 0 && data.clientName.size() < 100 &&
+             data.date is string && data.date.size() > 0 && data.date.size() < 50 &&
+             data.status in ['PO_RECEIVED', 'ORDERING', 'AT_KITCHEN', 'DELIVERING', 'COMPLETED'] &&
+             data.notes is string && data.notes.size() <= 1000 &&
+             data.items is list && data.items.size() <= 100 &&
+             isValidItemsList(data.items);
+    }
+    
+    function isValidItemsList(items) {
+      // We can't easily loop in rules, but we can check if it's a list. 
+      // For deeper validation, we rely on the client, but we enforce size limits.
+      return items is list && items.size() <= 100;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Anyone authenticated can read users (needed for admin to see clients, clients to see drivers etc, or just restrict to admin and self)
+      // Let's restrict to admin or self for privacy.
+      allow read: if isAuthenticated() && (isAdmin() || isOwner(userId));
+      
+      // Allow user to create their own profile. Default role must be 'client' unless created by admin.
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) &&
+                    (isAdmin() || request.resource.data.role == 'client');
+                    
+      // Allow update. Users can't change their own role unless they are admin.
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) &&
+                    areImmutableFieldsUnchanged(['uid']) &&
+                    (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role));
+                    
+      allow delete: if isAdmin();
+    }
+
+    match /purchaseOrders/{orderId} {
+      // Admin sees all. Driver sees all (to know what to deliver). Kitchen sees all. Client sees only their own.
+      allow read: if isAuthenticated() && (isAdmin() || isDriver() || isKitchen() || (isClient() && resource.data.clientId == request.auth.uid));
+      
+      // Only admin can create POs
+      allow create: if isAdmin() && isValidPurchaseOrder(request.resource.data);
+      
+      // Admin can update anything. Driver can update status/items. Kitchen can update status/items. Client can update status/items.
+      // We protect immutable fields so they can't change the PO owner or ID.
+      allow update: if isAuthenticated() && isValidPurchaseOrder(request.resource.data) &&
+                    areImmutableFieldsUnchanged(['id', 'clientId', 'clientName', 'date']) &&
+                    (isAdmin() || isDriver() || isKitchen() || (isClient() && resource.data.clientId == request.auth.uid));
+                    
+      allow delete: if isAdmin();
+    }
+  }
+}

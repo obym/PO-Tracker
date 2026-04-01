@@ -1,0 +1,59 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "driver", "client", "kitchen"] },
+        "clientId": { "type": "string", "description": "Used to link client users to their POs" }
+      },
+      "required": ["uid", "email", "name", "role"]
+    },
+    "PurchaseOrder": {
+      "title": "PurchaseOrder",
+      "description": "A purchase order from a client",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["PO_RECEIVED", "ORDERING", "AT_KITCHEN", "DELIVERING", "COMPLETED"] },
+        "notes": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "quantity": { "type": "number" },
+              "unit": { "type": "string" },
+              "supplier": { "type": "string" },
+              "isOrdered": { "type": "boolean" },
+              "isAtKitchen": { "type": "boolean" },
+              "isDelivered": { "type": "boolean" },
+              "isReceived": { "type": "boolean" }
+            },
+            "required": ["id", "name", "quantity", "unit", "supplier", "isOrdered", "isAtKitchen", "isDelivered", "isReceived"]
+          }
+        }
+      },
+      "required": ["id", "clientId", "clientName", "date", "status", "notes", "items"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user profiles and roles"
+    },
+    "purchaseOrders/{orderId}": {
+      "schema": { "$ref": "#/entities/PurchaseOrder" },
+      "description": "Stores purchase orders"
+    }
+  }
+}
