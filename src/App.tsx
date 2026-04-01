@@ -533,10 +533,10 @@ export default function App() {
                   <UserIcon className="w-4 h-4 mr-2" />
                   Kelola Pengguna
                 </DialogTrigger>
-                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Kelola Akses Pengguna</DialogTitle>
-                    <DialogDescription>
+                    <DialogTitle className="text-2xl">Kelola Akses Pengguna</DialogTitle>
+                    <DialogDescription className="text-base">
                       Atur role untuk setiap email. Role menentukan akses mereka di aplikasi.
                     </DialogDescription>
                   </DialogHeader>
@@ -546,26 +546,25 @@ export default function App() {
                       <Table>
                         <TableHeader className="bg-slate-50">
                           <TableRow>
-                            <TableHead>Nama</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead className="w-[200px]">Role</TableHead>
+                            <TableHead className="text-base">Nama</TableHead>
+                            <TableHead className="text-base">Email</TableHead>
+                            <TableHead className="w-[250px] text-base">Role</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {allUsers.map((u) => (
                             <TableRow key={u.uid}>
-                              <TableCell className="font-medium">{u.name}</TableCell>
-                              <TableCell>{u.email}</TableCell>
+                              <TableCell className="font-medium text-base">{u.name}</TableCell>
+                              <TableCell className="text-base">{u.email}</TableCell>
                               <TableCell>
                                 <select 
-                                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer hover:bg-slate-50"
                                   value={u.role}
                                   onChange={(e) => handleUpdateUserRole(u.uid, e.target.value)}
-                                  disabled={u.uid === user.uid} // Prevent admin from changing their own role here to avoid lockout
                                 >
                                   <option value="admin">Admin</option>
-                                  <option value="driver">Driver</option>
                                   <option value="kitchen">Kitchen</option>
+                                  <option value="driver">Driver</option>
                                   <option value="client">Client</option>
                                 </select>
                               </TableCell>
