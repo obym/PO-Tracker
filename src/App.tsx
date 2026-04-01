@@ -20,6 +20,7 @@ interface OrderItem {
   quantity: number;
   unit: string;
   supplier: string;
+  unitPrice?: number;
   isOrdered: boolean;
   isAtKitchen: boolean;
   isDelivered: boolean;
@@ -72,7 +73,7 @@ export default function App() {
   const [newClientId, setNewClientId] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [newItems, setNewItems] = useState<Omit<OrderItem, 'id' | 'isOrdered' | 'isAtKitchen' | 'isDelivered' | 'isReceived'>[]>([
-    { name: '', quantity: 1, unit: 'pcs', supplier: '' }
+    { name: '', quantity: 1, unit: 'pcs', supplier: '', unitPrice: 0 }
   ]);
 
   // New Client Form State
@@ -178,7 +179,7 @@ export default function App() {
   };
 
   const handleAddItem = () => {
-    setNewItems([...newItems, { name: '', quantity: 1, unit: 'pcs', supplier: '' }]);
+    setNewItems([...newItems, { name: '', quantity: 1, unit: 'pcs', supplier: '', unitPrice: 0 }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -513,6 +514,7 @@ export default function App() {
                               <TableHead>Nama Barang</TableHead>
                               <TableHead className="w-[100px]">Qty</TableHead>
                               <TableHead className="w-[120px]">Satuan</TableHead>
+                              <TableHead className="w-[150px]">Harga Satuan</TableHead>
                               <TableHead>Supplier</TableHead>
                               <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
@@ -540,6 +542,15 @@ export default function App() {
                                     placeholder="kg, pcs..." 
                                     value={item.unit}
                                     onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
+                                  />
+                                </TableCell>
+                                <TableCell className="p-2">
+                                  <Input 
+                                    type="number" 
+                                    min="0"
+                                    placeholder="0"
+                                    value={item.unitPrice || ''}
+                                    onChange={(e) => handleItemChange(index, 'unitPrice', parseInt(e.target.value) || 0)}
                                   />
                                 </TableCell>
                                 <TableCell className="p-2">
