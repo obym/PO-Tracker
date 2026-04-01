@@ -413,7 +413,7 @@ export default function App() {
                   <Plus className="w-4 h-4 mr-2" />
                   PO Baru
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Buat Purchase Order Baru</DialogTitle>
                     <DialogDescription>
@@ -456,8 +456,8 @@ export default function App() {
                         </Button>
                       </div>
                       
-                      <div className="border rounded-md overflow-hidden">
-                        <Table>
+                      <div className="border rounded-md overflow-x-auto">
+                        <Table className="min-w-[600px]">
                           <TableHeader className="bg-slate-50">
                             <TableRow>
                               <TableHead>Nama Barang</TableHead>
@@ -533,7 +533,7 @@ export default function App() {
                   <UserIcon className="w-4 h-4 mr-2" />
                   Kelola Pengguna
                 </DialogTrigger>
-                <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-5xl sm:max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="text-2xl">Kelola Akses Pengguna</DialogTitle>
                     <DialogDescription className="text-base">
@@ -542,8 +542,8 @@ export default function App() {
                   </DialogHeader>
                   
                   <div className="py-4">
-                    <div className="border rounded-md overflow-hidden">
-                      <Table>
+                    <div className="border rounded-md overflow-x-auto">
+                      <Table className="min-w-[600px]">
                         <TableHeader className="bg-slate-50">
                           <TableRow>
                             <TableHead className="text-base">Nama</TableHead>
@@ -614,7 +614,7 @@ export default function App() {
 
       {/* Detail Modal */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedOrder && (
             <>
               <DialogHeader>
@@ -645,8 +645,8 @@ export default function App() {
               <div className="space-y-4">
                 <h3 className="font-semibold text-slate-800 text-lg border-b pb-2">Daftar Kebutuhan & Status</h3>
                 
-                <div className="border rounded-md overflow-hidden">
-                  <Table>
+                <div className="border rounded-md overflow-x-auto">
+                  <Table className="min-w-[800px]">
                     <TableHeader className="bg-slate-50">
                       <TableRow>
                         <TableHead>Barang</TableHead>
