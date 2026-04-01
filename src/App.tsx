@@ -464,7 +464,7 @@ export default function App() {
                   <Plus className="w-4 h-4 mr-2" />
                   PO Baru
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-4xl sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Buat Purchase Order Baru</DialogTitle>
                     <DialogDescription>
@@ -508,7 +508,7 @@ export default function App() {
                       </div>
                       
                       <div className="border rounded-md overflow-x-auto">
-                        <Table className="min-w-[600px]">
+                        <Table className="min-w-[800px]">
                           <TableHeader className="bg-slate-50">
                             <TableRow>
                               <TableHead>Nama Barang</TableHead>
