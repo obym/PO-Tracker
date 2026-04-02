@@ -68,6 +68,7 @@ export default function App() {
   const [isUserManageOpen, setIsUserManageOpen] = useState(false);
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [poToDelete, setPoToDelete] = useState<string | null>(null);
 
   // New PO Form State
   const [newClientId, setNewClientId] = useState('');
@@ -348,6 +349,22 @@ export default function App() {
     } catch (error) {
       console.error("Error updating PO:", error);
       setEditError("Gagal memperbarui PO. Pastikan Anda memiliki akses.");
+    }
+  };
+
+  const handleDeletePO = async () => {
+    if (user?.role !== 'admin' || !poToDelete) {
+      setGlobalError("Hanya Admin yang dapat menghapus PO.");
+      return;
+    }
+    
+    try {
+      await deleteDoc(doc(db, 'purchaseOrders', poToDelete));
+      setPoToDelete(null);
+      setSelectedOrder(null);
+    } catch (error) {
+      console.error("Error deleting PO:", error);
+      setGlobalError("Gagal menghapus PO. Pastikan Anda memiliki akses Admin.");
     }
   };
 
@@ -946,6 +963,21 @@ export default function App() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+
+              <Dialog open={!!poToDelete} onOpenChange={(open) => !open && setPoToDelete(null)}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Konfirmasi Hapus PO</DialogTitle>
+                    <DialogDescription>
+                      Apakah Anda yakin ingin menghapus Purchase Order ini? Tindakan ini tidak dapat dibatalkan.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="mt-4">
+                    <Button variant="outline" onClick={() => setPoToDelete(null)}>Batal</Button>
+                    <Button variant="destructive" onClick={handleDeletePO}>Hapus PO</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
               </>
             )}
 
@@ -992,9 +1024,16 @@ export default function App() {
                       {statusConfig[selectedOrder.status].label}
                     </Badge>
                   </DialogTitle>
-                  <Button variant="outline" size="sm" onClick={() => openEditPO(selectedOrder)}>
-                    <Edit className="w-4 h-4 mr-2" /> Edit PO
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => openEditPO(selectedOrder)}>
+                      <Edit className="w-4 h-4 mr-2" /> Edit PO
+                    </Button>
+                    {user.role === 'admin' && (
+                      <Button variant="destructive" size="sm" onClick={() => setPoToDelete(selectedOrder.id)}>
+                        <Trash2 className="w-4 h-4 mr-2" /> Hapus PO
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <DialogDescription className="text-slate-500 mt-1">
                   Diterima pada {new Date(selectedOrder.date).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })}
