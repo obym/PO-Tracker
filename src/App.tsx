@@ -993,16 +993,7 @@ export default function App() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedOrder.items.filter(item => user.role !== 'client' || item.isAtKitchen).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={user.role === 'client' ? 2 : 6} className="text-center text-slate-500 py-8">
-                            Belum ada produk yang sampai di dapur.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {selectedOrder.items
-                        .filter(item => user.role !== 'client' || item.isAtKitchen)
-                        .map((item) => (
+                      {selectedOrder.items.map((item) => (
                         <TableRow key={item.id} className={item.isReceived ? 'bg-emerald-50/50' : ''}>
                           <TableCell>
                             <div className="font-medium text-slate-800">{item.name}</div>
