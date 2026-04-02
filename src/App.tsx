@@ -70,6 +70,14 @@ export default function App() {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [poToDelete, setPoToDelete] = useState<string | null>(null);
 
+  // Edit User State
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [editUserName, setEditUserName] = useState('');
+  const [editUserPhone, setEditUserPhone] = useState('');
+  const [editUserAddress, setEditUserAddress] = useState('');
+  const [editUserError, setEditUserError] = useState<string | null>(null);
+
   // New PO Form State
   const [newClientId, setNewClientId] = useState('');
   const [newNotes, setNewNotes] = useState('');
@@ -226,6 +234,36 @@ export default function App() {
     } catch (error) {
       console.error("Error deleting user:", error);
       alert("Gagal menghapus pengguna. Pastikan Anda memiliki akses Admin.");
+    }
+  };
+
+  const openEditUser = (user: UserProfile) => {
+    setEditingUser(user);
+    setEditUserName(user.name);
+    setEditUserPhone(user.phone || '');
+    setEditUserAddress(user.address || '');
+    setEditUserError(null);
+    setIsEditUserOpen(true);
+  };
+
+  const handleUpdateUser = async () => {
+    setEditUserError(null);
+    if (!editingUser || !editUserName) {
+      setEditUserError('Mohon lengkapi nama pengguna.');
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, 'users', editingUser.uid), {
+        name: editUserName,
+        phone: editUserPhone,
+        address: editUserAddress
+      });
+      setIsEditUserOpen(false);
+      setEditingUser(null);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      setEditUserError("Gagal memperbarui pengguna. Pastikan Anda memiliki akses Admin.");
     }
   };
 
@@ -908,7 +946,7 @@ export default function App() {
                             <TableHead className="text-base">Nama</TableHead>
                             <TableHead className="text-base">Email</TableHead>
                             <TableHead className="w-[200px] text-base">Role</TableHead>
-                            <TableHead className="w-[80px] text-center text-base">Aksi</TableHead>
+                            <TableHead className="w-[120px] text-center text-base">Aksi</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -929,14 +967,26 @@ export default function App() {
                                 </select>
                               </TableCell>
                               <TableCell className="text-center">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                  onClick={() => setUserToDelete(u.uid)}
-                                >
-                                  <Trash2 className="h-5 w-5" />
-                                </Button>
+                                <div className="flex justify-center gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
+                                    onClick={() => openEditUser(u)}
+                                    title="Edit Pengguna"
+                                  >
+                                    <Edit className="h-5 w-5" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => setUserToDelete(u.uid)}
+                                    title="Hapus Pengguna"
+                                  >
+                                    <Trash2 className="h-5 w-5" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -967,6 +1017,55 @@ export default function App() {
                   <DialogFooter className="mt-4">
                     <Button variant="outline" onClick={() => setUserToDelete(null)}>Batal</Button>
                     <Button variant="destructive" onClick={handleDeleteUser}>Hapus Pengguna</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Edit Pengguna</DialogTitle>
+                    <DialogDescription>
+                      Ubah data pengguna.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  {editUserError && (
+                    <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
+                      {editUserError}
+                    </div>
+                  )}
+
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editUserName">Nama Pengguna <span className="text-red-500">*</span></Label>
+                      <Input 
+                        id="editUserName" 
+                        value={editUserName}
+                        onChange={(e) => setEditUserName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editUserPhone">Telepon</Label>
+                      <Input 
+                        id="editUserPhone" 
+                        value={editUserPhone}
+                        onChange={(e) => setEditUserPhone(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editUserAddress">Alamat</Label>
+                      <Input 
+                        id="editUserAddress" 
+                        value={editUserAddress}
+                        onChange={(e) => setEditUserAddress(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsEditUserOpen(false)}>Batal</Button>
+                    <Button onClick={handleUpdateUser} className="bg-indigo-600 hover:bg-indigo-700">Simpan Perubahan</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
