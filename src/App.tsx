@@ -337,6 +337,7 @@ export default function App() {
   };
 
   const openEditPO = (po: PurchaseOrder) => {
+    if (user?.role !== 'admin') return;
     setEditingPO(po);
     setEditClientId(po.clientId);
     setEditNotes(po.notes);
@@ -1147,13 +1148,15 @@ export default function App() {
                     </Badge>
                   </DialogTitle>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => openEditPO(selectedOrder)}>
-                      <Edit className="w-4 h-4 mr-2" /> Edit PO
-                    </Button>
                     {user.role === 'admin' && (
-                      <Button variant="destructive" size="sm" onClick={() => setPoToDelete(selectedOrder.id)}>
-                        <Trash2 className="w-4 h-4 mr-2" /> Hapus PO
-                      </Button>
+                      <>
+                        <Button variant="outline" size="sm" onClick={() => openEditPO(selectedOrder)}>
+                          <Edit className="w-4 h-4 mr-2" /> Edit PO
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => setPoToDelete(selectedOrder.id)}>
+                          <Trash2 className="w-4 h-4 mr-2" /> Hapus PO
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
