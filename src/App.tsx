@@ -140,12 +140,6 @@ export default function App() {
     const unsubscribeOrders = onSnapshot(q, (snapshot) => {
       const fetchedOrders = snapshot.docs.map(doc => doc.data() as PurchaseOrder);
       setOrders(fetchedOrders);
-      
-      // Update selected order if it's open
-      if (selectedOrder) {
-        const updated = fetchedOrders.find(o => o.id === selectedOrder.id);
-        if (updated) setSelectedOrder(updated);
-      }
     }, (error) => {
       console.error("Error fetching orders:", error);
     });
@@ -170,6 +164,16 @@ export default function App() {
       unsubscribeAllUsers();
     };
   }, [isAuthReady, user]);
+
+  // Sync selectedOrder when orders change
+  useEffect(() => {
+    if (selectedOrder) {
+      const updated = orders.find(o => o.id === selectedOrder.id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedOrder)) {
+        setSelectedOrder(updated);
+      }
+    }
+  }, [orders, selectedOrder]);
 
   const handleLogin = async () => {
     try {
