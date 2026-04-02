@@ -435,8 +435,8 @@ export default function App() {
     const config = statusConfig[status];
     const Icon = config.icon;
 
-    // Filter for driver: only show ORDERING and DELIVERING
-    if (user.role === 'driver' && status !== 'ORDERING' && status !== 'DELIVERING') {
+    // Filter for driver: only show ORDERING, DELIVERING, and AT_KITCHEN
+    if (user.role === 'driver' && status !== 'ORDERING' && status !== 'DELIVERING' && status !== 'AT_KITCHEN') {
       return null;
     }
 
@@ -988,7 +988,7 @@ export default function App() {
                         {(user.role === 'admin' || user.role === 'kitchen' || user.role === 'driver') && <TableHead>Supplier</TableHead>}
                         {(user.role === 'admin' || user.role === 'kitchen') && <TableHead className="text-center w-[120px]">Diorder?</TableHead>}
                         {(user.role === 'admin' || user.role === 'driver') && <TableHead className="text-center w-[120px]">Dikirim?</TableHead>}
-                        {(user.role === 'admin' || user.role === 'kitchen') && <TableHead className="text-center w-[120px]">Sampai Dapur?</TableHead>}
+                        {(user.role === 'admin' || user.role === 'kitchen' || user.role === 'driver') && <TableHead className="text-center w-[120px]">Sampai Dapur?</TableHead>}
                         <TableHead className="text-center w-[120px]">Diterima Klien?</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1037,11 +1037,12 @@ export default function App() {
                             </TableCell>
                           )}
 
-                          {(user.role === 'admin' || user.role === 'kitchen') && (
+                          {(user.role === 'admin' || user.role === 'kitchen' || user.role === 'driver') && (
                             <TableCell className="text-center">
                               <Button
                                 variant={item.isAtKitchen ? "default" : "outline"}
                                 size="sm"
+                                disabled={user.role !== 'kitchen' && user.role !== 'admin' && user.role !== 'driver'}
                                 className={`w-full ${item.isAtKitchen ? 'bg-orange-600 hover:bg-orange-700' : 'text-slate-500'}`}
                                 onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isAtKitchen')}
                               >
