@@ -12,7 +12,7 @@ import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from
 import { collection, doc, setDoc, getDoc, onSnapshot, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
 
 // --- Types ---
-type OrderStatus = 'PO_RECEIVED' | 'ORDERING' | 'AT_KITCHEN' | 'DELIVERING' | 'COMPLETED';
+type OrderStatus = 'PO_RECEIVED' | 'ORDERING' | 'DELIVERING' | 'AT_KITCHEN' | 'COMPLETED';
 
 interface OrderItem {
   id: string;
@@ -49,8 +49,8 @@ interface UserProfile {
 const statusConfig = {
   PO_RECEIVED: { label: 'PO Diterima', color: 'bg-blue-100 text-blue-800', icon: FileText },
   ORDERING: { label: 'Proses Order', color: 'bg-amber-100 text-amber-800', icon: ShoppingCart },
-  AT_KITCHEN: { label: 'Sampai Dapur', color: 'bg-orange-100 text-orange-800', icon: Package },
   DELIVERING: { label: 'Proses Kirim', color: 'bg-indigo-100 text-indigo-800', icon: Truck },
+  AT_KITCHEN: { label: 'Sampai Dapur', color: 'bg-orange-100 text-orange-800', icon: Package },
   COMPLETED: { label: 'Selesai (Diterima Klien)', color: 'bg-emerald-100 text-emerald-800', icon: CheckCircle2 },
 };
 
@@ -314,19 +314,23 @@ export default function App() {
   };
 
   const handleUpdatePO = async () => {
-    if (!editingPO || editItems.length === 0 || editItems.some(i => !i.name || !i.supplier)) {
+    if (!editingPO || !editClientId || editItems.length === 0 || editItems.some(i => !i.name || !i.supplier)) {
       alert('Mohon lengkapi semua field yang wajib.');
       return;
     }
 
+    const client = clients.find(c => c.uid === editClientId);
+    if (!client) return;
+
     try {
       await updateDoc(doc(db, 'purchaseOrders', editingPO.id), {
+        clientId: client.uid,
+        clientName: client.name,
         notes: editNotes,
         items: editItems
       });
       setIsEditOpen(false);
       setEditingPO(null);
-      alert('PO berhasil diperbarui!');
     } catch (error) {
       console.error("Error updating PO:", error);
       alert("Gagal memperbarui PO. Pastikan Anda memiliki akses.");
@@ -344,15 +348,15 @@ export default function App() {
       
       // Logic dependencies
       if (field === 'isReceived' && newItem.isReceived) {
+        newItem.isAtKitchen = true;
         newItem.isDelivered = true;
-        newItem.isAtKitchen = true;
-        newItem.isOrdered = true;
-      }
-      if (field === 'isDelivered' && newItem.isDelivered) {
-        newItem.isAtKitchen = true;
         newItem.isOrdered = true;
       }
       if (field === 'isAtKitchen' && newItem.isAtKitchen) {
+        newItem.isDelivered = true;
+        newItem.isOrdered = true;
+      }
+      if (field === 'isDelivered' && newItem.isDelivered) {
         newItem.isOrdered = true;
       }
       
@@ -361,16 +365,16 @@ export default function App() {
 
     // Determine new status
     const allReceived = updatedItems.every(i => i.isReceived);
-    const allDelivered = updatedItems.every(i => i.isDelivered);
     const allAtKitchen = updatedItems.every(i => i.isAtKitchen);
+    const allDelivered = updatedItems.every(i => i.isDelivered);
     const allOrdered = updatedItems.every(i => i.isOrdered);
     const someOrdered = updatedItems.some(i => i.isOrdered);
 
     let newStatus = order.status;
     if (allReceived) newStatus = 'COMPLETED';
-    else if (allDelivered) newStatus = 'DELIVERING'; // Or maybe delivered? Let's say DELIVERING means it's on the way, but if all delivered it's waiting for client to receive.
-    else if (allAtKitchen) newStatus = 'DELIVERING'; // Ready to deliver
-    else if (allOrdered) newStatus = 'AT_KITCHEN'; // Waiting for kitchen
+    else if (allAtKitchen) newStatus = 'AT_KITCHEN';
+    else if (allDelivered) newStatus = 'DELIVERING'; 
+    else if (allOrdered) newStatus = 'DELIVERING';
     else if (someOrdered) newStatus = 'ORDERING';
     else newStatus = 'PO_RECEIVED';
 
@@ -427,8 +431,8 @@ export default function App() {
     const config = statusConfig[status];
     const Icon = config.icon;
 
-    // Filter for driver: only show AT_KITCHEN and DELIVERING
-    if (user.role === 'driver' && status !== 'AT_KITCHEN' && status !== 'DELIVERING') {
+    // Filter for driver: only show ORDERING and DELIVERING
+    if (user.role === 'driver' && status !== 'ORDERING' && status !== 'DELIVERING') {
       return null;
     }
 
@@ -648,20 +652,25 @@ export default function App() {
                   <DialogHeader>
                     <DialogTitle>Edit Purchase Order</DialogTitle>
                     <DialogDescription>
-                      Ubah detail PO. Klien tidak dapat diubah setelah PO dibuat.
+                      Ubah detail PO, termasuk klien jika diperlukan.
                     </DialogDescription>
                   </DialogHeader>
                   
                   <div className="grid gap-6 py-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="editClientSelect">Klien</Label>
-                        <Input 
+                        <Label htmlFor="editClientSelect">Klien <span className="text-red-500">*</span></Label>
+                        <select 
                           id="editClientSelect"
-                          value={editingPO?.clientName || ''}
-                          disabled
-                          className="bg-slate-100"
-                        />
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          value={editClientId}
+                          onChange={(e) => setEditClientId(e.target.value)}
+                        >
+                          <option value="" disabled>-- Pilih Klien --</option>
+                          {clients.map(client => (
+                            <option key={client.uid} value={client.uid}>{client.name}</option>
+                          ))}
+                        </select>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="editNotes">Catatan Tambahan</Label>
@@ -925,8 +934,8 @@ export default function App() {
         <div className="flex gap-6 min-w-max pb-4">
           {renderKanbanColumn('PO_RECEIVED')}
           {renderKanbanColumn('ORDERING')}
-          {renderKanbanColumn('AT_KITCHEN')}
           {renderKanbanColumn('DELIVERING')}
+          {renderKanbanColumn('AT_KITCHEN')}
           {renderKanbanColumn('COMPLETED')}
         </div>
       </main>
@@ -972,10 +981,10 @@ export default function App() {
                     <TableHeader className="bg-slate-50">
                       <TableRow>
                         <TableHead>Barang</TableHead>
-                        {(user.role === 'admin' || user.role === 'kitchen') && <TableHead>Supplier</TableHead>}
+                        {(user.role === 'admin' || user.role === 'kitchen' || user.role === 'driver') && <TableHead>Supplier</TableHead>}
                         {(user.role === 'admin' || user.role === 'kitchen') && <TableHead className="text-center w-[120px]">Diorder?</TableHead>}
-                        {(user.role === 'admin' || user.role === 'kitchen') && <TableHead className="text-center w-[120px]">Sampai Dapur?</TableHead>}
                         {(user.role === 'admin' || user.role === 'driver') && <TableHead className="text-center w-[120px]">Dikirim?</TableHead>}
+                        {(user.role === 'admin' || user.role === 'kitchen') && <TableHead className="text-center w-[120px]">Sampai Dapur?</TableHead>}
                         <TableHead className="text-center w-[120px]">Diterima Klien?</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -987,7 +996,7 @@ export default function App() {
                             <div className="text-xs text-slate-500">{item.quantity} {item.unit}</div>
                           </TableCell>
                           
-                          {(user.role === 'admin' || user.role === 'kitchen') && (
+                          {(user.role === 'admin' || user.role === 'kitchen' || user.role === 'driver') && (
                             <TableCell>
                               <Badge variant="outline" className="bg-white text-slate-600 font-normal">
                                 {item.supplier}
@@ -1009,20 +1018,6 @@ export default function App() {
                             </TableCell>
                           )}
 
-                          {(user.role === 'admin' || user.role === 'kitchen') && (
-                            <TableCell className="text-center">
-                              <Button
-                                variant={item.isAtKitchen ? "default" : "outline"}
-                                size="sm"
-                                className={`w-full ${item.isAtKitchen ? 'bg-orange-600 hover:bg-orange-700' : 'text-slate-500'}`}
-                                onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isAtKitchen')}
-                              >
-                                {item.isAtKitchen ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Package className="w-4 h-4 mr-1" />}
-                                {item.isAtKitchen ? 'Ya' : 'Belum'}
-                              </Button>
-                            </TableCell>
-                          )}
-
                           {(user.role === 'admin' || user.role === 'driver') && (
                             <TableCell className="text-center">
                               <Button
@@ -1034,6 +1029,20 @@ export default function App() {
                               >
                                 {item.isDelivered ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Truck className="w-4 h-4 mr-1" />}
                                 {item.isDelivered ? 'Ya' : 'Belum'}
+                              </Button>
+                            </TableCell>
+                          )}
+
+                          {(user.role === 'admin' || user.role === 'kitchen') && (
+                            <TableCell className="text-center">
+                              <Button
+                                variant={item.isAtKitchen ? "default" : "outline"}
+                                size="sm"
+                                className={`w-full ${item.isAtKitchen ? 'bg-orange-600 hover:bg-orange-700' : 'text-slate-500'}`}
+                                onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isAtKitchen')}
+                              >
+                                {item.isAtKitchen ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Package className="w-4 h-4 mr-1" />}
+                                {item.isAtKitchen ? 'Ya' : 'Belum'}
                               </Button>
                             </TableCell>
                           )}
