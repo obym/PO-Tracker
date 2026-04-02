@@ -92,6 +92,7 @@ export default function App() {
   const [clientError, setClientError] = useState<string | null>(null);
   const [newPoError, setNewPoError] = useState<string | null>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [globalSuccess, setGlobalSuccess] = useState<string | null>(null);
 
   // Handle Auth
   useEffect(() => {
@@ -362,6 +363,12 @@ export default function App() {
       await deleteDoc(doc(db, 'purchaseOrders', poToDelete));
       setPoToDelete(null);
       setSelectedOrder(null);
+      setGlobalSuccess("PO sudah dihapus.");
+      
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => {
+        setGlobalSuccess(null);
+      }, 3000);
     } catch (error) {
       console.error("Error deleting PO:", error);
       setGlobalError("Gagal menghapus PO. Pastikan Anda memiliki akses Admin.");
@@ -996,6 +1003,12 @@ export default function App() {
 
       {/* Main Content - Kanban Board */}
       <main className="flex-1 overflow-x-auto p-6">
+        {globalSuccess && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-lg mb-6 flex justify-between items-center">
+            <span>{globalSuccess}</span>
+            <Button variant="ghost" size="sm" onClick={() => setGlobalSuccess(null)}>Tutup</Button>
+          </div>
+        )}
         {globalError && (
           <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg mb-6 flex justify-between items-center">
             <span>{globalError}</span>
