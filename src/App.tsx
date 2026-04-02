@@ -1060,9 +1060,9 @@ export default function App() {
                       <TableRow>
                         <TableHead>Barang</TableHead>
                         {(user.role === 'admin' || user.role === 'kitchen' || user.role === 'driver') && <TableHead>Supplier</TableHead>}
-                        {(user.role === 'admin' || user.role === 'kitchen') && <TableHead className="text-center w-[120px]">Diorder?</TableHead>}
-                        {(user.role === 'admin' || user.role === 'driver') && <TableHead className="text-center w-[120px]">Dikirim?</TableHead>}
-                        {(user.role === 'admin' || user.role === 'kitchen' || user.role === 'driver') && <TableHead className="text-center w-[120px]">Sampai Dapur?</TableHead>}
+                        <TableHead className="text-center w-[120px]">Diorder?</TableHead>
+                        <TableHead className="text-center w-[120px]">Dikirim?</TableHead>
+                        <TableHead className="text-center w-[120px]">Sampai Dapur?</TableHead>
                         <TableHead className="text-center w-[120px]">Diterima Klien?</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1082,49 +1082,44 @@ export default function App() {
                             </TableCell>
                           )}
 
-                          {(user.role === 'admin' || user.role === 'kitchen') && (
-                            <TableCell className="text-center">
-                              <Button
-                                variant={item.isOrdered ? "default" : "outline"}
-                                size="sm"
-                                className={`w-full ${item.isOrdered ? 'bg-indigo-600 hover:bg-indigo-700' : 'text-slate-500'}`}
-                                onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isOrdered')}
-                              >
-                                {item.isOrdered ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Clock className="w-4 h-4 mr-1" />}
-                                {item.isOrdered ? 'Ya' : 'Belum'}
-                              </Button>
-                            </TableCell>
-                          )}
+                          <TableCell className="text-center">
+                            <Button
+                              variant={item.isOrdered ? "default" : "outline"}
+                              size="sm"
+                              disabled={user.role !== 'kitchen' && user.role !== 'admin'}
+                              className={`w-full ${item.isOrdered ? 'bg-indigo-600 hover:bg-indigo-700' : 'text-slate-500'}`}
+                              onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isOrdered')}
+                            >
+                              {item.isOrdered ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Clock className="w-4 h-4 mr-1" />}
+                              {item.isOrdered ? 'Ya' : 'Belum'}
+                            </Button>
+                          </TableCell>
 
-                          {(user.role === 'admin' || user.role === 'driver') && (
-                            <TableCell className="text-center">
-                              <Button
-                                variant={item.isDelivered ? "default" : "outline"}
-                                size="sm"
-                                disabled={user.role !== 'driver' && user.role !== 'admin'}
-                                className={`w-full ${item.isDelivered ? 'bg-blue-600 hover:bg-blue-700' : 'text-slate-500'}`}
-                                onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isDelivered')}
-                              >
-                                {item.isDelivered ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Truck className="w-4 h-4 mr-1" />}
-                                {item.isDelivered ? 'Ya' : 'Belum'}
-                              </Button>
-                            </TableCell>
-                          )}
+                          <TableCell className="text-center">
+                            <Button
+                              variant={item.isDelivered ? "default" : "outline"}
+                              size="sm"
+                              disabled={user.role !== 'driver' && user.role !== 'admin'}
+                              className={`w-full ${item.isDelivered ? 'bg-blue-600 hover:bg-blue-700' : 'text-slate-500'}`}
+                              onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isDelivered')}
+                            >
+                              {item.isDelivered ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Truck className="w-4 h-4 mr-1" />}
+                              {item.isDelivered ? 'Ya' : 'Belum'}
+                            </Button>
+                          </TableCell>
 
-                          {(user.role === 'admin' || user.role === 'kitchen' || user.role === 'driver') && (
-                            <TableCell className="text-center">
-                              <Button
-                                variant={item.isAtKitchen ? "default" : "outline"}
-                                size="sm"
-                                disabled={user.role !== 'kitchen' && user.role !== 'admin' && user.role !== 'driver'}
-                                className={`w-full ${item.isAtKitchen ? 'bg-orange-600 hover:bg-orange-700' : 'text-slate-500'}`}
-                                onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isAtKitchen')}
-                              >
-                                {item.isAtKitchen ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Package className="w-4 h-4 mr-1" />}
-                                {item.isAtKitchen ? 'Ya' : 'Belum'}
-                              </Button>
-                            </TableCell>
-                          )}
+                          <TableCell className="text-center">
+                            <Button
+                              variant={item.isAtKitchen ? "default" : "outline"}
+                              size="sm"
+                              disabled={user.role !== 'kitchen' && user.role !== 'admin' && user.role !== 'driver'}
+                              className={`w-full ${item.isAtKitchen ? 'bg-orange-600 hover:bg-orange-700' : 'text-slate-500'}`}
+                              onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isAtKitchen')}
+                            >
+                              {item.isAtKitchen ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Package className="w-4 h-4 mr-1" />}
+                              {item.isAtKitchen ? 'Ya' : 'Belum'}
+                            </Button>
+                          </TableCell>
 
                           <TableCell className="text-center">
                             <Button
