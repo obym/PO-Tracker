@@ -82,11 +82,15 @@ export default function App() {
   const [editClientId, setEditClientId] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [editItems, setEditItems] = useState<OrderItem[]>([]);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // New Client Form State
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
   const [newClientAddress, setNewClientAddress] = useState('');
+  const [clientError, setClientError] = useState<string | null>(null);
+  const [newPoError, setNewPoError] = useState<string | null>(null);
+  const [globalError, setGlobalError] = useState<string | null>(null);
 
   // Handle Auth
   useEffect(() => {
@@ -224,8 +228,9 @@ export default function App() {
   };
 
   const handleCreateClient = async () => {
+    setClientError(null);
     if (!newClientName) {
-      alert('Mohon lengkapi nama klien.');
+      setClientError('Mohon lengkapi nama klien.');
       return;
     }
 
@@ -246,16 +251,16 @@ export default function App() {
       setNewClientName('');
       setNewClientPhone('');
       setNewClientAddress('');
-      alert('Klien berhasil ditambahkan!');
     } catch (error) {
       console.error("Error creating client:", error);
-      alert("Gagal menambahkan klien. Pastikan Anda memiliki akses Admin.");
+      setClientError("Gagal menambahkan klien. Pastikan Anda memiliki akses Admin.");
     }
   };
 
   const handleCreatePO = async () => {
+    setNewPoError(null);
     if (!newClientId || newItems.length === 0 || newItems.some(i => !i.name || !i.supplier)) {
-      alert('Mohon lengkapi semua field yang wajib.');
+      setNewPoError('Mohon lengkapi semua field yang wajib (termasuk Nama Barang dan Supplier).');
       return;
     }
 
@@ -287,7 +292,7 @@ export default function App() {
       setNewItems([{ name: '', quantity: 1, unit: 'pcs', supplier: '', unitPrice: 0 }]);
     } catch (error) {
       console.error("Error creating PO:", error);
-      alert("Gagal membuat PO. Pastikan Anda memiliki akses Admin.");
+      setNewPoError("Gagal membuat PO. Pastikan Anda memiliki akses Admin.");
     }
   };
 
@@ -296,6 +301,7 @@ export default function App() {
     setEditClientId(po.clientId);
     setEditNotes(po.notes);
     setEditItems(po.items);
+    setEditError(null);
     setIsEditOpen(true);
   };
 
@@ -318,13 +324,17 @@ export default function App() {
   };
 
   const handleUpdatePO = async () => {
+    setEditError(null);
     if (!editingPO || !editClientId || editItems.length === 0 || editItems.some(i => !i.name || !i.supplier)) {
-      alert('Mohon lengkapi semua field yang wajib.');
+      setEditError('Mohon lengkapi semua field yang wajib (termasuk Nama Barang dan Supplier).');
       return;
     }
 
     const client = clients.find(c => c.uid === editClientId);
-    if (!client) return;
+    if (!client) {
+      setEditError('Klien tidak ditemukan.');
+      return;
+    }
 
     try {
       await updateDoc(doc(db, 'purchaseOrders', editingPO.id), {
@@ -337,7 +347,7 @@ export default function App() {
       setEditingPO(null);
     } catch (error) {
       console.error("Error updating PO:", error);
-      alert("Gagal memperbarui PO. Pastikan Anda memiliki akses.");
+      setEditError("Gagal memperbarui PO. Pastikan Anda memiliki akses.");
     }
   };
 
@@ -534,6 +544,12 @@ export default function App() {
                     </DialogDescription>
                   </DialogHeader>
                   
+                  {newPoError && (
+                    <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
+                      {newPoError}
+                    </div>
+                  )}
+
                   <div className="grid gap-6 py-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -660,6 +676,12 @@ export default function App() {
                     </DialogDescription>
                   </DialogHeader>
                   
+                  {editError && (
+                    <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
+                      {editError}
+                    </div>
+                  )}
+
                   <div className="grid gap-6 py-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -797,6 +819,13 @@ export default function App() {
                         Masukkan data klien baru.
                       </DialogDescription>
                     </DialogHeader>
+
+                    {clientError && (
+                      <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
+                        {clientError}
+                      </div>
+                    )}
+
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
                         <Label htmlFor="clientName">Nama Klien</Label>
@@ -935,6 +964,12 @@ export default function App() {
 
       {/* Main Content - Kanban Board */}
       <main className="flex-1 overflow-x-auto p-6">
+        {globalError && (
+          <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg mb-6 flex justify-between items-center">
+            <span>{globalError}</span>
+            <Button variant="ghost" size="sm" onClick={() => setGlobalError(null)}>Tutup</Button>
+          </div>
+        )}
         <div className="flex gap-6 min-w-max pb-4">
           {renderKanbanColumn('PO_RECEIVED')}
           {renderKanbanColumn('ORDERING')}
