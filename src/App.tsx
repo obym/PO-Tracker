@@ -481,10 +481,15 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center bg-slate-100">
         <Card className="w-[400px] shadow-lg">
           <CardHeader className="text-center">
-            <div className="mx-auto bg-indigo-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4">
-              <Package className="w-8 h-8 text-indigo-600" />
+            <div className="mx-auto flex items-center justify-center mb-4">
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/9/90/National_emblem_of_Indonesia_Garuda_Pancasila.svg" 
+                alt="Garuda Pancasila" 
+                className="w-20 h-20 object-contain"
+                referrerPolicy="no-referrer"
+              />
             </div>
-            <CardTitle className="text-2xl">PO & Kitchen Tracker</CardTitle>
+            <CardTitle className="text-2xl">Tracking PO & Pengiriman</CardTitle>
             <CardDescription>Masuk untuk mengelola pesanan dan pengiriman</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center pb-8">
@@ -572,11 +577,16 @@ export default function App() {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-indigo-600 p-2 rounded-lg">
-              <Package className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center">
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/9/90/National_emblem_of_Indonesia_Garuda_Pancasila.svg" 
+                alt="Garuda Pancasila" 
+                className="w-10 h-10 object-contain"
+                referrerPolicy="no-referrer"
+              />
             </div>
-            <h1 className="text-xl font-bold text-slate-800 tracking-tight">PO & Kitchen Tracker</h1>
+            <h1 className="text-xl font-bold text-slate-800 tracking-tight">Tracking PO & Pengiriman</h1>
             <Badge variant="outline" className="ml-2 uppercase bg-slate-100">{user.role}</Badge>
           </div>
           
