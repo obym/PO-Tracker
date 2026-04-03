@@ -776,7 +776,13 @@ export default function App() {
   );
 
   const renderKanbanColumn = (status: OrderStatus) => {
-    const columnOrders = filteredOrders.filter(o => o.status === status);
+    let columnOrders = filteredOrders.filter(o => o.status === status);
+    
+    // Jika bukan admin, gabungkan INVOICED ke dalam COMPLETED
+    if (status === 'COMPLETED' && user.role !== 'admin') {
+      columnOrders = filteredOrders.filter(o => o.status === 'COMPLETED' || o.status === 'INVOICED');
+    }
+
     const config = statusConfig[status];
     const Icon = config.icon;
 
@@ -1660,7 +1666,7 @@ export default function App() {
           {renderKanbanColumn('DELIVERING')}
           {renderKanbanColumn('AT_KITCHEN')}
           {renderKanbanColumn('COMPLETED')}
-          {renderKanbanColumn('INVOICED')}
+          {user.role === 'admin' && renderKanbanColumn('INVOICED')}
         </div>
       </main>
 
