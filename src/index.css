@@ -131,19 +131,29 @@
 
 @media print {
   body * {
-    visibility: hidden;
+    visibility: hidden !important;
   }
+  
   #print-area, #print-area * {
-    visibility: visible;
+    visibility: visible !important;
   }
+  
   #print-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
-  @page {
-    size: A4 portrait;
-    margin: 1cm;
+
+  /* Fix for Radix Dialog */
+  [data-radix-portal], 
+  [data-radix-portal] * {
+    position: static !important;
+    transform: none !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
   }
 }
