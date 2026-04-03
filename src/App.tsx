@@ -1660,6 +1660,7 @@ export default function App() {
           {renderKanbanColumn('DELIVERING')}
           {renderKanbanColumn('AT_KITCHEN')}
           {renderKanbanColumn('COMPLETED')}
+          {renderKanbanColumn('INVOICED')}
         </div>
       </main>
 
