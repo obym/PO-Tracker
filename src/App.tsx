@@ -598,7 +598,7 @@ export default function App() {
                 referrerPolicy="no-referrer"
               />
             </div>
-            <CardTitle className="text-2xl">Tracking PO & Pengiriman</CardTitle>
+            <CardTitle className="text-2xl">PO & Pengiriman Tracker</CardTitle>
             <CardDescription>Masuk untuk mengelola pesanan dan pengiriman</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center pb-8">
@@ -685,8 +685,8 @@ export default function App() {
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col xl:flex-row items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <div className="flex items-center justify-center">
               <img 
                 src="https://upload.wikimedia.org/wikipedia/commons/9/90/National_emblem_of_Indonesia_Garuda_Pancasila.svg" 
@@ -695,16 +695,16 @@ export default function App() {
                 referrerPolicy="no-referrer"
               />
             </div>
-            <h1 className="text-xl font-bold text-slate-800 tracking-tight">Tracking PO & Pengiriman</h1>
-            <Badge variant="outline" className="ml-2 uppercase bg-slate-100">{user.role}</Badge>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight text-center">PO & Pengiriman Tracker</h1>
+            <Badge variant="outline" className="uppercase bg-slate-100">{user.role}</Badge>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <Input 
                 placeholder="Cari PO atau Klien..." 
-                className="pl-9 w-[250px] bg-slate-50 border-slate-200"
+                className="pl-9 w-[200px] sm:w-[250px] bg-slate-50 border-slate-200"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -714,7 +714,7 @@ export default function App() {
               <>
               <Dialog open={isNewOpen} onOpenChange={setIsNewOpen}>
                 <DialogTrigger render={<Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm" />}>
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="w-4 h-4 mr-2 hidden sm:block" />
                   PO Baru
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
@@ -1031,8 +1031,8 @@ export default function App() {
             {user.role === 'admin' && (
               <>
                 <Dialog open={isNewClientOpen} onOpenChange={setIsNewClientOpen}>
-                  <DialogTrigger render={<Button variant="outline" className="ml-2 bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
-                    <Plus className="w-4 h-4 mr-2" />
+                  <DialogTrigger render={<Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
+                    <Plus className="w-4 h-4 mr-2 hidden sm:block" />
                     Tambah Klien
                   </DialogTrigger>
                   <DialogContent className="max-w-md">
@@ -1087,11 +1087,11 @@ export default function App() {
                 </Dialog>
 
                   <Dialog open={isSupplierManageOpen} onOpenChange={setIsSupplierManageOpen}>
-                <DialogTrigger render={<Button variant="outline" className="ml-2 bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
-                  <Package className="w-4 h-4 mr-2" />
+                <DialogTrigger render={<Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
+                  <Package className="w-4 h-4 mr-2 hidden sm:block" />
                   Kelola Supplier
                 </DialogTrigger>
-                <DialogContent className="max-w-5xl sm:max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-7xl sm:max-w-7xl w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="text-2xl">Kelola Supplier</DialogTitle>
                     <DialogDescription className="text-base">
@@ -1106,7 +1106,7 @@ export default function App() {
                       </Button>
                     </div>
                     <div className="border rounded-md overflow-x-auto">
-                      <Table className="min-w-[600px]">
+                      <Table className="min-w-[1000px]">
                         <TableHeader className="bg-slate-50">
                           <TableRow>
                             <TableHead className="text-base">Nama</TableHead>
@@ -1164,11 +1164,11 @@ export default function App() {
               </Dialog>
 
               <Dialog open={isUserManageOpen} onOpenChange={setIsUserManageOpen}>
-                <DialogTrigger render={<Button variant="outline" className="ml-2 bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
-                  <UserIcon className="w-4 h-4 mr-2" />
+                <DialogTrigger render={<Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
+                  <UserIcon className="w-4 h-4 mr-2 hidden sm:block" />
                   Kelola Pengguna
                 </DialogTrigger>
-                <DialogContent className="max-w-5xl sm:max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-7xl sm:max-w-7xl w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="text-2xl">Kelola Akses Pengguna</DialogTitle>
                     <DialogDescription className="text-base">
@@ -1178,7 +1178,7 @@ export default function App() {
                   
                   <div className="py-4">
                     <div className="border rounded-md overflow-x-auto">
-                      <Table className="min-w-[600px]">
+                      <Table className="min-w-[1000px]">
                         <TableHeader className="bg-slate-50">
                           <TableRow>
                             <TableHead className="text-base">Nama</TableHead>

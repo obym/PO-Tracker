@@ -1,5 +1,5 @@
 {
-  "name": "PO & Kitchen Tracker",
+  "name": "PO & Pengiriman Tracker",
   "description": "Aplikasi admin untuk melacak Purchase Order klien, order supplier, hingga barang sampai di dapur.",
   "requestFramePermissions": []
 }
