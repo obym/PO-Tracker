@@ -17,7 +17,7 @@ type OrderStatus = 'PO_RECEIVED' | 'ORDERING' | 'DELIVERING' | 'AT_KITCHEN' | 'C
 interface OrderItem {
   id: string;
   name: string;
-  quantity: number;
+  quantity: number | string;
   unit: string;
   supplier: string;
   unitPrice?: number;
@@ -316,6 +316,7 @@ export default function App() {
       notes: newNotes,
       items: newItems.map((item, i) => ({
         ...item,
+        quantity: typeof item.quantity === 'string' ? parseFloat(item.quantity) || 0 : item.quantity,
         id: `i-${Date.now()}-${i}`,
         isOrdered: false,
         isAtKitchen: false,
@@ -382,7 +383,10 @@ export default function App() {
         clientId: client.uid,
         clientName: client.name,
         notes: editNotes,
-        items: editItems
+        items: editItems.map(item => ({
+          ...item,
+          quantity: typeof item.quantity === 'string' ? parseFloat(item.quantity) || 0 : item.quantity
+        }))
       });
       setIsEditOpen(false);
       setEditingPO(null);
@@ -682,10 +686,14 @@ export default function App() {
                                 </TableCell>
                                 <TableCell className="p-2">
                                   <Input 
-                                    type="number" 
-                                    min="1"
+                                    type="text" 
                                     value={item.quantity}
-                                    onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
+                                    onChange={(e) => {
+                                      const val = e.target.value.replace(/,/g, '.');
+                                      if (/^\d*\.?\d*$/.test(val)) {
+                                        handleItemChange(index, 'quantity', val);
+                                      }
+                                    }}
                                   />
                                 </TableCell>
                                 <TableCell className="p-2">
@@ -697,11 +705,15 @@ export default function App() {
                                 </TableCell>
                                 <TableCell className="p-2">
                                   <Input 
-                                    type="number" 
-                                    min="0"
+                                    type="text" 
                                     placeholder="0"
-                                    value={item.unitPrice || ''}
-                                    onChange={(e) => handleItemChange(index, 'unitPrice', parseInt(e.target.value) || 0)}
+                                    value={item.unitPrice ? new Intl.NumberFormat('id-ID').format(Number(item.unitPrice)) : ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value.replace(/\./g, '');
+                                      if (/^\d*$/.test(val)) {
+                                        handleItemChange(index, 'unitPrice', val === '' ? 0 : parseInt(val));
+                                      }
+                                    }}
                                   />
                                 </TableCell>
                                 <TableCell className="p-2">
@@ -814,10 +826,14 @@ export default function App() {
                                 </TableCell>
                                 <TableCell className="p-2">
                                   <Input 
-                                    type="number" 
-                                    min="1"
+                                    type="text" 
                                     value={item.quantity}
-                                    onChange={(e) => handleEditItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
+                                    onChange={(e) => {
+                                      const val = e.target.value.replace(/,/g, '.');
+                                      if (/^\d*\.?\d*$/.test(val)) {
+                                        handleEditItemChange(index, 'quantity', val);
+                                      }
+                                    }}
                                   />
                                 </TableCell>
                                 <TableCell className="p-2">
@@ -837,11 +853,15 @@ export default function App() {
                                 </TableCell>
                                 <TableCell className="p-2">
                                   <Input 
-                                    type="number" 
-                                    min="0"
+                                    type="text" 
                                     placeholder="0"
-                                    value={item.unitPrice || ''}
-                                    onChange={(e) => handleEditItemChange(index, 'unitPrice', parseInt(e.target.value) || 0)}
+                                    value={item.unitPrice ? new Intl.NumberFormat('id-ID').format(Number(item.unitPrice)) : ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value.replace(/\./g, '');
+                                      if (/^\d*$/.test(val)) {
+                                        handleEditItemChange(index, 'unitPrice', val === '' ? 0 : parseInt(val));
+                                      }
+                                    }}
                                   />
                                 </TableCell>
                                 <TableCell className="p-2">
