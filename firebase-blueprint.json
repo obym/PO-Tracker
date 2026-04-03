@@ -9,9 +9,25 @@
         "email": { "type": "string", "format": "email" },
         "name": { "type": "string" },
         "role": { "type": "string", "enum": ["admin", "driver", "client", "kitchen"] },
-        "clientId": { "type": "string", "description": "Used to link client users to their POs" }
+        "clientId": { "type": "string", "description": "Used to link client users to their POs" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "district": { "type": "string" }
       },
       "required": ["uid", "email", "name", "role"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "A supplier of goods",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "district": { "type": "string" }
+      },
+      "required": ["id", "name"]
     },
     "PurchaseOrder": {
       "title": "PurchaseOrder",
@@ -50,6 +66,10 @@
     "users/{userId}": {
       "schema": { "$ref": "#/entities/User" },
       "description": "Stores user profiles and roles"
+    },
+    "suppliers/{supplierId}": {
+      "schema": { "$ref": "#/entities/Supplier" },
+      "description": "Stores supplier details"
     },
     "purchaseOrders/{orderId}": {
       "schema": { "$ref": "#/entities/PurchaseOrder" },

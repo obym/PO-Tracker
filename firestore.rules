@@ -13,8 +13,20 @@ service cloud.firestore {
     //   - uid: string (required, immutable)
     //   - email: string (required)
     //   - name: string (required)
-    //   - role: string (required, enum: ['admin', 'driver', 'client'])
+    //   - role: string (required, enum: ['admin', 'driver', 'client', 'kitchen'])
     //   - clientId: string (optional)
+    //   - phone: string (optional)
+    //   - address: string (optional)
+    //   - district: string (optional)
+    //
+    // Collection: suppliers
+    // Document ID: {supplierId}
+    // Fields:
+    //   - id: string (required, immutable)
+    //   - name: string (required)
+    //   - phone: string (optional)
+    //   - address: string (optional)
+    //   - district: string (optional)
     //
     // Collection: purchaseOrders
     // Document ID: {orderId}
@@ -101,9 +113,19 @@ service cloud.firestore {
              data.role in ['admin', 'driver', 'client', 'kitchen'] &&
              (!('clientId' in data) || (data.clientId is string && data.clientId.size() < 100)) &&
              (!('phone' in data) || (data.phone is string && data.phone.size() < 50)) &&
-             (!('address' in data) || (data.address is string && data.address.size() < 500));
+             (!('address' in data) || (data.address is string && data.address.size() < 500)) &&
+             (!('district' in data) || (data.district is string && data.district.size() < 100));
     }
     
+    function isValidSupplier(data) {
+      return hasRequiredFields(['id', 'name']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() < 50)) &&
+             (!('address' in data) || (data.address is string && data.address.size() < 500)) &&
+             (!('district' in data) || (data.district is string && data.district.size() < 100));
+    }
+
     function isValidPurchaseOrder(data) {
       return hasRequiredFields(['id', 'clientId', 'clientName', 'date', 'status', 'notes', 'items']) &&
              data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
@@ -140,6 +162,13 @@ service cloud.firestore {
                     areImmutableFieldsUnchanged(['uid']) &&
                     (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role));
                     
+      allow delete: if isAdmin();
+    }
+
+    match /suppliers/{supplierId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidSupplier(request.resource.data);
+      allow update: if isAdmin() && isValidSupplier(request.resource.data) && areImmutableFieldsUnchanged(['id']);
       allow delete: if isAdmin();
     }
 

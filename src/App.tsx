@@ -37,6 +37,14 @@ interface PurchaseOrder {
   notes: string;
 }
 
+interface Supplier {
+  id: string;
+  name: string;
+  phone?: string;
+  address?: string;
+  district?: string;
+}
+
 interface UserProfile {
   uid: string;
   email: string;
@@ -44,6 +52,7 @@ interface UserProfile {
   role: 'admin' | 'driver' | 'client' | 'kitchen';
   phone?: string;
   address?: string;
+  district?: string;
 }
 
 const statusConfig = {
@@ -60,15 +69,18 @@ export default function App() {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [clients, setClients] = useState<UserProfile[]>([]);
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isNewOpen, setIsNewOpen] = useState(false);
   const [isUserManageOpen, setIsUserManageOpen] = useState(false);
+  const [isSupplierManageOpen, setIsSupplierManageOpen] = useState(false);
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [poToDelete, setPoToDelete] = useState<string | null>(null);
+  const [supplierToDelete, setSupplierToDelete] = useState<string | null>(null);
 
   // Edit User State
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
@@ -76,7 +88,18 @@ export default function App() {
   const [editUserName, setEditUserName] = useState('');
   const [editUserPhone, setEditUserPhone] = useState('');
   const [editUserAddress, setEditUserAddress] = useState('');
+  const [editUserDistrict, setEditUserDistrict] = useState('');
   const [editUserError, setEditUserError] = useState<string | null>(null);
+
+  // Supplier State
+  const [isEditSupplierOpen, setIsEditSupplierOpen] = useState(false);
+  const [isNewSupplierOpen, setIsNewSupplierOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [supplierName, setSupplierName] = useState('');
+  const [supplierPhone, setSupplierPhone] = useState('');
+  const [supplierAddress, setSupplierAddress] = useState('');
+  const [supplierDistrict, setSupplierDistrict] = useState('');
+  const [supplierError, setSupplierError] = useState<string | null>(null);
 
   // New PO Form State
   const [newClientId, setNewClientId] = useState('');
@@ -160,6 +183,7 @@ export default function App() {
 
     let unsubscribeClients = () => {};
     let unsubscribeAllUsers = () => {};
+    let unsubscribeSuppliers = () => {};
     if (user.role === 'admin') {
       const clientsQuery = query(collection(db, 'users'), where('role', '==', 'client'));
       unsubscribeClients = onSnapshot(clientsQuery, (snapshot) => {
@@ -170,12 +194,18 @@ export default function App() {
       unsubscribeAllUsers = onSnapshot(allUsersQuery, (snapshot) => {
         setAllUsers(snapshot.docs.map(doc => doc.data() as UserProfile));
       });
+
+      const suppliersQuery = query(collection(db, 'suppliers'));
+      unsubscribeSuppliers = onSnapshot(suppliersQuery, (snapshot) => {
+        setSuppliers(snapshot.docs.map(doc => doc.data() as Supplier));
+      });
     }
 
     return () => {
       unsubscribeOrders();
       unsubscribeClients();
       unsubscribeAllUsers();
+      unsubscribeSuppliers();
     };
   }, [isAuthReady, user]);
 
@@ -242,6 +272,7 @@ export default function App() {
     setEditUserName(user.name);
     setEditUserPhone(user.phone || '');
     setEditUserAddress(user.address || '');
+    setEditUserDistrict(user.district || '');
     setEditUserError(null);
     setIsEditUserOpen(true);
   };
@@ -257,13 +288,86 @@ export default function App() {
       await updateDoc(doc(db, 'users', editingUser.uid), {
         name: editUserName,
         phone: editUserPhone,
-        address: editUserAddress
+        address: editUserAddress,
+        district: editUserDistrict
       });
       setIsEditUserOpen(false);
       setEditingUser(null);
     } catch (error) {
       console.error("Error updating user:", error);
       setEditUserError("Gagal memperbarui pengguna. Pastikan Anda memiliki akses Admin.");
+    }
+  };
+
+  const handleCreateSupplier = async () => {
+    setSupplierError(null);
+    if (!supplierName) {
+      setSupplierError('Mohon lengkapi nama supplier.');
+      return;
+    }
+
+    try {
+      const newId = `supplier-${Date.now()}`;
+      const newSupplier: Supplier = {
+        id: newId,
+        name: supplierName,
+        phone: supplierPhone,
+        address: supplierAddress,
+        district: supplierDistrict
+      };
+      
+      await setDoc(doc(db, 'suppliers', newId), newSupplier);
+      setIsNewSupplierOpen(false);
+      setSupplierName('');
+      setSupplierPhone('');
+      setSupplierAddress('');
+      setSupplierDistrict('');
+    } catch (error) {
+      console.error("Error creating supplier:", error);
+      setSupplierError("Gagal membuat supplier. Pastikan Anda memiliki akses Admin.");
+    }
+  };
+
+  const openEditSupplier = (supplier: Supplier) => {
+    setEditingSupplier(supplier);
+    setSupplierName(supplier.name);
+    setSupplierPhone(supplier.phone || '');
+    setSupplierAddress(supplier.address || '');
+    setSupplierDistrict(supplier.district || '');
+    setSupplierError(null);
+    setIsEditSupplierOpen(true);
+  };
+
+  const handleUpdateSupplier = async () => {
+    setSupplierError(null);
+    if (!editingSupplier || !supplierName) {
+      setSupplierError('Mohon lengkapi nama supplier.');
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, 'suppliers', editingSupplier.id), {
+        name: supplierName,
+        phone: supplierPhone,
+        address: supplierAddress,
+        district: supplierDistrict
+      });
+      setIsEditSupplierOpen(false);
+      setEditingSupplier(null);
+    } catch (error) {
+      console.error("Error updating supplier:", error);
+      setSupplierError("Gagal memperbarui supplier. Pastikan Anda memiliki akses Admin.");
+    }
+  };
+
+  const handleDeleteSupplier = async () => {
+    if (!supplierToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'suppliers', supplierToDelete));
+      setSupplierToDelete(null);
+    } catch (error) {
+      console.error("Error deleting supplier:", error);
+      alert("Gagal menghapus supplier. Pastikan Anda memiliki akses Admin.");
     }
   };
 
@@ -717,11 +821,24 @@ export default function App() {
                                   />
                                 </TableCell>
                                 <TableCell className="p-2">
-                                  <Input 
-                                    placeholder="Nama supplier" 
-                                    value={item.supplier}
-                                    onChange={(e) => handleItemChange(index, 'supplier', e.target.value)}
-                                  />
+                                  {suppliers.length > 0 ? (
+                                    <select
+                                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                      value={item.supplier}
+                                      onChange={(e) => handleItemChange(index, 'supplier', e.target.value)}
+                                    >
+                                      <option value="" disabled>Pilih Supplier</option>
+                                      {suppliers.map(s => (
+                                        <option key={s.id} value={s.name}>{s.name}</option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <Input 
+                                      placeholder="Nama supplier" 
+                                      value={item.supplier}
+                                      onChange={(e) => handleItemChange(index, 'supplier', e.target.value)}
+                                    />
+                                  )}
                                 </TableCell>
                                 <TableCell className="p-2 text-center">
                                   <Button 
@@ -865,11 +982,24 @@ export default function App() {
                                   />
                                 </TableCell>
                                 <TableCell className="p-2">
-                                  <Input 
-                                    placeholder="Nama supplier" 
-                                    value={item.supplier}
-                                    onChange={(e) => handleEditItemChange(index, 'supplier', e.target.value)}
-                                  />
+                                  {suppliers.length > 0 ? (
+                                    <select
+                                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                      value={item.supplier}
+                                      onChange={(e) => handleEditItemChange(index, 'supplier', e.target.value)}
+                                    >
+                                      <option value="" disabled>Pilih Supplier</option>
+                                      {suppliers.map(s => (
+                                        <option key={s.id} value={s.name}>{s.name}</option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <Input 
+                                      placeholder="Nama supplier" 
+                                      value={item.supplier}
+                                      onChange={(e) => handleEditItemChange(index, 'supplier', e.target.value)}
+                                    />
+                                  )}
                                 </TableCell>
                                 <TableCell className="p-2 text-center">
                                   <Button 
@@ -956,7 +1086,84 @@ export default function App() {
                   </DialogContent>
                 </Dialog>
 
-                <Dialog open={isUserManageOpen} onOpenChange={setIsUserManageOpen}>
+                  <Dialog open={isSupplierManageOpen} onOpenChange={setIsSupplierManageOpen}>
+                <DialogTrigger render={<Button variant="outline" className="ml-2 bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
+                  <Package className="w-4 h-4 mr-2" />
+                  Kelola Supplier
+                </DialogTrigger>
+                <DialogContent className="max-w-5xl sm:max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl">Kelola Supplier</DialogTitle>
+                    <DialogDescription className="text-base">
+                      Kelola daftar supplier yang tersedia.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="py-4">
+                    <div className="flex justify-end mb-4">
+                      <Button onClick={() => setIsNewSupplierOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+                        <Plus className="w-4 h-4 mr-2" /> Tambah Supplier
+                      </Button>
+                    </div>
+                    <div className="border rounded-md overflow-x-auto">
+                      <Table className="min-w-[600px]">
+                        <TableHeader className="bg-slate-50">
+                          <TableRow>
+                            <TableHead className="text-base">Nama</TableHead>
+                            <TableHead className="text-base">Telepon</TableHead>
+                            <TableHead className="text-base">Alamat</TableHead>
+                            <TableHead className="text-base">Kecamatan/Kabupaten</TableHead>
+                            <TableHead className="w-[120px] text-center text-base">Aksi</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {suppliers.map((s) => (
+                            <TableRow key={s.id}>
+                              <TableCell className="font-medium text-base">{s.name}</TableCell>
+                              <TableCell className="text-base">{s.phone || '-'}</TableCell>
+                              <TableCell className="text-base">{s.address || '-'}</TableCell>
+                              <TableCell className="text-base">{s.district || '-'}</TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex justify-center gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
+                                    onClick={() => openEditSupplier(s)}
+                                    title="Edit Supplier"
+                                  >
+                                    <Edit className="h-5 w-5" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => setSupplierToDelete(s.id)}
+                                    title="Hapus Supplier"
+                                  >
+                                    <Trash2 className="h-5 w-5" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {suppliers.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-slate-500 py-4">Belum ada data supplier.</TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button onClick={() => setIsSupplierManageOpen(false)} className="bg-slate-800 hover:bg-slate-900">Tutup</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isUserManageOpen} onOpenChange={setIsUserManageOpen}>
                 <DialogTrigger render={<Button variant="outline" className="ml-2 bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
                   <UserIcon className="w-4 h-4 mr-2" />
                   Kelola Pengguna
@@ -976,7 +1183,10 @@ export default function App() {
                           <TableRow>
                             <TableHead className="text-base">Nama</TableHead>
                             <TableHead className="text-base">Email</TableHead>
-                            <TableHead className="w-[200px] text-base">Role</TableHead>
+                            <TableHead className="text-base">Telepon</TableHead>
+                            <TableHead className="text-base">Alamat</TableHead>
+                            <TableHead className="text-base">Kecamatan/Kabupaten</TableHead>
+                            <TableHead className="w-[150px] text-base">Role</TableHead>
                             <TableHead className="w-[120px] text-center text-base">Aksi</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -985,6 +1195,9 @@ export default function App() {
                             <TableRow key={u.uid}>
                               <TableCell className="font-medium text-base">{u.name}</TableCell>
                               <TableCell className="text-base">{u.email}</TableCell>
+                              <TableCell className="text-base">{u.phone || '-'}</TableCell>
+                              <TableCell className="text-base">{u.address || '-'}</TableCell>
+                              <TableCell className="text-base">{u.district || '-'}</TableCell>
                               <TableCell>
                                 <select 
                                   className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer hover:bg-slate-50"
@@ -1092,11 +1305,148 @@ export default function App() {
                         onChange={(e) => setEditUserAddress(e.target.value)}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editUserDistrict">Kecamatan/Kabupaten</Label>
+                      <Input 
+                        id="editUserDistrict" 
+                        value={editUserDistrict}
+                        onChange={(e) => setEditUserDistrict(e.target.value)}
+                      />
+                    </div>
                   </div>
                   
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsEditUserOpen(false)}>Batal</Button>
                     <Button onClick={handleUpdateUser} className="bg-indigo-600 hover:bg-indigo-700">Simpan Perubahan</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={!!supplierToDelete} onOpenChange={(open) => !open && setSupplierToDelete(null)}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Konfirmasi Hapus Supplier</DialogTitle>
+                    <DialogDescription>
+                      Apakah Anda yakin ingin menghapus supplier ini? Tindakan ini tidak dapat dibatalkan.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="mt-4">
+                    <Button variant="outline" onClick={() => setSupplierToDelete(null)}>Batal</Button>
+                    <Button variant="destructive" onClick={handleDeleteSupplier}>Hapus Supplier</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isNewSupplierOpen} onOpenChange={setIsNewSupplierOpen}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Tambah Supplier Baru</DialogTitle>
+                    <DialogDescription>
+                      Masukkan data supplier baru.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  {supplierError && (
+                    <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
+                      {supplierError}
+                    </div>
+                  )}
+
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="supplierName">Nama Supplier <span className="text-red-500">*</span></Label>
+                      <Input 
+                        id="supplierName" 
+                        value={supplierName}
+                        onChange={(e) => setSupplierName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="supplierPhone">Telepon</Label>
+                      <Input 
+                        id="supplierPhone" 
+                        value={supplierPhone}
+                        onChange={(e) => setSupplierPhone(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="supplierAddress">Alamat</Label>
+                      <Input 
+                        id="supplierAddress" 
+                        value={supplierAddress}
+                        onChange={(e) => setSupplierAddress(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="supplierDistrict">Kecamatan/Kabupaten</Label>
+                      <Input 
+                        id="supplierDistrict" 
+                        value={supplierDistrict}
+                        onChange={(e) => setSupplierDistrict(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsNewSupplierOpen(false)}>Batal</Button>
+                    <Button onClick={handleCreateSupplier} className="bg-indigo-600 hover:bg-indigo-700">Simpan Supplier</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isEditSupplierOpen} onOpenChange={setIsEditSupplierOpen}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Edit Supplier</DialogTitle>
+                    <DialogDescription>
+                      Ubah data supplier.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  {supplierError && (
+                    <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
+                      {supplierError}
+                    </div>
+                  )}
+
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editSupplierName">Nama Supplier <span className="text-red-500">*</span></Label>
+                      <Input 
+                        id="editSupplierName" 
+                        value={supplierName}
+                        onChange={(e) => setSupplierName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editSupplierPhone">Telepon</Label>
+                      <Input 
+                        id="editSupplierPhone" 
+                        value={supplierPhone}
+                        onChange={(e) => setSupplierPhone(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editSupplierAddress">Alamat</Label>
+                      <Input 
+                        id="editSupplierAddress" 
+                        value={supplierAddress}
+                        onChange={(e) => setSupplierAddress(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editSupplierDistrict">Kecamatan/Kabupaten</Label>
+                      <Input 
+                        id="editSupplierDistrict" 
+                        value={supplierDistrict}
+                        onChange={(e) => setSupplierDistrict(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsEditSupplierOpen(false)}>Batal</Button>
+                    <Button onClick={handleUpdateSupplier} className="bg-indigo-600 hover:bg-indigo-700">Simpan Perubahan</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
