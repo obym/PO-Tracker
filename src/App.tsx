@@ -651,9 +651,10 @@ export default function App() {
         </div>
         
         {/* Invoice content */}
-        <div className="flex-1 p-4 sm:p-8 overflow-auto flex justify-center">
-          <div id="print-area" className="bg-white text-black p-8 sm:p-12 font-sans text-sm w-full max-w-4xl shadow-lg border border-slate-200">
-            {/* Header */}
+        <div className="flex-1 p-2 sm:p-8 overflow-auto flex justify-center">
+          <div id="print-area" className="bg-white text-black p-4 sm:p-12 font-sans text-xs sm:text-sm w-full max-w-4xl shadow-lg border border-slate-200 overflow-x-auto">
+            <div className="min-w-[600px]">
+              {/* Header */}
             <div className="text-center mb-6">
               <h1 className="text-2xl font-bold border-2 border-black inline-block px-16 py-1 mb-2 tracking-widest">NOTA</h1>
               <h2 className="text-xl font-bold uppercase">KOPERASI GARUDA MERAH PUTIH</h2>
@@ -751,7 +752,7 @@ export default function App() {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-between">
+            <div className="flex justify-between mt-8">
               <div>
                 <p>BANK TRANSFER :</p>
                 <p>Rekening Koperasi Garuda Merah Putih</p>
@@ -763,6 +764,7 @@ export default function App() {
                 <p className="font-bold">Hariaji</p>
                 <p>Ketua Koperasi</p>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -792,7 +794,7 @@ export default function App() {
     }
 
     return (
-      <div key={status} className="flex flex-col bg-slate-50 rounded-xl p-4 min-w-[300px] max-w-[350px] border border-slate-200 shadow-sm">
+      <div key={status} className="flex flex-col bg-slate-50 rounded-xl p-4 w-[85vw] sm:w-[300px] sm:min-w-[300px] sm:max-w-[350px] shrink-0 snap-center border border-slate-200 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Icon className="w-5 h-5 text-slate-600" />
@@ -850,26 +852,30 @@ export default function App() {
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col xl:flex-row items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <div className="flex items-center justify-center">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <img 
                 src="https://upload.wikimedia.org/wikipedia/commons/9/90/National_emblem_of_Indonesia_Garuda_Pancasila.svg" 
                 alt="Garuda Pancasila" 
-                className="w-10 h-10 object-contain"
+                className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
                 referrerPolicy="no-referrer"
               />
+              <h1 className="text-base sm:text-xl font-bold text-slate-800 tracking-tight">PO Tracker</h1>
+              <Badge variant="outline" className="uppercase bg-slate-100 text-[10px] sm:text-xs">{user.role}</Badge>
             </div>
-            <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight text-center">PO & Pengiriman Tracker</h1>
-            <Badge variant="outline" className="uppercase bg-slate-100">{user.role}</Badge>
+            {/* Mobile logout button */}
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout" className="md:hidden">
+              <LogOut className="w-5 h-5 text-slate-500" />
+            </Button>
           </div>
           
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <div className="relative">
+          <div className="flex w-full md:w-auto items-center gap-2">
+            <div className="relative flex-1 md:flex-none">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <Input 
-                placeholder="Cari PO atau Klien..." 
-                className="pl-9 w-[200px] sm:w-[250px] bg-slate-50 border-slate-200"
+                placeholder="Cari PO..." 
+                className="pl-9 w-full md:w-[250px] bg-slate-50 border-slate-200"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -878,9 +884,11 @@ export default function App() {
             {user.role === 'admin' && (
               <>
               <Dialog open={isNewOpen} onOpenChange={setIsNewOpen}>
-                <DialogTrigger render={<Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm" />}>
-                  <Plus className="w-4 h-4 mr-2 hidden sm:block" />
-                  PO Baru
+                <DialogTrigger asChild>
+                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm px-3 shrink-0">
+                    <Plus className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">PO Baru</span>
+                  </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
@@ -1200,7 +1208,7 @@ export default function App() {
                     <Plus className="w-4 h-4 mr-2 hidden sm:block" />
                     Tambah Klien
                   </DialogTrigger>
-                  <DialogContent className="max-w-md">
+                  <DialogContent className="max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Tambah Klien Baru</DialogTitle>
                       <DialogDescription>
@@ -1416,7 +1424,7 @@ export default function App() {
               </Dialog>
 
               <Dialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
-                <DialogContent>
+                <DialogContent className="w-[95vw] sm:max-w-md rounded-lg">
                   <DialogHeader>
                     <DialogTitle>Konfirmasi Hapus Pengguna</DialogTitle>
                     <DialogDescription>
@@ -1431,7 +1439,7 @@ export default function App() {
               </Dialog>
 
               <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Edit Pengguna</DialogTitle>
                     <DialogDescription>
@@ -1488,7 +1496,7 @@ export default function App() {
               </Dialog>
 
               <Dialog open={!!supplierToDelete} onOpenChange={(open) => !open && setSupplierToDelete(null)}>
-                <DialogContent>
+                <DialogContent className="w-[95vw] sm:max-w-md rounded-lg">
                   <DialogHeader>
                     <DialogTitle>Konfirmasi Hapus Supplier</DialogTitle>
                     <DialogDescription>
@@ -1503,7 +1511,7 @@ export default function App() {
               </Dialog>
 
               <Dialog open={isNewSupplierOpen} onOpenChange={setIsNewSupplierOpen}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Tambah Supplier Baru</DialogTitle>
                     <DialogDescription>
@@ -1560,7 +1568,7 @@ export default function App() {
               </Dialog>
 
               <Dialog open={isEditSupplierOpen} onOpenChange={setIsEditSupplierOpen}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Edit Supplier</DialogTitle>
                     <DialogDescription>
@@ -1617,7 +1625,7 @@ export default function App() {
               </Dialog>
 
               <Dialog open={!!poToDelete} onOpenChange={(open) => !open && setPoToDelete(null)}>
-                <DialogContent>
+                <DialogContent className="w-[95vw] sm:max-w-md rounded-lg">
                   <DialogHeader>
                     <DialogTitle>Konfirmasi Hapus PO</DialogTitle>
                     <DialogDescription>
@@ -1633,8 +1641,8 @@ export default function App() {
               </>
             )}
 
-            <div className="flex items-center gap-3 ml-4 pl-4 border-l border-slate-200">
-              <div className="text-right hidden sm:block">
+            <div className="hidden md:flex items-center gap-3 ml-4 pl-4 border-l border-slate-200">
+              <div className="text-right">
                 <p className="text-sm font-medium text-slate-800 leading-none">{user.name}</p>
                 <p className="text-xs text-slate-500 mt-1">{user.email}</p>
               </div>
@@ -1647,7 +1655,7 @@ export default function App() {
       </header>
 
       {/* Main Content - Kanban Board */}
-      <main className="flex-1 overflow-x-auto p-6">
+      <main className="flex-1 overflow-x-auto p-4 sm:p-6 snap-x snap-mandatory">
         {globalSuccess && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-lg mb-6 flex justify-between items-center">
             <span>{globalSuccess}</span>
@@ -1660,7 +1668,7 @@ export default function App() {
             <Button variant="ghost" size="sm" onClick={() => setGlobalError(null)}>Tutup</Button>
           </div>
         )}
-        <div className="flex gap-6 min-w-max pb-4">
+        <div className="flex gap-4 sm:gap-6 min-w-max pb-4">
           {renderKanbanColumn('PO_RECEIVED')}
           {renderKanbanColumn('ORDERING')}
           {renderKanbanColumn('DELIVERING')}
@@ -1672,7 +1680,7 @@ export default function App() {
 
       {/* Detail Modal */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-4xl sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
           {selectedOrder && (
             <>
               <DialogHeader>
