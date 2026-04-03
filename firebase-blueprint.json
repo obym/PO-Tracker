@@ -38,7 +38,7 @@
         "clientId": { "type": "string" },
         "clientName": { "type": "string" },
         "date": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["PO_RECEIVED", "ORDERING", "AT_KITCHEN", "DELIVERING", "COMPLETED"] },
+        "status": { "type": "string", "enum": ["PO_RECEIVED", "ORDERING", "AT_KITCHEN", "DELIVERING", "COMPLETED", "INVOICED"] },
         "notes": { "type": "string" },
         "items": {
           "type": "array",

@@ -35,7 +35,7 @@ service cloud.firestore {
     //   - clientId: string (required, immutable)
     //   - clientName: string (required, immutable)
     //   - date: string (required, immutable)
-    //   - status: string (required, enum: ['PO_RECEIVED', 'ORDERING', 'AT_KITCHEN', 'DELIVERING', 'COMPLETED'])
+    //   - status: string (required, enum: ['PO_RECEIVED', 'ORDERING', 'AT_KITCHEN', 'DELIVERING', 'COMPLETED', 'INVOICED'])
     //   - notes: string (required)
     //   - items: list of objects (required)
     //     - id: string
@@ -132,7 +132,7 @@ service cloud.firestore {
              data.clientId is string && data.clientId.size() > 0 && data.clientId.size() < 100 &&
              data.clientName is string && data.clientName.size() > 0 && data.clientName.size() < 100 &&
              data.date is string && data.date.size() > 0 && data.date.size() < 50 &&
-             data.status in ['PO_RECEIVED', 'ORDERING', 'AT_KITCHEN', 'DELIVERING', 'COMPLETED'] &&
+             data.status in ['PO_RECEIVED', 'ORDERING', 'AT_KITCHEN', 'DELIVERING', 'COMPLETED', 'INVOICED'] &&
              data.notes is string && data.notes.size() <= 1000 &&
              data.items is list && data.items.size() <= 100 &&
              isValidItemsList(data.items);

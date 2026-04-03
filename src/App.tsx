@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2, Edit } from 'lucide-react';
+import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2, Edit, Receipt, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,8 +11,10 @@ import { auth, db } from './firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, onSnapshot, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
 
+import { terbilang } from './lib/terbilang';
+
 // --- Types ---
-type OrderStatus = 'PO_RECEIVED' | 'ORDERING' | 'DELIVERING' | 'AT_KITCHEN' | 'COMPLETED';
+type OrderStatus = 'PO_RECEIVED' | 'ORDERING' | 'DELIVERING' | 'AT_KITCHEN' | 'COMPLETED' | 'INVOICED';
 
 interface OrderItem {
   id: string;
@@ -61,6 +63,7 @@ const statusConfig = {
   DELIVERING: { label: 'Proses Kirim', color: 'bg-indigo-100 text-indigo-800', icon: Truck },
   AT_KITCHEN: { label: 'Sampai Dapur', color: 'bg-orange-100 text-orange-800', icon: Package },
   COMPLETED: { label: 'Selesai (Diterima Klien)', color: 'bg-emerald-100 text-emerald-800', icon: CheckCircle2 },
+  INVOICED: { label: 'Nota Dibuat', color: 'bg-purple-100 text-purple-800', icon: Receipt },
 };
 
 export default function App() {
@@ -115,6 +118,10 @@ export default function App() {
   const [editNotes, setEditNotes] = useState('');
   const [editItems, setEditItems] = useState<OrderItem[]>([]);
   const [editError, setEditError] = useState<string | null>(null);
+
+  // Invoice State
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [invoiceOrder, setInvoiceOrder] = useState<PurchaseOrder | null>(null);
 
   // New Client Form State
   const [newClientName, setNewClientName] = useState('');
@@ -498,6 +505,26 @@ export default function App() {
       console.error("Error updating PO:", error);
       setEditError("Gagal memperbarui PO. Pastikan Anda memiliki akses.");
     }
+  };
+
+  const handleOpenInvoice = async (order: PurchaseOrder) => {
+    setInvoiceOrder(order);
+    setIsInvoiceOpen(true);
+    
+    // If status is COMPLETED, update it to INVOICED
+    if (order.status === 'COMPLETED' && user?.role === 'admin') {
+      try {
+        await updateDoc(doc(db, 'purchaseOrders', order.id), {
+          status: 'INVOICED'
+        });
+      } catch (error) {
+        console.error("Error updating status to INVOICED:", error);
+      }
+    }
+  };
+
+  const handlePrintInvoice = () => {
+    window.print();
   };
 
   const handleDeletePO = async () => {
@@ -1504,6 +1531,137 @@ export default function App() {
         </div>
       </main>
 
+      {/* Invoice Modal */}
+      <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
+        <DialogContent className="max-w-4xl sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="print:hidden">
+            <DialogTitle className="text-xl flex items-center justify-between">
+              Nota / Invoice
+              <Button onClick={handlePrintInvoice} className="bg-indigo-600 hover:bg-indigo-700">
+                <Printer className="w-4 h-4 mr-2" /> Cetak
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {invoiceOrder && (
+            <div id="print-area" className="bg-white text-black p-8 font-sans text-sm">
+              {/* Header */}
+              <div className="text-center mb-6">
+                <h1 className="text-2xl font-bold border-2 border-black inline-block px-16 py-1 mb-2 tracking-widest">NOTA</h1>
+                <h2 className="text-xl font-bold uppercase">KOPERASI GARUDA MERAH PUTIH</h2>
+                <p>Dsn. Padangan RT 02 RW 03 Ds. Pagu</p>
+                <p>Kec. Pagu Kab. Kediri</p>
+                <p>Phone : 0812-5278-8733</p>
+              </div>
+
+              {/* Info */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <table className="w-full">
+                    <tbody>
+                      <tr>
+                        <td className="w-24">Nomor</td>
+                        <td className="w-4">:</td>
+                        <td>{invoiceOrder.id}</td>
+                      </tr>
+                      <tr>
+                        <td>Tanggal Nota</td>
+                        <td>:</td>
+                        <td>{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <p className="font-bold">Kepada :</p>
+                  <p className="font-bold">{invoiceOrder.clientName}</p>
+                  {/* We don't have client address in PO, we can fetch from clients list if needed, or just leave it */}
+                  {clients.find(c => c.uid === invoiceOrder.clientId)?.address && (
+                    <p>{clients.find(c => c.uid === invoiceOrder.clientId)?.address}</p>
+                  )}
+                  {clients.find(c => c.uid === invoiceOrder.clientId)?.district && (
+                    <p>{clients.find(c => c.uid === invoiceOrder.clientId)?.district}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Table */}
+              <table className="w-full border-collapse border border-black mb-4">
+                <thead>
+                  <tr className="bg-gray-200">
+                    <th className="border border-black p-2 text-center w-10">NO</th>
+                    <th className="border border-black p-2 text-left">NAMA BARANG</th>
+                    <th className="border border-black p-2 text-center w-16">QTY</th>
+                    <th className="border border-black p-2 text-center w-24">SATUAN</th>
+                    <th className="border border-black p-2 text-right w-32">HARGA</th>
+                    <th className="border border-black p-2 text-right w-32">SUBTOTAL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoiceOrder.items.map((item, index) => {
+                    const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                    const price = item.unitPrice || 0;
+                    const subtotal = qty * price;
+                    return (
+                      <tr key={item.id}>
+                        <td className="border border-black p-2 text-center">{index + 1}</td>
+                        <td className="border border-black p-2">{item.name}</td>
+                        <td className="border border-black p-2 text-center">{qty}</td>
+                        <td className="border border-black p-2 text-center">{item.unit}</td>
+                        <td className="border border-black p-2 text-right">
+                          {price > 0 ? price.toLocaleString('id-ID') : '-'}
+                        </td>
+                        <td className="border border-black p-2 text-right">
+                          {subtotal > 0 ? subtotal.toLocaleString('id-ID') : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr>
+                    <td colSpan={4} className="border-t border-black"></td>
+                    <td className="border border-black p-2 text-right font-bold">TOTAL</td>
+                    <td className="border border-black p-2 text-right font-bold">
+                      {invoiceOrder.items.reduce((sum, item) => {
+                        const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                        const price = item.unitPrice || 0;
+                        return sum + (qty * price);
+                      }, 0).toLocaleString('id-ID')}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Terbilang */}
+              <div className="mb-6">
+                <p className="font-bold mb-1">Terbilang :</p>
+                <div className="border border-black p-2 inline-block min-w-[50%] italic">
+                  {terbilang(invoiceOrder.items.reduce((sum, item) => {
+                    const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                    const price = item.unitPrice || 0;
+                    return sum + (qty * price);
+                  }, 0))} Rupiah
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex justify-between">
+                <div>
+                  <p>BANK TRANSFER :</p>
+                  <p>Rekening Koperasi Garuda Merah Putih</p>
+                  <p>Bank Mandiri : 171-00-1986218-7</p>
+                </div>
+                <div className="text-center mr-12">
+                  <p>Hormat Kami,</p>
+                  <div className="h-24"></div>
+                  <p className="font-bold">Hariaji</p>
+                  <p>Ketua Koperasi</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Detail Modal */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-4xl sm:max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1518,6 +1676,11 @@ export default function App() {
                     </Badge>
                   </DialogTitle>
                   <div className="flex gap-2">
+                    {(selectedOrder.status === 'COMPLETED' || selectedOrder.status === 'INVOICED') && user.role === 'admin' && (
+                      <Button variant="outline" size="sm" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100" onClick={() => handleOpenInvoice(selectedOrder)}>
+                        <Receipt className="w-4 h-4 mr-2" /> Cetak Nota
+                      </Button>
+                    )}
                     {user.role === 'admin' && (
                       <>
                         <Button variant="outline" size="sm" onClick={() => openEditPO(selectedOrder)}>
