@@ -828,11 +828,6 @@ export default function App() {
       columnOrders = filteredOrders.filter(o => o.status === 'COMPLETED' || o.status === 'INVOICED');
     }
 
-    // Filter out 'Dikirim Supplier' orders for driver
-    if (user.role === 'driver') {
-      columnOrders = columnOrders.filter(o => o.deliveredBy !== 'Dikirim Supplier');
-    }
-
     const config = statusConfig[status];
     const Icon = config.icon;
 
@@ -1042,7 +1037,7 @@ export default function App() {
                 className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
                 referrerPolicy="no-referrer"
               />
-              <h1 className="text-base sm:text-xl font-bold text-slate-800 tracking-tight">PO & Pengiriman Tracker</h1>
+              <h1 className="text-base sm:text-xl font-bold text-slate-800 tracking-tight">PO Tracker</h1>
               <Badge variant="outline" className="uppercase bg-slate-100 text-[10px] sm:text-xs">{user.role}</Badge>
             </div>
             {/* Mobile logout button */}
@@ -1968,7 +1963,7 @@ export default function App() {
                       <TableRow>
                         <TableHead>Barang</TableHead>
                         {(user.role === 'admin' || user.role === 'kitchen' || user.role === 'driver') && <TableHead>Supplier</TableHead>}
-                        {selectedOrder.deliveredBy !== 'Dikirim Supplier' && (
+                        {!(user.role === 'driver' && selectedOrder.deliveredBy === 'Dikirim Supplier') && (
                           <>
                             <TableHead className="text-center w-[120px]">Diorder?</TableHead>
                             <TableHead className="text-center w-[120px]">Dikirim?</TableHead>
@@ -1994,7 +1989,7 @@ export default function App() {
                             </TableCell>
                           )}
 
-                          {selectedOrder.deliveredBy !== 'Dikirim Supplier' && (
+                          {!(user.role === 'driver' && selectedOrder.deliveredBy === 'Dikirim Supplier') && (
                             <>
                               <TableCell className="text-center">
                                 <Button
