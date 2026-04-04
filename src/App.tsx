@@ -23,6 +23,7 @@ interface OrderItem {
   unit: string;
   supplier: string;
   unitPrice?: number;
+  hpp?: number;
   isOrdered: boolean;
   isAtKitchen: boolean;
   isDelivered: boolean;
@@ -75,6 +76,7 @@ export default function App() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentView, setCurrentView] = useState<'kanban' | 'finance'>('kanban');
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isNewOpen, setIsNewOpen] = useState(false);
@@ -475,6 +477,26 @@ export default function App() {
     setEditItems(editItems.filter((_, i) => i !== index));
   };
 
+  const handleUpdateHpp = async (orderId: string, itemId: string, hppValue: number) => {
+    try {
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+      
+      const updatedItems = order.items.map(item => 
+        item.id === itemId ? { ...item, hpp: hppValue } : item
+      );
+      
+      await updateDoc(doc(db, 'purchaseOrders', orderId), {
+        items: updatedItems
+      });
+      setGlobalSuccess('HPP berhasil disimpan.');
+      setTimeout(() => setGlobalSuccess(null), 3000);
+    } catch (error) {
+      console.error("Error updating HPP:", error);
+      setGlobalError('Gagal menyimpan HPP.');
+    }
+  };
+
   const handleUpdatePO = async () => {
     setEditError(null);
     if (!editingPO || !editClientId || editItems.length === 0 || editItems.some(i => !i.name || !i.supplier)) {
@@ -848,6 +870,130 @@ export default function App() {
     );
   };
 
+  const renderFinanceDashboard = () => {
+    const invoicedOrders = filteredOrders.filter(o => o.status === 'INVOICED');
+    
+    let totalProfitAll = 0;
+
+    return (
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
+        <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+          <Receipt className="w-6 h-6 text-indigo-600" /> Dashboard Keuangan
+        </h2>
+        
+        {invoicedOrders.length === 0 ? (
+          <div className="bg-white p-8 rounded-xl border border-slate-200 text-center shadow-sm">
+            <p className="text-slate-500">Belum ada PO yang selesai dan dibuatkan nota.</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {invoicedOrders.map(order => {
+              let orderTotalProfit = 0;
+              
+              return (
+                <Card key={order.id} className="overflow-hidden">
+                  <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-lg text-slate-800">PO: {order.id}</CardTitle>
+                        <CardDescription className="mt-1 text-slate-600">
+                          Klien: <span className="font-medium text-slate-800">{order.clientName}</span>
+                        </CardDescription>
+                      </div>
+                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                        INVOICED
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Barang</TableHead>
+                            <TableHead className="text-center">Qty</TableHead>
+                            <TableHead className="text-right">Harga Jual</TableHead>
+                            <TableHead className="text-right">HPP</TableHead>
+                            <TableHead className="text-right">Keuntungan</TableHead>
+                            <TableHead className="w-[100px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {order.items.map(item => {
+                            const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                            const price = item.unitPrice || 0;
+                            const hpp = item.hpp || 0;
+                            const profit = (price - hpp) * qty;
+                            orderTotalProfit += profit;
+                            
+                            return (
+                              <TableRow key={item.id}>
+                                <TableCell>
+                                  <div className="font-medium">{item.name}</div>
+                                  <div className="text-xs text-slate-500">{item.supplier}</div>
+                                </TableCell>
+                                <TableCell className="text-center">{qty} {item.unit}</TableCell>
+                                <TableCell className="text-right">Rp {price.toLocaleString('id-ID')}</TableCell>
+                                <TableCell className="text-right">
+                                  <Input 
+                                    type="number" 
+                                    className="w-24 text-right ml-auto h-8"
+                                    placeholder="0"
+                                    defaultValue={item.hpp || ''}
+                                    onBlur={(e) => {
+                                      const val = parseFloat(e.target.value);
+                                      if (!isNaN(val) && val !== item.hpp) {
+                                        handleUpdateHpp(order.id, item.id, val);
+                                      }
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right font-medium text-emerald-600">
+                                  Rp {profit.toLocaleString('id-ID')}
+                                </TableCell>
+                                <TableCell></TableCell>
+                              </TableRow>
+                            );
+                          })}
+                          <TableRow className="bg-slate-50 font-bold">
+                            <TableCell colSpan={4} className="text-right text-slate-800">Total Keuntungan PO ini:</TableCell>
+                            <TableCell className="text-right text-emerald-700">
+                              Rp {orderTotalProfit.toLocaleString('id-ID')}
+                            </TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            
+            {/* Calculate grand total */}
+            <div className="hidden">
+              {totalProfitAll = invoicedOrders.reduce((sum, order) => {
+                return sum + order.items.reduce((itemSum, item) => {
+                  const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                  const price = item.unitPrice || 0;
+                  const hpp = item.hpp || 0;
+                  return itemSum + ((price - hpp) * qty);
+                }, 0);
+              }, 0)}
+            </div>
+            
+            <Card className="bg-indigo-600 text-white border-none shadow-md">
+              <CardContent className="p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="text-indigo-100 text-lg">Total Keuntungan Keseluruhan</div>
+                <div className="text-3xl font-bold">Rp {totalProfitAll.toLocaleString('id-ID')}</div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col">
       {/* Header */}
@@ -883,12 +1029,18 @@ export default function App() {
             
             {user.role === 'admin' && (
               <>
+              <Button 
+                variant={currentView === 'finance' ? 'default' : 'outline'} 
+                className={currentView === 'finance' ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm px-3 shrink-0' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm px-3 shrink-0'}
+                onClick={() => setCurrentView(currentView === 'kanban' ? 'finance' : 'kanban')}
+              >
+                <Receipt className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">{currentView === 'kanban' ? 'Keuangan' : 'Kanban'}</span>
+              </Button>
               <Dialog open={isNewOpen} onOpenChange={setIsNewOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm px-3 shrink-0">
-                    <Plus className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">PO Baru</span>
-                  </Button>
+                <DialogTrigger render={<Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm px-3 shrink-0" />}>
+                  <Plus className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">PO Baru</span>
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
@@ -1654,28 +1806,33 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content - Kanban Board */}
+      {/* Main Content */}
       <main className="flex-1 overflow-x-auto p-4 sm:p-6 snap-x snap-mandatory">
         {globalSuccess && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-lg mb-6 flex justify-between items-center">
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-lg mb-6 flex justify-between items-center max-w-7xl mx-auto">
             <span>{globalSuccess}</span>
             <Button variant="ghost" size="sm" onClick={() => setGlobalSuccess(null)}>Tutup</Button>
           </div>
         )}
         {globalError && (
-          <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg mb-6 flex justify-between items-center">
+          <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg mb-6 flex justify-between items-center max-w-7xl mx-auto">
             <span>{globalError}</span>
             <Button variant="ghost" size="sm" onClick={() => setGlobalError(null)}>Tutup</Button>
           </div>
         )}
-        <div className="flex gap-4 sm:gap-6 min-w-max pb-4">
-          {renderKanbanColumn('PO_RECEIVED')}
-          {renderKanbanColumn('ORDERING')}
-          {renderKanbanColumn('DELIVERING')}
-          {renderKanbanColumn('AT_KITCHEN')}
-          {renderKanbanColumn('COMPLETED')}
-          {user.role === 'admin' && renderKanbanColumn('INVOICED')}
-        </div>
+        
+        {currentView === 'finance' ? (
+          renderFinanceDashboard()
+        ) : (
+          <div className="flex gap-4 sm:gap-6 min-w-max pb-4">
+            {renderKanbanColumn('PO_RECEIVED')}
+            {renderKanbanColumn('ORDERING')}
+            {renderKanbanColumn('DELIVERING')}
+            {renderKanbanColumn('AT_KITCHEN')}
+            {renderKanbanColumn('COMPLETED')}
+            {user.role === 'admin' && renderKanbanColumn('INVOICED')}
+          </div>
+        )}
       </main>
 
       {/* Detail Modal */}
