@@ -32,6 +32,8 @@ interface OrderItem {
 
 interface PurchaseOrder {
   id: string;
+  poNumber?: string;
+  deliveredBy?: 'Dikirim Koperasi' | 'Dikirim Supplier';
   clientId: string;
   clientName: string;
   date: string;
@@ -108,6 +110,8 @@ export default function App() {
 
   // New PO Form State
   const [newClientId, setNewClientId] = useState('');
+  const [newPoNumber, setNewPoNumber] = useState('');
+  const [newDeliveredBy, setNewDeliveredBy] = useState<'Dikirim Koperasi' | 'Dikirim Supplier'>('Dikirim Koperasi');
   const [newNotes, setNewNotes] = useState('');
   const [newItems, setNewItems] = useState<Omit<OrderItem, 'id' | 'isOrdered' | 'isAtKitchen' | 'isDelivered' | 'isReceived'>[]>([
     { name: '', quantity: 1, unit: 'pcs', supplier: '', unitPrice: 0 }
@@ -117,6 +121,8 @@ export default function App() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingPO, setEditingPO] = useState<PurchaseOrder | null>(null);
   const [editClientId, setEditClientId] = useState('');
+  const [editPoNumber, setEditPoNumber] = useState('');
+  const [editDeliveredBy, setEditDeliveredBy] = useState<'Dikirim Koperasi' | 'Dikirim Supplier'>('Dikirim Koperasi');
   const [editNotes, setEditNotes] = useState('');
   const [editItems, setEditItems] = useState<OrderItem[]>([]);
   const [editError, setEditError] = useState<string | null>(null);
@@ -421,6 +427,8 @@ export default function App() {
 
     const newPO: PurchaseOrder = {
       id: `PO-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`,
+      poNumber: newPoNumber,
+      deliveredBy: newDeliveredBy,
       clientId: client.uid,
       clientName: client.name,
       date: new Date().toISOString(),
@@ -441,6 +449,8 @@ export default function App() {
       await setDoc(doc(db, 'purchaseOrders', newPO.id), newPO);
       setIsNewOpen(false);
       setNewClientId('');
+      setNewPoNumber('');
+      setNewDeliveredBy('Dikirim Koperasi');
       setNewNotes('');
       setNewItems([{ name: '', quantity: 1, unit: 'pcs', supplier: '', unitPrice: 0 }]);
     } catch (error) {
@@ -453,6 +463,8 @@ export default function App() {
     if (user?.role !== 'admin') return;
     setEditingPO(po);
     setEditClientId(po.clientId);
+    setEditPoNumber(po.poNumber || '');
+    setEditDeliveredBy(po.deliveredBy || 'Dikirim Koperasi');
     setEditNotes(po.notes);
     setEditItems(po.items);
     setEditError(null);
@@ -514,6 +526,8 @@ export default function App() {
       await updateDoc(doc(db, 'purchaseOrders', editingPO.id), {
         clientId: client.uid,
         clientName: client.name,
+        poNumber: editPoNumber,
+        deliveredBy: editDeliveredBy,
         notes: editNotes,
         items: editItems.map(item => ({
           ...item,
@@ -693,13 +707,20 @@ export default function App() {
                     <tr>
                       <td className="w-24">Nomor</td>
                       <td className="w-4">:</td>
-                      <td>{invoiceOrder.id}</td>
+                      <td>{invoiceOrder.poNumber || invoiceOrder.id}</td>
                     </tr>
                     <tr>
                       <td>Tanggal Nota</td>
                       <td>:</td>
                       <td>{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                     </tr>
+                    {invoiceOrder.deliveredBy && (
+                      <tr>
+                        <td>Pengiriman</td>
+                        <td>:</td>
+                        <td>{invoiceOrder.deliveredBy}</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -936,13 +957,22 @@ export default function App() {
                                 <TableCell className="text-right">Rp {price.toLocaleString('id-ID')}</TableCell>
                                 <TableCell className="text-right">
                                   <Input 
-                                    type="number" 
-                                    className="w-24 text-right ml-auto h-8"
+                                    type="text" 
+                                    className="w-28 text-right ml-auto h-8"
                                     placeholder="0"
-                                    defaultValue={item.hpp || ''}
+                                    defaultValue={item.hpp ? item.hpp.toLocaleString('id-ID') : ''}
+                                    onChange={(e) => {
+                                      const rawValue = e.target.value.replace(/\D/g, '');
+                                      if (rawValue) {
+                                        e.target.value = parseInt(rawValue, 10).toLocaleString('id-ID');
+                                      } else {
+                                        e.target.value = '';
+                                      }
+                                    }}
                                     onBlur={(e) => {
-                                      const val = parseFloat(e.target.value);
-                                      if (!isNaN(val) && val !== item.hpp) {
+                                      const rawValue = e.target.value.replace(/\D/g, '');
+                                      const val = rawValue ? parseInt(rawValue, 10) : 0;
+                                      if (val !== (item.hpp || 0)) {
                                         handleUpdateHpp(order.id, item.id, val);
                                       }
                                     }}
@@ -1016,8 +1046,8 @@ export default function App() {
             </Button>
           </div>
           
-          <div className="flex w-full md:w-auto items-center gap-2">
-            <div className="relative flex-1 md:flex-none">
+          <div className="flex flex-wrap w-full md:w-auto items-center gap-2">
+            <div className="relative flex-1 md:flex-none min-w-[150px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <Input 
                 placeholder="Cari PO..." 
@@ -1057,7 +1087,7 @@ export default function App() {
                   )}
 
                   <div className="grid gap-6 py-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="clientSelect">Pilih Klien <span className="text-red-500">*</span></Label>
                         <select 
@@ -1070,6 +1100,27 @@ export default function App() {
                           {clients.map(c => (
                             <option key={c.uid} value={c.uid}>{c.name} ({c.email})</option>
                           ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="newPoNumber">Nomor PO (Invoice)</Label>
+                        <Input 
+                          id="newPoNumber"
+                          placeholder="Masukkan Nomor PO"
+                          value={newPoNumber}
+                          onChange={(e) => setNewPoNumber(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="newDeliveredBy">Dikirim Oleh</Label>
+                        <select 
+                          id="newDeliveredBy"
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          value={newDeliveredBy}
+                          onChange={(e) => setNewDeliveredBy(e.target.value as any)}
+                        >
+                          <option value="Dikirim Koperasi">Dikirim Koperasi</option>
+                          <option value="Dikirim Supplier">Dikirim Supplier</option>
                         </select>
                       </div>
                       <div className="space-y-2">
@@ -1210,7 +1261,7 @@ export default function App() {
                   )}
 
                   <div className="grid gap-6 py-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="editClientSelect">Klien <span className="text-red-500">*</span></Label>
                         <select 
@@ -1223,6 +1274,27 @@ export default function App() {
                           {clients.map(client => (
                             <option key={client.uid} value={client.uid}>{client.name}</option>
                           ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editPoNumber">Nomor PO (Invoice)</Label>
+                        <Input 
+                          id="editPoNumber"
+                          placeholder="Masukkan Nomor PO"
+                          value={editPoNumber}
+                          onChange={(e) => setEditPoNumber(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editDeliveredBy">Dikirim Oleh</Label>
+                        <select 
+                          id="editDeliveredBy"
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          value={editDeliveredBy}
+                          onChange={(e) => setEditDeliveredBy(e.target.value as any)}
+                        >
+                          <option value="Dikirim Koperasi">Dikirim Koperasi</option>
+                          <option value="Dikirim Supplier">Dikirim Supplier</option>
                         </select>
                       </div>
                       <div className="space-y-2">
@@ -1356,9 +1428,9 @@ export default function App() {
             {user.role === 'admin' && (
               <>
                 <Dialog open={isNewClientOpen} onOpenChange={setIsNewClientOpen}>
-                  <DialogTrigger render={<Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
-                    <Plus className="w-4 h-4 mr-2 hidden sm:block" />
-                    Tambah Klien
+                  <DialogTrigger render={<Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm px-3 shrink-0" />}>
+                    <Plus className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Tambah Klien</span>
                   </DialogTrigger>
                   <DialogContent className="max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
@@ -1412,9 +1484,9 @@ export default function App() {
                 </Dialog>
 
                   <Dialog open={isSupplierManageOpen} onOpenChange={setIsSupplierManageOpen}>
-                <DialogTrigger render={<Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
-                  <Package className="w-4 h-4 mr-2 hidden sm:block" />
-                  Kelola Supplier
+                <DialogTrigger render={<Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm px-3 shrink-0" />}>
+                  <Package className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Kelola Supplier</span>
                 </DialogTrigger>
                 <DialogContent className="max-w-7xl sm:max-w-7xl w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
@@ -1489,9 +1561,9 @@ export default function App() {
               </Dialog>
 
               <Dialog open={isUserManageOpen} onOpenChange={setIsUserManageOpen}>
-                <DialogTrigger render={<Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm" />}>
-                  <UserIcon className="w-4 h-4 mr-2 hidden sm:block" />
-                  Kelola Pengguna
+                <DialogTrigger render={<Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm px-3 shrink-0" />}>
+                  <UserIcon className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Kelola Pengguna</span>
                 </DialogTrigger>
                 <DialogContent className="max-w-7xl sm:max-w-7xl w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
