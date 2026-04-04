@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ChevronLeft, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2, Edit, Receipt, Printer } from 'lucide-react';
+import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ChevronLeft, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2, Edit, Receipt, Printer, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -562,6 +562,53 @@ export default function App() {
     window.print();
   };
 
+  const handleExportToExcel = () => {
+    const invoicedOrders = orders.filter(o => o.status === 'INVOICED');
+    if (invoicedOrders.length === 0) return;
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Header
+    csvContent += "Nomor PO,Klien,Tanggal,Barang,Qty,Satuan,Harga Jual,HPP,Keuntungan\n";
+
+    let grandTotalProfit = 0;
+
+    invoicedOrders.forEach(order => {
+      let orderTotalProfit = 0;
+      const poNumber = order.poNumber || order.id;
+      const clientName = order.clientName.replace(/,/g, ''); // Remove commas to avoid CSV issues
+      const date = new Date(order.date).toLocaleDateString('id-ID');
+
+      order.items.forEach(item => {
+        const itemName = item.name.replace(/,/g, '');
+        const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+        const unit = item.unit.replace(/,/g, '');
+        const price = item.unitPrice || 0;
+        const hpp = item.hpp || 0;
+        const profit = (price - hpp) * qty;
+
+        orderTotalProfit += profit;
+        
+        csvContent += `"${poNumber}","${clientName}","${date}","${itemName}",${qty},"${unit}",${price},${hpp},${profit}\n`;
+      });
+
+      grandTotalProfit += orderTotalProfit;
+      // Add a subtotal row for the PO
+      csvContent += `,,,Total PO ${poNumber},,,,,${orderTotalProfit}\n`;
+    });
+
+    // Add Grand Total
+    csvContent += `\n,,,TOTAL KESELURUHAN,,,,,${grandTotalProfit}\n`;
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Laporan_Keuangan_PO_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleDeletePO = async () => {
     if (user?.role !== 'admin' || !poToDelete) {
       setGlobalError("Hanya Admin yang dapat menghapus PO.");
@@ -859,7 +906,7 @@ export default function App() {
             >
               <CardHeader className="p-4 pb-2">
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-sm font-bold text-slate-800">{order.id}</CardTitle>
+                  <CardTitle className="text-sm font-bold text-slate-800">{order.poNumber || order.id}</CardTitle>
                   <Badge className={config.color} variant="outline">{config.label}</Badge>
                 </div>
                 <CardDescription className="text-xs mt-1 text-slate-500">
@@ -899,9 +946,16 @@ export default function App() {
 
     return (
       <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
-        <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-          <Receipt className="w-6 h-6 text-indigo-600" /> Dashboard Keuangan
-        </h2>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <Receipt className="w-6 h-6 text-indigo-600" /> Dashboard Keuangan
+          </h2>
+          {invoicedOrders.length > 0 && (
+            <Button onClick={handleExportToExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Download className="w-4 h-4 mr-2" /> Download ke Excel (CSV)
+            </Button>
+          )}
+        </div>
         
         {invoicedOrders.length === 0 ? (
           <div className="bg-white p-8 rounded-xl border border-slate-200 text-center shadow-sm">
@@ -917,7 +971,7 @@ export default function App() {
                   <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-lg text-slate-800">PO: {order.id}</CardTitle>
+                        <CardTitle className="text-lg text-slate-800">PO: {order.poNumber || order.id}</CardTitle>
                         <CardDescription className="mt-1 text-slate-600">
                           Klien: <span className="font-medium text-slate-800">{order.clientName}</span>
                         </CardDescription>
