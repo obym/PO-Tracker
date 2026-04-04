@@ -816,8 +816,9 @@ export default function App() {
   }
 
   const filteredOrders = orders.filter(o => 
-    o.clientName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    o.id.toLowerCase().includes(searchQuery.toLowerCase())
+    (o.clientName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    o.id.toLowerCase().includes(searchQuery.toLowerCase())) &&
+    !(user.role === 'driver' && o.deliveredBy === 'Dikirim Supplier')
   );
 
   const renderKanbanColumn = (status: OrderStatus) => {
