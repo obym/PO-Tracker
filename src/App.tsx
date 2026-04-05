@@ -111,6 +111,7 @@ export default function App() {
   // New PO Form State
   const [newClientId, setNewClientId] = useState('');
   const [newPoNumber, setNewPoNumber] = useState('');
+  const [newPoDate, setNewPoDate] = useState(new Date().toISOString().split('T')[0]);
   const [newDeliveredBy, setNewDeliveredBy] = useState<'Dikirim Koperasi' | 'Dikirim Supplier'>('Dikirim Koperasi');
   const [newNotes, setNewNotes] = useState('');
   const [newItems, setNewItems] = useState<Omit<OrderItem, 'id' | 'isOrdered' | 'isAtKitchen' | 'isDelivered' | 'isReceived'>[]>([
@@ -122,6 +123,7 @@ export default function App() {
   const [editingPO, setEditingPO] = useState<PurchaseOrder | null>(null);
   const [editClientId, setEditClientId] = useState('');
   const [editPoNumber, setEditPoNumber] = useState('');
+  const [editPoDate, setEditPoDate] = useState('');
   const [editDeliveredBy, setEditDeliveredBy] = useState<'Dikirim Koperasi' | 'Dikirim Supplier'>('Dikirim Koperasi');
   const [editNotes, setEditNotes] = useState('');
   const [editItems, setEditItems] = useState<OrderItem[]>([]);
@@ -431,7 +433,7 @@ export default function App() {
       deliveredBy: newDeliveredBy,
       clientId: client.uid,
       clientName: client.name,
-      date: new Date().toISOString(),
+      date: new Date(newPoDate).toISOString(),
       status: 'PO_RECEIVED',
       notes: newNotes,
       items: newItems.map((item, i) => ({
@@ -464,6 +466,7 @@ export default function App() {
     setEditingPO(po);
     setEditClientId(po.clientId);
     setEditPoNumber(po.poNumber || '');
+    setEditPoDate(new Date(po.date).toISOString().split('T')[0]);
     setEditDeliveredBy(po.deliveredBy || 'Dikirim Koperasi');
     setEditNotes(po.notes);
     setEditItems(po.items);
@@ -527,6 +530,7 @@ export default function App() {
         clientId: client.uid,
         clientName: client.name,
         poNumber: editPoNumber,
+        date: new Date(editPoDate).toISOString(),
         deliveredBy: editDeliveredBy,
         notes: editNotes,
         items: editItems.map(item => ({
@@ -1158,6 +1162,15 @@ export default function App() {
                         </select>
                       </div>
                       <div className="space-y-2">
+                        <Label htmlFor="newPoDate">Tanggal PO <span className="text-red-500">*</span></Label>
+                        <Input 
+                          id="newPoDate"
+                          type="date"
+                          value={newPoDate}
+                          onChange={(e) => setNewPoDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="newPoNumber">Nomor PO (Invoice)</Label>
                         <Input 
                           id="newPoNumber"
@@ -1317,6 +1330,15 @@ export default function App() {
                             <option key={client.uid} value={client.uid}>{client.name}</option>
                           ))}
                         </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editPoDate">Tanggal PO <span className="text-red-500">*</span></Label>
+                        <Input 
+                          id="editPoDate"
+                          type="date"
+                          value={editPoDate}
+                          onChange={(e) => setEditPoDate(e.target.value)}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="editPoNumber">Nomor PO (Invoice)</Label>
