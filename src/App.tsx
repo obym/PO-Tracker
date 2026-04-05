@@ -854,7 +854,11 @@ export default function App() {
               </div>
               <div className="text-center mr-12">
                 <p>Hormat Kami,</p>
-                <div className="h-24"></div>
+                <img src="/signature.png" alt="Tanda Tangan Hariaji" className="h-24 mx-auto object-contain mix-blend-multiply" onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }} />
+                <div className="h-24 hidden"></div>
                 <p className="font-bold">Hariaji</p>
                 <p>Ketua Koperasi</p>
               </div>
