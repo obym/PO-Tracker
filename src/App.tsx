@@ -1252,24 +1252,11 @@ export default function App() {
                                   />
                                 </TableCell>
                                 <TableCell className="p-2">
-                                  {suppliers.length > 0 ? (
-                                    <select
-                                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                      value={item.supplier}
-                                      onChange={(e) => handleItemChange(index, 'supplier', e.target.value)}
-                                    >
-                                      <option value="" disabled>Pilih Supplier</option>
-                                      {suppliers.map(s => (
-                                        <option key={s.id} value={s.name}>{s.name}</option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <Input 
-                                      placeholder="Nama supplier" 
-                                      value={item.supplier}
-                                      onChange={(e) => handleItemChange(index, 'supplier', e.target.value)}
-                                    />
-                                  )}
+                                  <Input 
+                                    placeholder="Nama supplier" 
+                                    value={item.supplier}
+                                    onChange={(e) => handleItemChange(index, 'supplier', e.target.value)}
+                                  />
                                 </TableCell>
                                 <TableCell className="p-2 text-center">
                                   <Button 
@@ -1434,24 +1421,11 @@ export default function App() {
                                   />
                                 </TableCell>
                                 <TableCell className="p-2">
-                                  {suppliers.length > 0 ? (
-                                    <select
-                                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                      value={item.supplier}
-                                      onChange={(e) => handleEditItemChange(index, 'supplier', e.target.value)}
-                                    >
-                                      <option value="" disabled>Pilih Supplier</option>
-                                      {suppliers.map(s => (
-                                        <option key={s.id} value={s.name}>{s.name}</option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <Input 
-                                      placeholder="Nama supplier" 
-                                      value={item.supplier}
-                                      onChange={(e) => handleEditItemChange(index, 'supplier', e.target.value)}
-                                    />
-                                  )}
+                                  <Input 
+                                    placeholder="Nama supplier" 
+                                    value={item.supplier}
+                                    onChange={(e) => handleEditItemChange(index, 'supplier', e.target.value)}
+                                  />
                                 </TableCell>
                                 <TableCell className="p-2 text-center">
                                   <Button 
