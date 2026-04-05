@@ -22,6 +22,7 @@ interface OrderItem {
   quantity: number | string;
   unit: string;
   supplier: string;
+  category?: 'Bahan Baku' | 'Bahan Operasional';
   unitPrice?: number;
   hpp?: number;
   isOrdered: boolean;
@@ -115,7 +116,7 @@ export default function App() {
   const [newDeliveredBy, setNewDeliveredBy] = useState<'Dikirim Koperasi' | 'Dikirim Supplier'>('Dikirim Koperasi');
   const [newNotes, setNewNotes] = useState('');
   const [newItems, setNewItems] = useState<Omit<OrderItem, 'id' | 'isOrdered' | 'isAtKitchen' | 'isDelivered' | 'isReceived'>[]>([
-    { name: '', quantity: 1, unit: 'pcs', supplier: '', unitPrice: 0 }
+    { name: '', quantity: 1, unit: 'pcs', supplier: '', category: 'Bahan Baku', unitPrice: 0 }
   ]);
 
   // Edit PO Form State
@@ -250,7 +251,7 @@ export default function App() {
   };
 
   const handleAddItem = () => {
-    setNewItems([...newItems, { name: '', quantity: 1, unit: 'pcs', supplier: '', unitPrice: 0 }]);
+    setNewItems([...newItems, { name: '', quantity: 1, unit: 'pcs', supplier: '', category: 'Bahan Baku', unitPrice: 0 }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -483,7 +484,7 @@ export default function App() {
   const handleAddEditItem = () => {
     setEditItems([...editItems, { 
       id: `i-${Date.now()}-${editItems.length}`, 
-      name: '', quantity: 1, unit: 'pcs', supplier: '', unitPrice: 0,
+      name: '', quantity: 1, unit: 'pcs', supplier: '', category: 'Bahan Baku', unitPrice: 0,
       isOrdered: false, isAtKitchen: false, isDelivered: false, isReceived: false 
     }]);
   };
@@ -800,29 +801,88 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {invoiceOrder.items.map((item, index) => {
-                  const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                  const price = item.unitPrice || 0;
-                  const subtotal = qty * price;
-                  return (
-                    <tr key={item.id}>
-                      <td className="border border-black p-2 text-center">{index + 1}</td>
-                      <td className="border border-black p-2">{item.name}</td>
-                      <td className="border border-black p-2 text-center">{qty}</td>
-                      <td className="border border-black p-2 text-center">{item.unit}</td>
-                      <td className="border border-black p-2 text-right">
-                        {price > 0 ? price.toLocaleString('id-ID') : '-'}
-                      </td>
-                      <td className="border border-black p-2 text-right">
-                        {subtotal > 0 ? subtotal.toLocaleString('id-ID') : '-'}
+                {/* Bahan Baku */}
+                {invoiceOrder.items.filter(item => item.category === 'Bahan Baku' || !item.category).length > 0 && (
+                  <>
+                    <tr className="bg-gray-100 font-bold">
+                      <td colSpan={6} className="border border-black p-2">Bahan Baku</td>
+                    </tr>
+                    {invoiceOrder.items.filter(item => item.category === 'Bahan Baku' || !item.category).map((item, index) => {
+                      const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                      const price = item.unitPrice || 0;
+                      const subtotal = qty * price;
+                      return (
+                        <tr key={item.id}>
+                          <td className="border border-black p-2 text-center">{index + 1}</td>
+                          <td className="border border-black p-2">{item.name}</td>
+                          <td className="border border-black p-2 text-center">{qty}</td>
+                          <td className="border border-black p-2 text-center">{item.unit}</td>
+                          <td className="border border-black p-2 text-right">
+                            {price > 0 ? price.toLocaleString('id-ID') : '-'}
+                          </td>
+                          <td className="border border-black p-2 text-right">
+                            {subtotal > 0 ? subtotal.toLocaleString('id-ID') : '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    <tr>
+                      <td colSpan={4} className="border-t border-black"></td>
+                      <td className="border border-black p-2 text-right font-bold">Subtotal Bahan Baku</td>
+                      <td className="border border-black p-2 text-right font-bold">
+                        {invoiceOrder.items.filter(item => item.category === 'Bahan Baku' || !item.category).reduce((sum, item) => {
+                          const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                          const price = item.unitPrice || 0;
+                          return sum + (qty * price);
+                        }, 0).toLocaleString('id-ID')}
                       </td>
                     </tr>
-                  );
-                })}
+                  </>
+                )}
+
+                {/* Bahan Operasional */}
+                {invoiceOrder.items.filter(item => item.category === 'Bahan Operasional').length > 0 && (
+                  <>
+                    <tr className="bg-gray-100 font-bold">
+                      <td colSpan={6} className="border border-black p-2">Bahan Operasional</td>
+                    </tr>
+                    {invoiceOrder.items.filter(item => item.category === 'Bahan Operasional').map((item, index) => {
+                      const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                      const price = item.unitPrice || 0;
+                      const subtotal = qty * price;
+                      return (
+                        <tr key={item.id}>
+                          <td className="border border-black p-2 text-center">{index + 1}</td>
+                          <td className="border border-black p-2">{item.name}</td>
+                          <td className="border border-black p-2 text-center">{qty}</td>
+                          <td className="border border-black p-2 text-center">{item.unit}</td>
+                          <td className="border border-black p-2 text-right">
+                            {price > 0 ? price.toLocaleString('id-ID') : '-'}
+                          </td>
+                          <td className="border border-black p-2 text-right">
+                            {subtotal > 0 ? subtotal.toLocaleString('id-ID') : '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    <tr>
+                      <td colSpan={4} className="border-t border-black"></td>
+                      <td className="border border-black p-2 text-right font-bold">Subtotal Bahan Operasional</td>
+                      <td className="border border-black p-2 text-right font-bold">
+                        {invoiceOrder.items.filter(item => item.category === 'Bahan Operasional').reduce((sum, item) => {
+                          const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                          const price = item.unitPrice || 0;
+                          return sum + (qty * price);
+                        }, 0).toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  </>
+                )}
+
                 <tr>
                   <td colSpan={4} className="border-t border-black"></td>
-                  <td className="border border-black p-2 text-right font-bold">TOTAL</td>
-                  <td className="border border-black p-2 text-right font-bold">
+                  <td className="border border-black p-2 text-right font-bold bg-gray-200">TOTAL KESELURUHAN</td>
+                  <td className="border border-black p-2 text-right font-bold bg-gray-200">
                     {invoiceOrder.items.reduce((sum, item) => {
                       const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
                       const price = item.unitPrice || 0;
@@ -1222,6 +1282,7 @@ export default function App() {
                               <TableHead className="w-[100px]">Qty</TableHead>
                               <TableHead className="w-[120px]">Satuan</TableHead>
                               <TableHead className="w-[150px]">Harga Satuan</TableHead>
+                              <TableHead className="w-[150px]">Kategori</TableHead>
                               <TableHead>Supplier</TableHead>
                               <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
@@ -1267,6 +1328,16 @@ export default function App() {
                                       }
                                     }}
                                   />
+                                </TableCell>
+                                <TableCell className="p-2">
+                                  <select
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    value={item.category || 'Bahan Baku'}
+                                    onChange={(e) => handleItemChange(index, 'category', e.target.value as 'Bahan Baku' | 'Bahan Operasional')}
+                                  >
+                                    <option value="Bahan Baku">Bahan Baku</option>
+                                    <option value="Bahan Operasional">Bahan Operasional</option>
+                                  </select>
                                 </TableCell>
                                 <TableCell className="p-2">
                                   <Input 
@@ -1392,6 +1463,7 @@ export default function App() {
                               <TableHead className="w-[100px]">Qty</TableHead>
                               <TableHead className="w-[120px]">Satuan</TableHead>
                               <TableHead className="w-[150px]">Harga Satuan</TableHead>
+                              <TableHead className="w-[150px]">Kategori</TableHead>
                               <TableHead>Supplier</TableHead>
                               <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
@@ -1445,6 +1517,16 @@ export default function App() {
                                       }
                                     }}
                                   />
+                                </TableCell>
+                                <TableCell className="p-2">
+                                  <select
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    value={item.category || 'Bahan Baku'}
+                                    onChange={(e) => handleEditItemChange(index, 'category', e.target.value as 'Bahan Baku' | 'Bahan Operasional')}
+                                  >
+                                    <option value="Bahan Baku">Bahan Baku</option>
+                                    <option value="Bahan Operasional">Bahan Operasional</option>
+                                  </select>
                                 </TableCell>
                                 <TableCell className="p-2">
                                   <Input 
