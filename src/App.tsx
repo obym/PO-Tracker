@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ChevronLeft, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2, Edit, Receipt, Printer, Download } from 'lucide-react';
+import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ChevronLeft, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2, Edit, Receipt, Printer, Download, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -565,6 +565,37 @@ export default function App() {
 
   const handlePrintInvoice = () => {
     window.print();
+  };
+
+  const handleRekapSupplier = (supplierName: string) => {
+    if (!selectedOrder) return;
+    
+    const supplierItems = selectedOrder.items.filter(item => item.supplier === supplierName);
+    if (supplierItems.length === 0) return;
+
+    const supplier = suppliers.find(s => s.name === supplierName);
+    
+    let text = `*PO: ${selectedOrder.poNumber || selectedOrder.id}*\n`;
+    text += `*Klien:* ${selectedOrder.clientName}\n`;
+    text += `*Tanggal:* ${new Date(selectedOrder.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}\n\n`;
+    text += `*Pesanan untuk ${supplierName}:*\n`;
+    
+    supplierItems.forEach((item, idx) => {
+      text += `${idx + 1}. ${item.name} - ${item.quantity} ${item.unit}\n`;
+    });
+
+    navigator.clipboard.writeText(text).then(() => {
+      alert(`Rekap pesanan untuk ${supplierName} berhasil disalin ke clipboard!`);
+      
+      if (supplier && supplier.phone) {
+        let phone = supplier.phone.replace(/\D/g, '');
+        if (phone.startsWith('0')) phone = '62' + phone.substring(1);
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+      }
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+      alert('Gagal menyalin teks.');
+    });
   };
 
   const handleExportToExcel = () => {
@@ -2109,6 +2140,9 @@ export default function App() {
                           </>
                         )}
                         <TableHead className="text-center w-[120px]">Diterima Klien?</TableHead>
+                        {(user.role === 'admin' || user.role === 'kitchen') && (
+                          <TableHead className="text-center w-[120px]">Rekap Supplier</TableHead>
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -2182,6 +2216,20 @@ export default function App() {
                               {item.isReceived ? 'Ya' : 'Belum'}
                             </Button>
                           </TableCell>
+                          {(user.role === 'admin' || user.role === 'kitchen') && (
+                            <TableCell className="text-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                                onClick={() => handleRekapSupplier(item.supplier)}
+                                disabled={!item.supplier}
+                              >
+                                <MessageSquare className="w-4 h-4 mr-1" />
+                                Rekap
+                              </Button>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>
