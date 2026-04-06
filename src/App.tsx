@@ -932,7 +932,8 @@ export default function App() {
 
   const filteredOrders = orders.filter(o => 
     (o.clientName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    o.id.toLowerCase().includes(searchQuery.toLowerCase())) &&
+    o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (o.poNumber && o.poNumber.toLowerCase().includes(searchQuery.toLowerCase()))) &&
     !(user.role === 'driver' && o.deliveredBy === 'Dikirim Supplier')
   );
 
@@ -2052,7 +2053,7 @@ export default function App() {
               <DialogHeader>
                 <div className="flex items-center justify-between pr-6">
                   <DialogTitle className="text-xl flex items-center gap-3">
-                    {selectedOrder.id}
+                    {selectedOrder.poNumber || selectedOrder.id}
                     <Badge className={statusConfig[selectedOrder.status].color} variant="outline">
                       {statusConfig[selectedOrder.status].label}
                     </Badge>
