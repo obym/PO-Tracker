@@ -132,6 +132,7 @@ export default function App() {
 
   // Invoice State
   const [invoiceOrder, setInvoiceOrder] = useState<PurchaseOrder | null>(null);
+  const [rekapSupplierData, setRekapSupplierData] = useState<{order: PurchaseOrder, supplierName: string} | null>(null);
 
   // New Client Form State
   const [newClientName, setNewClientName] = useState('');
@@ -573,29 +574,8 @@ export default function App() {
     const supplierItems = selectedOrder.items.filter(item => item.supplier === supplierName);
     if (supplierItems.length === 0) return;
 
-    const supplier = suppliers.find(s => s.name === supplierName);
-    
-    let text = `*PO: ${selectedOrder.poNumber || selectedOrder.id}*\n`;
-    text += `*Klien:* ${selectedOrder.clientName}\n`;
-    text += `*Tanggal:* ${new Date(selectedOrder.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}\n\n`;
-    text += `*Pesanan untuk ${supplierName}:*\n`;
-    
-    supplierItems.forEach((item, idx) => {
-      text += `${idx + 1}. ${item.name} - ${item.quantity} ${item.unit}\n`;
-    });
-
-    navigator.clipboard.writeText(text).then(() => {
-      alert(`Rekap pesanan untuk ${supplierName} berhasil disalin ke clipboard!`);
-      
-      if (supplier && supplier.phone) {
-        let phone = supplier.phone.replace(/\D/g, '');
-        if (phone.startsWith('0')) phone = '62' + phone.substring(1);
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
-      }
-    }).catch(err => {
-      console.error('Failed to copy text: ', err);
-      alert('Gagal menyalin teks.');
-    });
+    setRekapSupplierData({ order: selectedOrder, supplierName });
+    setIsDetailOpen(false);
   };
 
   const handleExportToExcel = () => {
@@ -752,6 +732,108 @@ export default function App() {
             </Button>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (rekapSupplierData) {
+    const { order, supplierName } = rekapSupplierData;
+    const supplierItems = order.items.filter(item => item.supplier === supplierName);
+
+    return (
+      <div className="min-h-screen bg-slate-100 flex flex-col">
+        {/* Print controls (hidden in print) */}
+        <div className="print:hidden p-4 border-b border-slate-200 flex justify-between items-center bg-white shadow-sm sticky top-0 z-10">
+           <Button variant="outline" onClick={() => setRekapSupplierData(null)}>
+             <ChevronLeft className="w-4 h-4 mr-2" /> Kembali
+           </Button>
+           <Button onClick={handlePrintInvoice} className="bg-indigo-600 hover:bg-indigo-700">
+             <Printer className="w-4 h-4 mr-2" /> Cetak Rekap
+           </Button>
+        </div>
+        
+        {/* Rekap content */}
+        <div className="flex-1 p-2 sm:p-8 overflow-auto flex justify-center">
+          <div id="print-area" className="bg-white text-black p-4 sm:p-12 font-sans text-xs sm:text-sm w-full max-w-4xl shadow-lg border border-slate-200 overflow-x-auto">
+            <div className="min-w-[600px]">
+              {/* Header */}
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold border-2 border-black inline-block px-16 py-1 mb-2 tracking-widest">PEMBELIAN BARANG</h1>
+              <h2 className="text-xl font-bold uppercase">KOPERASI GARUDA MERAH PUTIH</h2>
+              <p>Dsn. Padangan RT 02 RW 03 Ds. Pagu</p>
+              <p>Kec. Pagu Kab. Kediri</p>
+              <p>Phone : 0812-5278-8733</p>
+            </div>
+
+            {/* Info */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <table className="w-full">
+                  <tbody>
+                    <tr>
+                      <td className="w-24">Nomor PO</td>
+                      <td className="w-4">:</td>
+                      <td>{order.poNumber || order.id}</td>
+                    </tr>
+                    <tr>
+                      <td>Tanggal Order</td>
+                      <td>:</td>
+                      <td>{new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <p className="font-bold">Kepada :</p>
+                <p className="font-bold">{supplierName}</p>
+                {suppliers.find(s => s.name === supplierName)?.address && (
+                  <p>{suppliers.find(s => s.name === supplierName)?.address}</p>
+                )}
+                {suppliers.find(s => s.name === supplierName)?.district && (
+                  <p>{suppliers.find(s => s.name === supplierName)?.district}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Table */}
+            <table className="w-full border-collapse border border-black mb-4">
+              <thead>
+                <tr className="bg-gray-200">
+                  <th className="border border-black p-2 text-center w-10">NO</th>
+                  <th className="border border-black p-2 text-left">NAMA BARANG</th>
+                  <th className="border border-black p-2 text-center w-16">QTY</th>
+                  <th className="border border-black p-2 text-center w-24">SATUAN</th>
+                </tr>
+              </thead>
+              <tbody>
+                {supplierItems.map((item, index) => {
+                  const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                  return (
+                    <tr key={item.id}>
+                      <td className="border border-black p-2 text-center">{index + 1}</td>
+                      <td className="border border-black p-2">{item.name}</td>
+                      <td className="border border-black p-2 text-center">{qty}</td>
+                      <td className="border border-black p-2 text-center">{item.unit}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Footer */}
+            <div className="flex justify-between mt-8">
+              <div className="text-center w-48">
+                <p className="mb-16">Penerima,</p>
+                <p className="border-b border-black"></p>
+              </div>
+              <div className="text-center w-48">
+                <p className="mb-16">Hormat Kami,</p>
+                <p className="border-b border-black"></p>
+              </div>
+            </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
