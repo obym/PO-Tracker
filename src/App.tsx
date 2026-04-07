@@ -1078,7 +1078,7 @@ export default function App() {
             itemName: item.name,
             quantity: item.quantity,
             unit: item.unit,
-            price: item.price,
+            price: item.unitPrice || 0,
             hpp: item.hpp || 0
           });
         }
@@ -2249,9 +2249,9 @@ export default function App() {
                         </TableCell>
                         <TableCell className="font-medium">{history.itemName}</TableCell>
                         <TableCell className="text-center">{history.quantity} {history.unit}</TableCell>
-                        <TableCell className="text-right">Rp {history.price.toLocaleString('id-ID')}</TableCell>
+                        <TableCell className="text-right">Rp {(history.price || 0).toLocaleString('id-ID')}</TableCell>
                         {(user.role === 'admin' || user.role === 'finance') && (
-                          <TableCell className="text-right text-emerald-600">Rp {history.hpp.toLocaleString('id-ID')}</TableCell>
+                          <TableCell className="text-right text-emerald-600">Rp {(history.hpp || 0).toLocaleString('id-ID')}</TableCell>
                         )}
                       </TableRow>
                     ))}
