@@ -794,6 +794,11 @@ export default function App() {
                       <td>{order.poNumber || order.id}</td>
                     </tr>
                     <tr>
+                      <td>Pemesan</td>
+                      <td>:</td>
+                      <td>{order.clientName}</td>
+                    </tr>
+                    <tr>
                       <td>Tanggal Order</td>
                       <td>:</td>
                       <td>{new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
