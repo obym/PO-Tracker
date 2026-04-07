@@ -135,6 +135,9 @@ service cloud.firestore {
              data.status in ['PO_RECEIVED', 'ORDERING', 'AT_KITCHEN', 'DELIVERING', 'COMPLETED', 'INVOICED'] &&
              data.notes is string && data.notes.size() <= 1000 &&
              data.items is list && data.items.size() <= 100 &&
+             (!('poNumber' in data) || (data.poNumber is string && data.poNumber.size() < 100)) &&
+             (!('deliveredBy' in data) || (data.deliveredBy is string && data.deliveredBy.size() < 100)) &&
+             (!('deliveryDate' in data) || (data.deliveryDate == null || (data.deliveryDate is string && data.deliveryDate.size() < 50))) &&
              isValidItemsList(data.items);
     }
     

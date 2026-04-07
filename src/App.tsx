@@ -35,6 +35,7 @@ interface PurchaseOrder {
   id: string;
   poNumber?: string;
   deliveredBy?: 'Dikirim Koperasi' | 'Dikirim Supplier';
+  deliveryDate?: string;
   clientId: string;
   clientName: string;
   date: string;
@@ -122,6 +123,7 @@ export default function App() {
   const [newClientId, setNewClientId] = useState('');
   const [newPoNumber, setNewPoNumber] = useState('');
   const [newPoDate, setNewPoDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newDeliveryDate, setNewDeliveryDate] = useState('');
   const [newDeliveredBy, setNewDeliveredBy] = useState<'Dikirim Koperasi' | 'Dikirim Supplier'>('Dikirim Koperasi');
   const [newNotes, setNewNotes] = useState('');
   const [newItems, setNewItems] = useState<Omit<OrderItem, 'id' | 'isOrdered' | 'isAtKitchen' | 'isDelivered' | 'isReceived'>[]>([
@@ -134,6 +136,7 @@ export default function App() {
   const [editClientId, setEditClientId] = useState('');
   const [editPoNumber, setEditPoNumber] = useState('');
   const [editPoDate, setEditPoDate] = useState('');
+  const [editDeliveryDate, setEditDeliveryDate] = useState('');
   const [editDeliveredBy, setEditDeliveredBy] = useState<'Dikirim Koperasi' | 'Dikirim Supplier'>('Dikirim Koperasi');
   const [editNotes, setEditNotes] = useState('');
   const [editItems, setEditItems] = useState<OrderItem[]>([]);
@@ -442,6 +445,7 @@ export default function App() {
       id: `PO-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`,
       poNumber: newPoNumber,
       deliveredBy: newDeliveredBy,
+      deliveryDate: newDeliveryDate ? new Date(newDeliveryDate).toISOString() : undefined,
       clientId: client.uid,
       clientName: client.name,
       date: new Date(newPoDate).toISOString(),
@@ -478,6 +482,7 @@ export default function App() {
     setEditClientId(po.clientId);
     setEditPoNumber(po.poNumber || '');
     setEditPoDate(new Date(po.date).toISOString().split('T')[0]);
+    setEditDeliveryDate(po.deliveryDate ? new Date(po.deliveryDate).toISOString().split('T')[0] : '');
     setEditDeliveredBy(po.deliveredBy || 'Dikirim Koperasi');
     setEditNotes(po.notes);
     setEditItems(po.items);
@@ -542,6 +547,7 @@ export default function App() {
         clientName: client.name,
         poNumber: editPoNumber,
         date: new Date(editPoDate).toISOString(),
+        deliveryDate: editDeliveryDate ? new Date(editDeliveryDate).toISOString() : null,
         deliveredBy: editDeliveredBy,
         notes: editNotes,
         items: editItems.map(item => ({
@@ -753,7 +759,10 @@ export default function App() {
       <div className="min-h-screen bg-slate-100 flex flex-col">
         {/* Print controls (hidden in print) */}
         <div className="print:hidden p-4 border-b border-slate-200 flex justify-between items-center bg-white shadow-sm sticky top-0 z-10">
-           <Button variant="outline" onClick={() => setRekapSupplierData(null)}>
+           <Button variant="outline" onClick={() => {
+             setRekapSupplierData(null);
+             setIsDetailOpen(true);
+           }}>
              <ChevronLeft className="w-4 h-4 mr-2" /> Kembali
            </Button>
            <Button onClick={handlePrintInvoice} className="bg-indigo-600 hover:bg-indigo-700">
@@ -789,6 +798,13 @@ export default function App() {
                       <td>:</td>
                       <td>{new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                     </tr>
+                    {order.deliveryDate && (
+                      <tr>
+                        <td>Tanggal Kirim</td>
+                        <td>:</td>
+                        <td>{new Date(order.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -888,6 +904,13 @@ export default function App() {
                       <td>:</td>
                       <td>{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                     </tr>
+                    {invoiceOrder.deliveryDate && (
+                      <tr>
+                        <td>Tanggal Kirim</td>
+                        <td>:</td>
+                        <td>{new Date(invoiceOrder.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                      </tr>
+                    )}
                     {invoiceOrder.deliveredBy && (
                       <tr>
                         <td>Pengiriman</td>
@@ -1140,6 +1163,11 @@ export default function App() {
                 </div>
                 <CardDescription className="text-xs mt-1 text-slate-500">
                   {new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {order.deliveryDate && (
+                    <span className="block mt-0.5 text-indigo-600 font-medium">
+                      Kirim: {new Date(order.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
@@ -1397,6 +1425,15 @@ export default function App() {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label htmlFor="newDeliveryDate">Tanggal Kirim</Label>
+                        <Input 
+                          id="newDeliveryDate"
+                          type="date"
+                          value={newDeliveryDate}
+                          onChange={(e) => setNewDeliveryDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="newPoNumber">Nomor PO (Invoice)</Label>
                         <Input 
                           id="newPoNumber"
@@ -1575,6 +1612,15 @@ export default function App() {
                           type="date"
                           value={editPoDate}
                           onChange={(e) => setEditPoDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editDeliveryDate">Tanggal Kirim</Label>
+                        <Input 
+                          id="editDeliveryDate"
+                          type="date"
+                          value={editDeliveryDate}
+                          onChange={(e) => setEditDeliveryDate(e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
@@ -2299,6 +2345,11 @@ export default function App() {
                 </div>
                 <DialogDescription className="text-slate-500 mt-1">
                   Diterima pada {new Date(selectedOrder.date).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })}
+                  {selectedOrder.deliveryDate && (
+                    <span className="block mt-1 text-indigo-600 font-medium">
+                      Tanggal Kirim: {new Date(selectedOrder.deliveryDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  )}
                 </DialogDescription>
               </DialogHeader>
 
