@@ -1046,7 +1046,8 @@ export default function App() {
   const filteredOrders = orders.filter(o => 
     (o.clientName.toLowerCase().includes(searchQuery.toLowerCase()) || 
     o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (o.poNumber && o.poNumber.toLowerCase().includes(searchQuery.toLowerCase()))) &&
+    (o.poNumber && o.poNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    o.items.some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))) &&
     !(user.role === 'driver' && o.deliveredBy === 'Dikirim Supplier')
   );
 
@@ -1287,7 +1288,7 @@ export default function App() {
             <div className="relative flex-1 md:flex-none min-w-[150px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <Input 
-                placeholder="Cari PO..." 
+                placeholder="Cari PO, Klien, atau Barang..." 
                 className="pl-9 w-full md:w-[250px] bg-slate-50 border-slate-200"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -1829,26 +1830,26 @@ export default function App() {
                       <Table className="min-w-[1000px]">
                         <TableHeader className="bg-slate-50">
                           <TableRow>
-                            <TableHead className="text-base">Nama</TableHead>
-                            <TableHead className="text-base">Email</TableHead>
-                            <TableHead className="text-base">Telepon</TableHead>
-                            <TableHead className="text-base">Alamat</TableHead>
-                            <TableHead className="text-base">Kecamatan/Kabupaten</TableHead>
-                            <TableHead className="w-[150px] text-base">Role</TableHead>
-                            <TableHead className="w-[120px] text-center text-base">Aksi</TableHead>
+                            <TableHead className="text-sm">Nama</TableHead>
+                            <TableHead className="text-sm">Email</TableHead>
+                            <TableHead className="text-sm">Telepon</TableHead>
+                            <TableHead className="text-sm">Alamat</TableHead>
+                            <TableHead className="text-sm">Kecamatan/Kabupaten</TableHead>
+                            <TableHead className="w-[150px] text-sm">Role</TableHead>
+                            <TableHead className="w-[120px] text-center text-sm">Aksi</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {allUsers.map((u) => (
                             <TableRow key={u.uid}>
-                              <TableCell className="font-medium text-base">{u.name}</TableCell>
-                              <TableCell className="text-base">{u.email}</TableCell>
-                              <TableCell className="text-base">{u.phone || '-'}</TableCell>
-                              <TableCell className="text-base">{u.address || '-'}</TableCell>
-                              <TableCell className="text-base">{u.district || '-'}</TableCell>
+                              <TableCell className="font-medium text-sm">{u.name}</TableCell>
+                              <TableCell className="text-sm">{u.email}</TableCell>
+                              <TableCell className="text-sm">{u.phone || '-'}</TableCell>
+                              <TableCell className="text-sm">{u.address || '-'}</TableCell>
+                              <TableCell className="text-sm">{u.district || '-'}</TableCell>
                               <TableCell>
                                 <select 
-                                  className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer hover:bg-slate-50"
+                                  className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer hover:bg-slate-50"
                                   value={u.role}
                                   onChange={(e) => handleUpdateUserRole(u.uid, e.target.value)}
                                 >
