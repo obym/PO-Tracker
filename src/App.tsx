@@ -2321,7 +2321,7 @@ export default function App() {
                     <TableHeader className="bg-slate-50">
                       <TableRow>
                         <TableHead>Barang</TableHead>
-                        {(user.role === 'admin' || user.role === 'kitchen' || user.role === 'driver') && <TableHead>Supplier</TableHead>}
+                        {(user.role === 'admin' || user.role === 'kitchen') && <TableHead>Supplier</TableHead>}
                         {!(user.role === 'driver' && selectedOrder.deliveredBy === 'Dikirim Supplier') && (
                           <>
                             <TableHead className="text-center w-[120px]">Diorder?</TableHead>
@@ -2343,7 +2343,7 @@ export default function App() {
                             <div className="text-xs text-slate-500">{item.quantity} {item.unit}</div>
                           </TableCell>
                           
-                          {(user.role === 'admin' || user.role === 'kitchen' || user.role === 'driver') && (
+                          {(user.role === 'admin' || user.role === 'kitchen') && (
                             <TableCell>
                               <Badge variant="outline" className="bg-white text-slate-600 font-normal">
                                 {item.supplier}
