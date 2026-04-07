@@ -182,11 +182,11 @@ service cloud.firestore {
       // Admin can update anything. Driver can update status/items. Kitchen can update status/items. Client can update status/items.
       // We protect immutable fields so they can't change the PO owner or ID.
       allow update: if isAuthenticated() && isValidPurchaseOrder(request.resource.data) &&
-                    areImmutableFieldsUnchanged(['id', 'date']) &&
+                    areImmutableFieldsUnchanged(['id']) &&
                     (
                       isAdmin() || 
                       (
-                        areImmutableFieldsUnchanged(['clientId', 'clientName']) &&
+                        areImmutableFieldsUnchanged(['date', 'clientId', 'clientName']) &&
                         (isDriver() || isKitchen() || (isClient() && resource.data.clientId == request.auth.uid))
                       )
                     );
