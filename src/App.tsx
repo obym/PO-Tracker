@@ -722,8 +722,8 @@ export default function App() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-100">
-        <Card className="w-[400px] shadow-lg">
-          <CardHeader className="text-center">
+        <Card className="w-[400px] shadow-lg p-0 gap-0">
+          <CardHeader className="text-center p-6">
             <div className="mx-auto flex items-center justify-center mb-4">
               <img 
                 src="https://upload.wikimedia.org/wikipedia/commons/9/90/National_emblem_of_Indonesia_Garuda_Pancasila.svg" 
@@ -735,7 +735,7 @@ export default function App() {
             <CardTitle className="text-2xl">PO & Pengiriman Tracker</CardTitle>
             <CardDescription>Masuk untuk mengelola pesanan dan pengiriman</CardDescription>
           </CardHeader>
-          <CardContent className="flex justify-center pb-8">
+          <CardContent className="flex justify-center p-6 pt-0">
             <Button onClick={handleLogin} className="w-full bg-indigo-600 hover:bg-indigo-700">
               Login dengan Google
             </Button>
@@ -1127,16 +1127,16 @@ export default function App() {
           {columnOrders.map(order => (
             <Card 
               key={order.id} 
-              className="cursor-pointer hover:border-slate-400 transition-colors shadow-sm"
+              className="cursor-pointer hover:border-slate-400 transition-colors shadow-sm p-0 gap-0"
               onClick={() => {
                 setSelectedOrder(order);
                 setIsDetailOpen(true);
               }}
             >
               <CardHeader className="p-4 pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-sm font-bold text-slate-800">{order.poNumber || order.id}</CardTitle>
-                  <Badge className={config.color} variant="outline">{config.label}</Badge>
+                <div className="flex justify-between items-start gap-2">
+                  <CardTitle className="text-sm font-bold text-slate-800 break-words">{order.poNumber || order.id}</CardTitle>
+                  <Badge className={`${config.color} shrink-0`} variant="outline">{config.label}</Badge>
                 </div>
                 <CardDescription className="text-xs mt-1 text-slate-500">
                   {new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -1196,8 +1196,8 @@ export default function App() {
               let orderTotalProfit = 0;
               
               return (
-                <Card key={order.id} className="overflow-hidden">
-                  <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
+                <Card key={order.id} className="overflow-hidden p-0 gap-0">
+                  <CardHeader className="bg-slate-50 border-b border-slate-100 p-4 pb-4">
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle className="text-lg text-slate-800">PO: {order.poNumber || order.id}</CardTitle>
@@ -1296,7 +1296,7 @@ export default function App() {
               }, 0)}
             </div>
             
-            <Card className="bg-indigo-600 text-white border-none shadow-md">
+            <Card className="bg-indigo-600 text-white border-none shadow-md p-0 gap-0">
               <CardContent className="p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="text-indigo-100 text-lg">Total Keuntungan Keseluruhan</div>
                 <div className="text-3xl font-bold">Rp {totalProfitAll.toLocaleString('id-ID')}</div>
