@@ -86,6 +86,15 @@ export default function App() {
   const [isUserManageOpen, setIsUserManageOpen] = useState(false);
   const [isSupplierManageOpen, setIsSupplierManageOpen] = useState(false);
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
+  const [isProductHistoryOpen, setIsProductHistoryOpen] = useState(false);
+  const [productHistorySearchTerm, setProductHistorySearchTerm] = useState('');
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim() !== '') {
+      setProductHistorySearchTerm(searchQuery.trim());
+      setIsProductHistoryOpen(true);
+    }
+  };
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [poToDelete, setPoToDelete] = useState<string | null>(null);
   const [supplierToDelete, setSupplierToDelete] = useState<string | null>(null);
@@ -1043,6 +1052,43 @@ export default function App() {
     );
   }
 
+  const getProductHistory = () => {
+    if (!productHistorySearchTerm) return [];
+    
+    const history: {
+      date: string;
+      poNumber: string;
+      clientName: string;
+      itemName: string;
+      quantity: number | string;
+      unit: string;
+      price: number;
+      hpp: number;
+    }[] = [];
+
+    const lowerSearch = productHistorySearchTerm.toLowerCase();
+
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        if (item.name.toLowerCase().includes(lowerSearch)) {
+          history.push({
+            date: order.date,
+            poNumber: order.poNumber || order.id,
+            clientName: order.clientName,
+            itemName: item.name,
+            quantity: item.quantity,
+            unit: item.unit,
+            price: item.price,
+            hpp: item.hpp || 0
+          });
+        }
+      });
+    });
+
+    // Sort by date descending
+    return history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
+
   const filteredOrders = orders.filter(o => 
     (o.clientName.toLowerCase().includes(searchQuery.toLowerCase()) || 
     o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1292,6 +1338,7 @@ export default function App() {
                 className="pl-9 w-full md:w-[250px] bg-slate-50 border-slate-200"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
               />
             </div>
             
@@ -2158,6 +2205,66 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Product History Modal */}
+      <Dialog open={isProductHistoryOpen} onOpenChange={setIsProductHistoryOpen}>
+        <DialogContent className="max-w-4xl sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              Riwayat Barang: <span className="text-indigo-600">{productHistorySearchTerm}</span>
+            </DialogTitle>
+            <DialogDescription>
+              Menampilkan riwayat pemesanan untuk barang yang dicari.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {getProductHistory().length === 0 ? (
+              <div className="text-center text-slate-500 py-8">
+                Tidak ada riwayat pemesanan untuk barang ini.
+              </div>
+            ) : (
+              <div className="border rounded-md overflow-x-auto">
+                <Table className="min-w-[800px]">
+                  <TableHeader className="bg-slate-50">
+                    <TableRow>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>PO / Klien</TableHead>
+                      <TableHead>Barang</TableHead>
+                      <TableHead className="text-center">Qty</TableHead>
+                      <TableHead className="text-right">Harga Satuan</TableHead>
+                      {(user.role === 'admin' || user.role === 'finance') && (
+                        <TableHead className="text-right">HPP</TableHead>
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getProductHistory().map((history, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          {new Date(history.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium text-slate-800">{history.poNumber}</div>
+                          <div className="text-xs text-slate-500">{history.clientName}</div>
+                        </TableCell>
+                        <TableCell className="font-medium">{history.itemName}</TableCell>
+                        <TableCell className="text-center">{history.quantity} {history.unit}</TableCell>
+                        <TableCell className="text-right">Rp {history.price.toLocaleString('id-ID')}</TableCell>
+                        {(user.role === 'admin' || user.role === 'finance') && (
+                          <TableCell className="text-right text-emerald-600">Rp {history.hpp.toLocaleString('id-ID')}</TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsProductHistoryOpen(false)}>Tutup</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Detail Modal */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
