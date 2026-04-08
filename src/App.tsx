@@ -146,20 +146,6 @@ export default function App() {
   // Invoice State
   const [invoiceOrder, setInvoiceOrder] = useState<PurchaseOrder | null>(null);
   const [rekapSupplierData, setRekapSupplierData] = useState<{order: PurchaseOrder, supplierName: string} | null>(null);
-  const [signatureImage, setSignatureImage] = useState<string | null>(localStorage.getItem('signatureImage'));
-
-  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setSignatureImage(base64String);
-        localStorage.setItem('signatureImage', base64String);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   // New Client Form State
   const [newClientName, setNewClientName] = useState('');
@@ -891,23 +877,9 @@ export default function App() {
            <Button variant="outline" onClick={() => setInvoiceOrder(null)}>
              <ChevronLeft className="w-4 h-4 mr-2" /> Kembali
            </Button>
-           <div className="flex gap-2">
-             <div className="relative">
-               <input 
-                 type="file" 
-                 accept="image/jpeg, image/png" 
-                 onChange={handleSignatureUpload}
-                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                 title="Upload Tanda Tangan (JPG/PNG)"
-               />
-               <Button variant="outline" className="bg-white">
-                 Upload Tanda Tangan
-               </Button>
-             </div>
-             <Button onClick={handlePrintInvoice} className="bg-indigo-600 hover:bg-indigo-700">
-               <Printer className="w-4 h-4 mr-2" /> Cetak Nota
-             </Button>
-           </div>
+           <Button onClick={handlePrintInvoice} className="bg-indigo-600 hover:bg-indigo-700">
+             <Printer className="w-4 h-4 mr-2" /> Cetak Nota
+           </Button>
         </div>
         
         {/* Invoice content */}
@@ -1093,7 +1065,7 @@ export default function App() {
               </div>
               <div className="text-center mr-12">
                 <p>Hormat Kami,</p>
-                <img src={signatureImage || "/signature.png"} alt="Tanda Tangan Hariaji" className="h-24 mx-auto object-contain mix-blend-multiply" onError={(e) => {
+                <img src="/signature.png" alt="Tanda Tangan Hariaji" className="h-24 mx-auto object-contain mix-blend-multiply" onError={(e) => {
                   e.currentTarget.style.display = 'none';
                   e.currentTarget.nextElementSibling?.classList.remove('hidden');
                 }} />
