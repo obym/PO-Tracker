@@ -1703,19 +1703,12 @@ export default function App() {
                                   />
                                 </TableCell>
                                 <TableCell className="p-2">
-                                  <select 
-                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                  <Input 
+                                    type="text"
+                                    placeholder="Satuan"
                                     value={item.unit}
                                     onChange={(e) => handleEditItemChange(index, 'unit', e.target.value)}
-                                  >
-                                    <option value="pcs">pcs</option>
-                                    <option value="kg">kg</option>
-                                    <option value="gram">gram</option>
-                                    <option value="liter">liter</option>
-                                    <option value="box">box</option>
-                                    <option value="pack">pack</option>
-                                    <option value="ikat">ikat</option>
-                                  </select>
+                                  />
                                 </TableCell>
                                 <TableCell className="p-2">
                                   <Input 
