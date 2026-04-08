@@ -29,6 +29,7 @@ interface OrderItem {
   isAtKitchen: boolean;
   isDelivered: boolean;
   isReceived: boolean;
+  isTransferred?: boolean;
 }
 
 interface PurchaseOrder {
@@ -126,7 +127,7 @@ export default function App() {
   const [newDeliveryDate, setNewDeliveryDate] = useState('');
   const [newDeliveredBy, setNewDeliveredBy] = useState<'Dikirim Koperasi' | 'Dikirim Supplier'>('Dikirim Koperasi');
   const [newNotes, setNewNotes] = useState('');
-  const [newItems, setNewItems] = useState<Omit<OrderItem, 'id' | 'isOrdered' | 'isAtKitchen' | 'isDelivered' | 'isReceived'>[]>([
+  const [newItems, setNewItems] = useState<Omit<OrderItem, 'id' | 'isOrdered' | 'isAtKitchen' | 'isDelivered' | 'isReceived' | 'isTransferred'>[]>([
     { name: '', quantity: 1, unit: 'pcs', supplier: '', category: 'Bahan Baku', unitPrice: 0 }
   ]);
 
@@ -459,6 +460,7 @@ export default function App() {
         isAtKitchen: false,
         isDelivered: false,
         isReceived: false,
+        isTransferred: false,
       })),
     };
 
@@ -500,7 +502,7 @@ export default function App() {
     setEditItems([...editItems, { 
       id: `i-${Date.now()}-${editItems.length}`, 
       name: '', quantity: 1, unit: 'pcs', supplier: '', category: 'Bahan Baku', unitPrice: 0,
-      isOrdered: false, isAtKitchen: false, isDelivered: false, isReceived: false 
+      isOrdered: false, isAtKitchen: false, isDelivered: false, isReceived: false, isTransferred: false
     }]);
   };
 
@@ -1252,6 +1254,7 @@ export default function App() {
                             <TableHead className="text-right">Harga Jual</TableHead>
                             <TableHead className="text-right">HPP</TableHead>
                             <TableHead className="text-right">Keuntungan</TableHead>
+                            <TableHead className="text-center w-[160px]">Status Transfer</TableHead>
                             <TableHead className="w-[100px]"></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -1297,6 +1300,17 @@ export default function App() {
                                 <TableCell className="text-right font-medium text-emerald-600">
                                   Rp {profit.toLocaleString('id-ID')}
                                 </TableCell>
+                                <TableCell className="text-center">
+                                  <Button
+                                    variant={item.isTransferred ? "default" : "outline"}
+                                    size="sm"
+                                    className={`w-full text-xs ${item.isTransferred ? 'bg-emerald-600 hover:bg-emerald-700' : 'text-slate-500'}`}
+                                    onClick={() => toggleItemStatus(order.id, item.id, 'isTransferred')}
+                                  >
+                                    {item.isTransferred ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
+                                    {item.isTransferred ? 'Sudah' : 'Belum'}
+                                  </Button>
+                                </TableCell>
                                 <TableCell></TableCell>
                               </TableRow>
                             );
@@ -1306,7 +1320,7 @@ export default function App() {
                             <TableCell className="text-right text-emerald-700">
                               Rp {orderTotalProfit.toLocaleString('id-ID')}
                             </TableCell>
-                            <TableCell></TableCell>
+                            <TableCell colSpan={2}></TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
