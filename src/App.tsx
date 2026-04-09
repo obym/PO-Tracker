@@ -2426,7 +2426,7 @@ export default function App() {
                   </div>
                 </div>
                 <DialogDescription className="text-slate-500 mt-1">
-                  Diterima pada {new Date(selectedOrder.date).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })}
+                  Diterima pada {new Date(selectedOrder.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                   {selectedOrder.deliveryDate && (
                     <span className="block mt-1 text-indigo-600 font-medium">
                       Tanggal Kirim: {new Date(selectedOrder.deliveryDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
