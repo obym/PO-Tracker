@@ -37,6 +37,7 @@ interface PurchaseOrder {
   poNumber?: string;
   deliveredBy?: 'Dikirim Koperasi' | 'Dikirim Supplier';
   deliveryDate?: string;
+  invoiceDate?: string;
   clientId: string;
   clientName: string;
   date: string;
@@ -130,6 +131,7 @@ export default function App() {
   const [newClientId, setNewClientId] = useState('');
   const [newPoNumber, setNewPoNumber] = useState('');
   const [newPoDate, setNewPoDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newInvoiceDate, setNewInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [newDeliveryDate, setNewDeliveryDate] = useState('');
   const [newDeliveredBy, setNewDeliveredBy] = useState<'Dikirim Koperasi' | 'Dikirim Supplier'>('Dikirim Koperasi');
   const [newNotes, setNewNotes] = useState('');
@@ -143,6 +145,7 @@ export default function App() {
   const [editClientId, setEditClientId] = useState('');
   const [editPoNumber, setEditPoNumber] = useState('');
   const [editPoDate, setEditPoDate] = useState('');
+  const [editInvoiceDate, setEditInvoiceDate] = useState('');
   const [editDeliveryDate, setEditDeliveryDate] = useState('');
   const [editDeliveredBy, setEditDeliveredBy] = useState<'Dikirim Koperasi' | 'Dikirim Supplier'>('Dikirim Koperasi');
   const [editNotes, setEditNotes] = useState('');
@@ -453,6 +456,7 @@ export default function App() {
       poNumber: newPoNumber,
       deliveredBy: newDeliveredBy,
       deliveryDate: newDeliveryDate ? new Date(newDeliveryDate).toISOString() : undefined,
+      invoiceDate: newInvoiceDate ? new Date(newInvoiceDate).toISOString() : undefined,
       clientId: client.uid,
       clientName: client.name,
       date: new Date(newPoDate).toISOString(),
@@ -477,6 +481,7 @@ export default function App() {
       setNewPoNumber('');
       setNewDeliveredBy('Dikirim Koperasi');
       setNewNotes('');
+      setNewInvoiceDate(new Date().toISOString().split('T')[0]);
       setNewItems([{ name: '', quantity: 1, unit: 'pcs', supplier: '', unitPrice: 0 }]);
     } catch (error) {
       console.error("Error creating PO:", error);
@@ -490,6 +495,7 @@ export default function App() {
     setEditClientId(po.clientId);
     setEditPoNumber(po.poNumber || '');
     setEditPoDate(new Date(po.date).toISOString().split('T')[0]);
+    setEditInvoiceDate(po.invoiceDate ? new Date(po.invoiceDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
     setEditDeliveryDate(po.deliveryDate ? new Date(po.deliveryDate).toISOString().split('T')[0] : '');
     setEditDeliveredBy(po.deliveredBy || 'Dikirim Koperasi');
     setEditNotes(po.notes);
@@ -555,6 +561,7 @@ export default function App() {
         clientName: client.name,
         poNumber: editPoNumber,
         date: new Date(editPoDate).toISOString(),
+        invoiceDate: editInvoiceDate ? new Date(editInvoiceDate).toISOString() : null,
         deliveryDate: editDeliveryDate ? new Date(editDeliveryDate).toISOString() : null,
         deliveredBy: editDeliveredBy,
         notes: editNotes,
@@ -923,20 +930,13 @@ export default function App() {
                     <tr>
                       <td>Tanggal Nota</td>
                       <td>:</td>
-                      <td>{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                      <td>{new Date(invoiceOrder.invoiceDate || invoiceOrder.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                     </tr>
                     {invoiceOrder.deliveryDate && (
                       <tr>
                         <td>Tanggal Kirim</td>
                         <td>:</td>
                         <td>{new Date(invoiceOrder.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
-                      </tr>
-                    )}
-                    {invoiceOrder.deliveredBy && (
-                      <tr>
-                        <td>Pengiriman</td>
-                        <td>:</td>
-                        <td>{invoiceOrder.deliveredBy}</td>
                       </tr>
                     )}
                   </tbody>
@@ -1481,6 +1481,15 @@ export default function App() {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label htmlFor="newInvoiceDate">Tanggal Nota <span className="text-red-500">*</span></Label>
+                        <Input 
+                          id="newInvoiceDate"
+                          type="date"
+                          value={newInvoiceDate}
+                          onChange={(e) => setNewInvoiceDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="newDeliveryDate">Tanggal Kirim</Label>
                         <Input 
                           id="newDeliveryDate"
@@ -1668,6 +1677,15 @@ export default function App() {
                           type="date"
                           value={editPoDate}
                           onChange={(e) => setEditPoDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editInvoiceDate">Tanggal Nota <span className="text-red-500">*</span></Label>
+                        <Input 
+                          id="editInvoiceDate"
+                          type="date"
+                          value={editInvoiceDate}
+                          onChange={(e) => setEditInvoiceDate(e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
