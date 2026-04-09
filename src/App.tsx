@@ -698,12 +698,21 @@ export default function App() {
     const someOrdered = updatedItems.some(i => i.isOrdered);
 
     let newStatus = order.status;
-    if (allReceived) newStatus = 'COMPLETED';
-    else if (allAtKitchen) newStatus = 'AT_KITCHEN';
-    else if (allDelivered) newStatus = 'DELIVERING'; 
-    else if (allOrdered) newStatus = 'DELIVERING';
-    else if (someOrdered) newStatus = 'ORDERING';
-    else newStatus = 'PO_RECEIVED';
+    if (order.status === 'INVOICED') {
+      newStatus = 'INVOICED';
+    } else if (allReceived) {
+      newStatus = 'COMPLETED';
+    } else if (allAtKitchen) {
+      newStatus = 'AT_KITCHEN';
+    } else if (allDelivered) {
+      newStatus = 'DELIVERING'; 
+    } else if (allOrdered) {
+      newStatus = 'DELIVERING';
+    } else if (someOrdered) {
+      newStatus = 'ORDERING';
+    } else {
+      newStatus = 'PO_RECEIVED';
+    }
 
     try {
       await updateDoc(doc(db, 'purchaseOrders', orderId), {
