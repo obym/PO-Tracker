@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ChevronLeft, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2, Edit, Receipt, Printer, Download, MessageSquare } from 'lucide-react';
+import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2, Edit, Receipt, Printer, Download, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -92,10 +92,15 @@ export default function App() {
   const [isProductHistoryOpen, setIsProductHistoryOpen] = useState(false);
   const [productHistorySearchTerm, setProductHistorySearchTerm] = useState('');
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const [expandedFinanceCards, setExpandedFinanceCards] = useState<Record<string, boolean>>({});
 
   const toggleCardExpand = (e: React.MouseEvent, orderId: string) => {
     e.stopPropagation();
     setExpandedCards(prev => ({ ...prev, [orderId]: !prev[orderId] }));
+  };
+
+  const toggleFinanceCardExpand = (orderId: string) => {
+    setExpandedFinanceCards(prev => ({ ...prev, [orderId]: !prev[orderId] }));
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -1278,10 +1283,16 @@ export default function App() {
               
               return (
                 <Card key={order.id} className="overflow-hidden p-0 gap-0">
-                  <CardHeader className="bg-slate-50 border-b border-slate-100 p-4 pb-4">
+                  <CardHeader 
+                    className="bg-slate-50 border-b border-slate-100 p-4 pb-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                    onClick={() => toggleFinanceCardExpand(order.id)}
+                  >
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-lg text-slate-800">PO: {order.poNumber || order.id}</CardTitle>
+                        <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+                          {expandedFinanceCards[order.id] ? <ChevronUp className="w-5 h-5 text-slate-500" /> : <ChevronDown className="w-5 h-5 text-slate-500" />}
+                          PO: {order.poNumber || order.id}
+                        </CardTitle>
                         <CardDescription className="mt-1 text-slate-600 space-y-1">
                           <div>Klien: <span className="font-medium text-slate-800">{order.clientName}</span></div>
                           <div className="flex gap-4 text-xs">
@@ -1297,6 +1308,8 @@ export default function App() {
                       </Badge>
                     </div>
                   </CardHeader>
+                  
+                  {expandedFinanceCards[order.id] && (
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
@@ -1379,6 +1392,7 @@ export default function App() {
                       </Table>
                     </div>
                   </CardContent>
+                  )}
                 </Card>
               );
             })}
