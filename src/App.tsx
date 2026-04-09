@@ -1279,7 +1279,12 @@ export default function App() {
         ) : (
           <div className="space-y-6">
             {invoicedOrders.map(order => {
-              let orderTotalProfit = 0;
+              const orderTotalProfit = order.items.reduce((sum, item) => {
+                const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                const price = item.unitPrice || 0;
+                const hpp = item.hpp || 0;
+                return sum + ((price - hpp) * qty);
+              }, 0);
               
               return (
                 <Card key={order.id} className="overflow-hidden p-0 gap-0">
@@ -1303,9 +1308,14 @@ export default function App() {
                           </div>
                         </CardDescription>
                       </div>
-                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                        INVOICED
-                      </Badge>
+                      <div className="text-right flex flex-col items-end gap-2">
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                          INVOICED
+                        </Badge>
+                        <div className="text-sm font-bold text-emerald-700">
+                          Rp {orderTotalProfit.toLocaleString('id-ID')}
+                        </div>
+                      </div>
                     </div>
                   </CardHeader>
                   
@@ -1330,7 +1340,6 @@ export default function App() {
                             const price = item.unitPrice || 0;
                             const hpp = item.hpp || 0;
                             const profit = (price - hpp) * qty;
-                            orderTotalProfit += profit;
                             
                             return (
                               <TableRow key={item.id}>
