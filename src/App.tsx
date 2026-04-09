@@ -556,7 +556,7 @@ export default function App() {
     }
 
     try {
-      await updateDoc(doc(db, 'purchaseOrders', editingPO.id), {
+      const updatedData = {
         clientId: client.uid,
         clientName: client.name,
         poNumber: editPoNumber,
@@ -569,7 +569,13 @@ export default function App() {
           ...item,
           quantity: typeof item.quantity === 'string' ? parseFloat(item.quantity) || 0 : item.quantity
         }))
-      });
+      };
+      await updateDoc(doc(db, 'purchaseOrders', editingPO.id), updatedData);
+      
+      if (selectedOrder && selectedOrder.id === editingPO.id) {
+        setSelectedOrder({ ...selectedOrder, ...updatedData } as PurchaseOrder);
+      }
+      
       setIsEditOpen(false);
       setEditingPO(null);
     } catch (error) {
@@ -623,7 +629,7 @@ export default function App() {
       let orderTotalProfit = 0;
       const poNumber = order.poNumber || order.id;
       const clientName = order.clientName.replace(/,/g, ''); // Remove commas to avoid CSV issues
-      const date = new Date(order.date).toLocaleDateString('id-ID');
+      const date = new Date(order.invoiceDate || order.date).toLocaleDateString('id-ID');
 
       order.items.forEach(item => {
         const itemName = item.name.replace(/,/g, '');
@@ -1183,7 +1189,10 @@ export default function App() {
                   <Badge className={`${config.color} shrink-0`} variant="outline">{config.label}</Badge>
                 </div>
                 <CardDescription className="text-xs mt-1 text-slate-500">
-                  {new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {status === 'INVOICED' && order.invoiceDate 
+                    ? new Date(order.invoiceDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                  }
                   {order.deliveryDate && (
                     <span className="block mt-0.5 text-indigo-600 font-medium">
                       Kirim: {new Date(order.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -1273,8 +1282,14 @@ export default function App() {
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle className="text-lg text-slate-800">PO: {order.poNumber || order.id}</CardTitle>
-                        <CardDescription className="mt-1 text-slate-600">
-                          Klien: <span className="font-medium text-slate-800">{order.clientName}</span>
+                        <CardDescription className="mt-1 text-slate-600 space-y-1">
+                          <div>Klien: <span className="font-medium text-slate-800">{order.clientName}</span></div>
+                          <div className="flex gap-4 text-xs">
+                            <span>Nota: <span className="font-medium">{new Date(order.invoiceDate || order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span></span>
+                            {order.deliveryDate && (
+                              <span>Kirim: <span className="font-medium">{new Date(order.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span></span>
+                            )}
+                          </div>
                         </CardDescription>
                       </div>
                       <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
