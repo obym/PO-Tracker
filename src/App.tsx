@@ -1194,7 +1194,7 @@ export default function App() {
               <CardContent className="p-4 pt-0">
                 <p className="font-medium text-slate-700 mb-2">{order.clientName}</p>
                 
-                {status === 'INVOICED' && expandedCards[order.id] && (
+                {['INVOICED', 'DELIVERING', 'PO_RECEIVED'].includes(status) && expandedCards[order.id] && (
                   <div className="mb-3 space-y-1">
                     {order.items.map((item, idx) => (
                       <div key={idx} className="text-xs text-slate-600 flex justify-between border-b border-slate-100 pb-1">
@@ -1216,7 +1216,7 @@ export default function App() {
                       <span>{order.items.filter(i => i.isReceived).length} diterima</span>
                     </div>
                   </div>
-                  {status === 'INVOICED' && (
+                  {['INVOICED', 'DELIVERING', 'PO_RECEIVED'].includes(status) && (
                     <Button 
                       variant="ghost" 
                       size="sm" 
