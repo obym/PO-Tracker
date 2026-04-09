@@ -90,6 +90,12 @@ export default function App() {
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
   const [isProductHistoryOpen, setIsProductHistoryOpen] = useState(false);
   const [productHistorySearchTerm, setProductHistorySearchTerm] = useState('');
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+
+  const toggleCardExpand = (e: React.MouseEvent, orderId: string) => {
+    e.stopPropagation();
+    setExpandedCards(prev => ({ ...prev, [orderId]: !prev[orderId] }));
+  };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim() !== '') {
@@ -1165,7 +1171,7 @@ export default function App() {
           {columnOrders.map(order => (
             <Card 
               key={order.id} 
-              className="cursor-pointer hover:border-slate-400 transition-colors shadow-sm p-0 gap-0"
+              className="cursor-pointer hover:border-slate-400 transition-colors shadow-sm p-0 gap-0 shrink-0"
               onClick={() => {
                 setSelectedOrder(order);
                 setIsDetailOpen(true);
@@ -1188,15 +1194,38 @@ export default function App() {
               <CardContent className="p-4 pt-0">
                 <p className="font-medium text-slate-700 mb-2">{order.clientName}</p>
                 
-                <div className="flex items-center gap-4 text-xs text-slate-500">
-                  <div className="flex items-center gap-1">
-                    <Package className="w-3.5 h-3.5" />
-                    <span>{order.items.length} items</span>
+                {status === 'INVOICED' && expandedCards[order.id] && (
+                  <div className="mb-3 space-y-1">
+                    {order.items.map((item, idx) => (
+                      <div key={idx} className="text-xs text-slate-600 flex justify-between border-b border-slate-100 pb-1">
+                        <span className="truncate pr-2">{item.name}</span>
+                        <span className="shrink-0 font-medium">{item.quantity} {item.unit}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>{order.items.filter(i => i.isReceived).length} diterima</span>
+                )}
+
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                      <Package className="w-3.5 h-3.5" />
+                      <span>{order.items.length} items</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>{order.items.filter(i => i.isReceived).length} diterima</span>
+                    </div>
                   </div>
+                  {status === 'INVOICED' && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 px-2 text-xs"
+                      onClick={(e) => toggleCardExpand(e, order.id)}
+                    >
+                      {expandedCards[order.id] ? 'Tutup' : 'Detail'}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
