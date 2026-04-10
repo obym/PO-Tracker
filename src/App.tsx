@@ -620,7 +620,11 @@ export default function App() {
   };
 
   const handleExportToExcel = () => {
-    const invoicedOrders = orders.filter(o => o.status === 'INVOICED');
+    const invoicedOrders = orders.filter(o => o.status === 'INVOICED').sort((a, b) => {
+      const poA = a.poNumber || a.id;
+      const poB = b.poNumber || b.id;
+      return poB.localeCompare(poA, undefined, { numeric: true, sensitivity: 'base' });
+    });
     if (invoicedOrders.length === 0) return;
 
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -1150,7 +1154,11 @@ export default function App() {
     (o.poNumber && o.poNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
     o.items.some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))) &&
     !(user.role === 'driver' && o.deliveredBy === 'Dikirim Supplier')
-  );
+  ).sort((a, b) => {
+    const poA = a.poNumber || a.id;
+    const poB = b.poNumber || b.id;
+    return poB.localeCompare(poA, undefined, { numeric: true, sensitivity: 'base' });
+  });
 
   const renderKanbanColumn = (status: OrderStatus) => {
     let columnOrders = filteredOrders.filter(o => o.status === status);
