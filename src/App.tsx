@@ -1285,6 +1285,23 @@ export default function App() {
     const invoicedOrders = filteredOrders.filter(o => o.status === 'INVOICED');
     
     let totalProfitAll = 0;
+    const profitPerClient: Record<string, number> = {};
+
+    invoicedOrders.forEach(order => {
+      let orderProfit = 0;
+      order.items.forEach(item => {
+        const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+        const price = item.unitPrice || 0;
+        const hpp = item.hpp || 0;
+        orderProfit += (price - hpp) * qty;
+      });
+      totalProfitAll += orderProfit;
+      
+      if (!profitPerClient[order.clientName]) {
+        profitPerClient[order.clientName] = 0;
+      }
+      profitPerClient[order.clientName] += orderProfit;
+    });
 
     return (
       <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
@@ -1304,153 +1321,164 @@ export default function App() {
             <p className="text-slate-500">Belum ada PO yang selesai dan dibuatkan nota.</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {invoicedOrders.map(order => {
-              const orderTotalProfit = order.items.reduce((sum, item) => {
-                const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                const price = item.unitPrice || 0;
-                const hpp = item.hpp || 0;
-                return sum + ((price - hpp) * qty);
-              }, 0);
-              
-              return (
-                <Card key={order.id} className="overflow-hidden p-0 gap-0">
-                  <CardHeader 
-                    className="bg-slate-50 border-b border-slate-100 p-4 pb-4 cursor-pointer hover:bg-slate-100 transition-colors"
-                    onClick={() => toggleFinanceCardExpand(order.id)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
-                          {expandedFinanceCards[order.id] ? <ChevronUp className="w-5 h-5 text-slate-500" /> : <ChevronDown className="w-5 h-5 text-slate-500" />}
-                          PO: {order.poNumber || order.id}
-                        </CardTitle>
-                        <CardDescription className="mt-1 text-slate-600 space-y-1">
-                          <div>Klien: <span className="font-medium text-slate-800">{order.clientName}</span></div>
-                          <div className="flex gap-4 text-xs">
-                            <span>Nota: <span className="font-medium">{new Date(order.invoiceDate || order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span></span>
-                            {order.deliveryDate && (
-                              <span>Kirim: <span className="font-medium">{new Date(order.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span></span>
-                            )}
-                          </div>
-                        </CardDescription>
-                      </div>
-                      <div className="text-right flex flex-col items-end gap-2">
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                          INVOICED
-                        </Badge>
-                        <div className="text-sm font-bold text-emerald-700">
-                          Rp {orderTotalProfit.toLocaleString('id-ID')}
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  
-                  {expandedFinanceCards[order.id] && (
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Barang</TableHead>
-                            <TableHead className="text-center">Qty</TableHead>
-                            <TableHead className="text-right">Harga Jual</TableHead>
-                            <TableHead className="text-right">HPP</TableHead>
-                            <TableHead className="text-right">Keuntungan</TableHead>
-                            <TableHead className="text-center w-[160px]">Status Transfer</TableHead>
-                            <TableHead className="w-[100px]"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {order.items.map(item => {
-                            const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                            const price = item.unitPrice || 0;
-                            const hpp = item.hpp || 0;
-                            const profit = (price - hpp) * qty;
-                            
-                            return (
-                              <TableRow key={item.id}>
-                                <TableCell>
-                                  <div className="font-medium">{item.name}</div>
-                                  <div className="text-xs text-slate-500">{item.supplier}</div>
-                                </TableCell>
-                                <TableCell className="text-center">{qty} {item.unit}</TableCell>
-                                <TableCell className="text-right">Rp {price.toLocaleString('id-ID')}</TableCell>
-                                <TableCell className="text-right">
-                                  <Input 
-                                    type="text" 
-                                    className="w-28 text-right ml-auto h-8"
-                                    placeholder="0"
-                                    defaultValue={item.hpp ? item.hpp.toLocaleString('id-ID') : ''}
-                                    onChange={(e) => {
-                                      const rawValue = e.target.value.replace(/\D/g, '');
-                                      if (rawValue) {
-                                        e.target.value = parseInt(rawValue, 10).toLocaleString('id-ID');
-                                      } else {
-                                        e.target.value = '';
-                                      }
-                                    }}
-                                    onBlur={(e) => {
-                                      const rawValue = e.target.value.replace(/\D/g, '');
-                                      const val = rawValue ? parseInt(rawValue, 10) : 0;
-                                      if (val !== (item.hpp || 0)) {
-                                        handleUpdateHpp(order.id, item.id, val);
-                                      }
-                                    }}
-                                  />
-                                </TableCell>
-                                <TableCell className="text-right font-medium text-emerald-600">
-                                  Rp {profit.toLocaleString('id-ID')}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <Button
-                                    variant={item.isTransferred ? "default" : "outline"}
-                                    size="sm"
-                                    className={`w-full text-xs ${item.isTransferred ? 'bg-emerald-600 hover:bg-emerald-700' : 'text-slate-500'}`}
-                                    onClick={() => toggleItemStatus(order.id, item.id, 'isTransferred')}
-                                  >
-                                    {item.isTransferred ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
-                                    {item.isTransferred ? 'Sudah' : 'Belum'}
-                                  </Button>
-                                </TableCell>
-                                <TableCell></TableCell>
-                              </TableRow>
-                            );
-                          })}
-                          <TableRow className="bg-slate-50 font-bold">
-                            <TableCell colSpan={4} className="text-right text-slate-800">Total Keuntungan PO ini:</TableCell>
-                            <TableCell className="text-right text-emerald-700">
-                              Rp {orderTotalProfit.toLocaleString('id-ID')}
-                            </TableCell>
-                            <TableCell colSpan={2}></TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                  )}
-                </Card>
-              );
-            })}
-            
-            {/* Calculate grand total */}
-            <div className="hidden">
-              {totalProfitAll = invoicedOrders.reduce((sum, order) => {
-                return sum + order.items.reduce((itemSum, item) => {
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
+            <div className="flex-1 space-y-6 w-full">
+              {invoicedOrders.map(order => {
+                const orderTotalProfit = order.items.reduce((sum, item) => {
                   const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
                   const price = item.unitPrice || 0;
                   const hpp = item.hpp || 0;
-                  return itemSum + ((price - hpp) * qty);
+                  return sum + ((price - hpp) * qty);
                 }, 0);
-              }, 0)}
+                
+                return (
+                  <Card key={order.id} className="overflow-hidden p-0 gap-0">
+                    <CardHeader 
+                      className="bg-slate-50 border-b border-slate-100 p-4 pb-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                      onClick={() => toggleFinanceCardExpand(order.id)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+                            {expandedFinanceCards[order.id] ? <ChevronUp className="w-5 h-5 text-slate-500" /> : <ChevronDown className="w-5 h-5 text-slate-500" />}
+                            PO: {order.poNumber || order.id}
+                          </CardTitle>
+                          <CardDescription className="mt-1 text-slate-600 space-y-1">
+                            <div>Klien: <span className="font-medium text-slate-800">{order.clientName}</span></div>
+                            <div className="flex gap-4 text-xs">
+                              <span>Nota: <span className="font-medium">{new Date(order.invoiceDate || order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span></span>
+                              {order.deliveryDate && (
+                                <span>Kirim: <span className="font-medium">{new Date(order.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span></span>
+                              )}
+                            </div>
+                          </CardDescription>
+                        </div>
+                        <div className="text-right flex flex-col items-end gap-2">
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                            INVOICED
+                          </Badge>
+                          <div className="text-sm font-bold text-emerald-700">
+                            Rp {orderTotalProfit.toLocaleString('id-ID')}
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    {expandedFinanceCards[order.id] && (
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Barang</TableHead>
+                              <TableHead className="text-center">Qty</TableHead>
+                              <TableHead className="text-right">Harga Jual</TableHead>
+                              <TableHead className="text-right">HPP</TableHead>
+                              <TableHead className="text-right">Keuntungan</TableHead>
+                              <TableHead className="text-center w-[160px]">Status Transfer</TableHead>
+                              <TableHead className="w-[100px]"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {order.items.map(item => {
+                              const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                              const price = item.unitPrice || 0;
+                              const hpp = item.hpp || 0;
+                              const profit = (price - hpp) * qty;
+                              
+                              return (
+                                <TableRow key={item.id}>
+                                  <TableCell>
+                                    <div className="font-medium">{item.name}</div>
+                                    <div className="text-xs text-slate-500">{item.supplier}</div>
+                                  </TableCell>
+                                  <TableCell className="text-center">{qty} {item.unit}</TableCell>
+                                  <TableCell className="text-right">Rp {price.toLocaleString('id-ID')}</TableCell>
+                                  <TableCell className="text-right">
+                                    <Input 
+                                      type="text" 
+                                      className="w-28 text-right ml-auto h-8"
+                                      placeholder="0"
+                                      defaultValue={item.hpp ? item.hpp.toLocaleString('id-ID') : ''}
+                                      onChange={(e) => {
+                                        const rawValue = e.target.value.replace(/\D/g, '');
+                                        if (rawValue) {
+                                          e.target.value = parseInt(rawValue, 10).toLocaleString('id-ID');
+                                        } else {
+                                          e.target.value = '';
+                                        }
+                                      }}
+                                      onBlur={(e) => {
+                                        const rawValue = e.target.value.replace(/\D/g, '');
+                                        const val = rawValue ? parseInt(rawValue, 10) : 0;
+                                        if (val !== (item.hpp || 0)) {
+                                          handleUpdateHpp(order.id, item.id, val);
+                                        }
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell className="text-right font-medium text-emerald-600">
+                                    Rp {profit.toLocaleString('id-ID')}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <Button
+                                      variant={item.isTransferred ? "default" : "outline"}
+                                      size="sm"
+                                      className={`w-full text-xs ${item.isTransferred ? 'bg-emerald-600 hover:bg-emerald-700' : 'text-slate-500'}`}
+                                      onClick={() => toggleItemStatus(order.id, item.id, 'isTransferred')}
+                                    >
+                                      {item.isTransferred ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
+                                      {item.isTransferred ? 'Sudah' : 'Belum'}
+                                    </Button>
+                                  </TableCell>
+                                  <TableCell></TableCell>
+                                </TableRow>
+                              );
+                            })}
+                            <TableRow className="bg-slate-50 font-bold">
+                              <TableCell colSpan={4} className="text-right text-slate-800">Total Keuntungan PO ini:</TableCell>
+                              <TableCell className="text-right text-emerald-700">
+                                Rp {orderTotalProfit.toLocaleString('id-ID')}
+                              </TableCell>
+                              <TableCell colSpan={2}></TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                    )}
+                  </Card>
+                );
+              })}
             </div>
-            
-            <Card className="bg-indigo-600 text-white border-none shadow-md p-0 gap-0">
-              <CardContent className="p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="text-indigo-100 text-lg">Total Keuntungan Keseluruhan</div>
-                <div className="text-3xl font-bold">Rp {totalProfitAll.toLocaleString('id-ID')}</div>
-              </CardContent>
-            </Card>
+
+            <div className="w-full lg:w-80 shrink-0 space-y-4 sticky top-6">
+              <Card className="bg-indigo-600 text-white border-none shadow-md p-0 gap-0">
+                <CardContent className="p-6 flex flex-col gap-2">
+                  <div className="text-indigo-100 text-sm font-medium">Total Keuntungan Keseluruhan</div>
+                  <div className="text-3xl font-bold">Rp {totalProfitAll.toLocaleString('id-ID')}</div>
+                </CardContent>
+              </Card>
+
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-slate-50 border-b border-slate-100 p-4">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                    <UserIcon className="w-4 h-4 text-slate-500" />
+                    Rekap per Klien
+                  </h3>
+                </div>
+                <div className="p-4 space-y-3">
+                  {Object.entries(profitPerClient)
+                    .sort(([, profitA], [, profitB]) => profitB - profitA)
+                    .map(([client, profit]) => (
+                    <div key={client} className="flex flex-col p-3 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                      <span className="text-sm font-medium text-slate-600 mb-1">{client}</span>
+                      <span className="text-lg font-bold text-emerald-600">Rp {profit.toLocaleString('id-ID')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
