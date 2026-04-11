@@ -1177,16 +1177,16 @@ export default function App() {
     }
 
     return (
-      <div key={customTitle || status} className="flex flex-col bg-slate-50 rounded-xl p-4 w-[85vw] sm:w-[300px] sm:min-w-[300px] sm:max-w-[350px] shrink-0 snap-center border border-slate-200 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Icon className="w-5 h-5 text-slate-600" />
-            <h3 className="font-semibold text-slate-800">{customTitle || config.label}</h3>
+      <div key={customTitle || status} className="flex flex-col bg-slate-50 rounded-xl w-[85vw] sm:w-[300px] sm:min-w-[300px] sm:max-w-[350px] shrink-0 snap-center border border-slate-200 shadow-sm overflow-hidden">
+        <div className={`flex items-center justify-between p-3 border-b border-slate-200/50 ${config.color.split(' ')[0]}`}>
+          <div className={`flex items-center gap-2 ${config.color.split(' ')[1]}`}>
+            <Icon className="w-5 h-5" />
+            <h3 className="font-semibold">{customTitle || config.label}</h3>
           </div>
-          <Badge variant="secondary" className="bg-slate-200 text-slate-700">{columnOrders.length}</Badge>
+          <Badge variant="secondary" className="bg-white/60 text-slate-800 border-none">{columnOrders.length}</Badge>
         </div>
         
-        <div className="flex flex-col gap-3 overflow-y-auto pr-1" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+        <div className="flex flex-col gap-3 overflow-y-auto p-3 pr-2" style={{ maxHeight: 'calc(100vh - 240px)' }}>
           {columnOrders.map(order => (
             <Card 
               key={order.id} 
