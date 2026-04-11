@@ -1160,11 +1160,11 @@ export default function App() {
     return poB.localeCompare(poA, undefined, { numeric: true, sensitivity: 'base' });
   });
 
-  const renderKanbanColumn = (status: OrderStatus) => {
-    let columnOrders = filteredOrders.filter(o => o.status === status);
+  const renderKanbanColumn = (status: OrderStatus, customTitle?: string, customOrders?: PurchaseOrder[]) => {
+    let columnOrders = customOrders || filteredOrders.filter(o => o.status === status);
     
     // Jika bukan admin, gabungkan INVOICED ke dalam COMPLETED
-    if (status === 'COMPLETED' && user.role !== 'admin') {
+    if (status === 'COMPLETED' && user.role !== 'admin' && !customOrders) {
       columnOrders = filteredOrders.filter(o => o.status === 'COMPLETED' || o.status === 'INVOICED');
     }
 
@@ -1177,11 +1177,11 @@ export default function App() {
     }
 
     return (
-      <div key={status} className="flex flex-col bg-slate-50 rounded-xl p-4 w-[85vw] sm:w-[300px] sm:min-w-[300px] sm:max-w-[350px] shrink-0 snap-center border border-slate-200 shadow-sm">
+      <div key={customTitle || status} className="flex flex-col bg-slate-50 rounded-xl p-4 w-[85vw] sm:w-[300px] sm:min-w-[300px] sm:max-w-[350px] shrink-0 snap-center border border-slate-200 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Icon className="w-5 h-5 text-slate-600" />
-            <h3 className="font-semibold text-slate-800">{config.label}</h3>
+            <h3 className="font-semibold text-slate-800">{customTitle || config.label}</h3>
           </div>
           <Badge variant="secondary" className="bg-slate-200 text-slate-700">{columnOrders.length}</Badge>
         </div>
@@ -1260,6 +1260,25 @@ export default function App() {
         </div>
       </div>
     );
+  };
+
+  const renderInvoicedColumnsPerClient = () => {
+    const invoicedOrders = filteredOrders.filter(o => o.status === 'INVOICED');
+    if (invoicedOrders.length === 0) {
+      return renderKanbanColumn('INVOICED');
+    }
+
+    const ordersByClient: Record<string, PurchaseOrder[]> = {};
+    invoicedOrders.forEach(order => {
+      if (!ordersByClient[order.clientName]) {
+        ordersByClient[order.clientName] = [];
+      }
+      ordersByClient[order.clientName].push(order);
+    });
+
+    return Object.entries(ordersByClient).map(([clientName, orders]) => {
+      return renderKanbanColumn('INVOICED', `Nota Dibuat - ${clientName}`, orders);
+    });
   };
 
   const renderFinanceDashboard = () => {
@@ -2360,7 +2379,7 @@ export default function App() {
             {renderKanbanColumn('DELIVERING')}
             {renderKanbanColumn('AT_KITCHEN')}
             {renderKanbanColumn('COMPLETED')}
-            {user.role === 'admin' && renderKanbanColumn('INVOICED')}
+            {user.role === 'admin' && renderInvoicedColumnsPerClient()}
           </div>
         )}
       </main>
