@@ -73,6 +73,38 @@ const statusConfig = {
   INVOICED: { label: 'Nota Dibuat', color: 'bg-purple-100 text-purple-800', icon: Receipt },
 };
 
+const HppInput = ({ item, orderId, handleUpdateHpp }: { item: any, orderId: string, handleUpdateHpp: (orderId: string, itemId: string, hpp: number) => void }) => {
+  const [value, setValue] = useState(item.hpp ? item.hpp.toLocaleString('id-ID') : '');
+
+  useEffect(() => {
+    setValue(item.hpp ? item.hpp.toLocaleString('id-ID') : '');
+  }, [item.hpp]);
+
+  return (
+    <Input 
+      type="text" 
+      className="w-28 text-right ml-auto h-8"
+      placeholder="0"
+      value={value}
+      onChange={(e) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        if (rawValue) {
+          setValue(parseInt(rawValue, 10).toLocaleString('id-ID'));
+        } else {
+          setValue('');
+        }
+      }}
+      onBlur={() => {
+        const rawValue = value.replace(/\D/g, '');
+        const val = rawValue ? parseInt(rawValue, 10) : 0;
+        if (val !== (item.hpp || 0)) {
+          handleUpdateHpp(orderId, item.id, val);
+        }
+      }}
+    />
+  );
+};
+
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -1115,6 +1147,7 @@ export default function App() {
     if (!productHistorySearchTerm) return [];
     
     const history: {
+      orderId: string;
       date: string;
       poNumber: string;
       clientName: string;
@@ -1131,6 +1164,7 @@ export default function App() {
       order.items.forEach(item => {
         if (item.name.toLowerCase().includes(lowerSearch)) {
           history.push({
+            orderId: order.id,
             date: order.date,
             poNumber: order.poNumber || order.id,
             clientName: order.clientName,
@@ -1332,7 +1366,7 @@ export default function App() {
                 }, 0);
                 
                 return (
-                  <Card key={order.id} className="overflow-hidden p-0 gap-0">
+                  <Card key={order.id} id={`finance-card-${order.id}`} className="overflow-hidden p-0 gap-0">
                     <CardHeader 
                       className="bg-slate-50 border-b border-slate-100 p-4 pb-4 cursor-pointer hover:bg-slate-100 transition-colors"
                       onClick={() => toggleFinanceCardExpand(order.id)}
@@ -1395,27 +1429,7 @@ export default function App() {
                                   <TableCell className="text-center">{qty} {item.unit}</TableCell>
                                   <TableCell className="text-right">Rp {price.toLocaleString('id-ID')}</TableCell>
                                   <TableCell className="text-right">
-                                    <Input 
-                                      type="text" 
-                                      className="w-28 text-right ml-auto h-8"
-                                      placeholder="0"
-                                      defaultValue={item.hpp ? item.hpp.toLocaleString('id-ID') : ''}
-                                      onChange={(e) => {
-                                        const rawValue = e.target.value.replace(/\D/g, '');
-                                        if (rawValue) {
-                                          e.target.value = parseInt(rawValue, 10).toLocaleString('id-ID');
-                                        } else {
-                                          e.target.value = '';
-                                        }
-                                      }}
-                                      onBlur={(e) => {
-                                        const rawValue = e.target.value.replace(/\D/g, '');
-                                        const val = rawValue ? parseInt(rawValue, 10) : 0;
-                                        if (val !== (item.hpp || 0)) {
-                                          handleUpdateHpp(order.id, item.id, val);
-                                        }
-                                      }}
-                                    />
+                                    <HppInput item={item} orderId={order.id} handleUpdateHpp={handleUpdateHpp} />
                                   </TableCell>
                                   <TableCell className="text-right font-medium text-emerald-600">
                                     Rp {profit.toLocaleString('id-ID')}
@@ -2450,7 +2464,23 @@ export default function App() {
                           {new Date(history.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </TableCell>
                         <TableCell>
-                          <div className="font-medium text-slate-800">{history.poNumber}</div>
+                          <div 
+                            className="font-medium text-indigo-600 hover:underline cursor-pointer"
+                            onClick={() => {
+                              setIsProductHistoryOpen(false);
+                              setCurrentView('finance');
+                              setExpandedFinanceCards(prev => ({ ...prev, [history.orderId]: true }));
+                              // Add a small delay to allow the DOM to render the finance view before scrolling
+                              setTimeout(() => {
+                                const element = document.getElementById(`finance-card-${history.orderId}`);
+                                if (element) {
+                                  element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }
+                              }, 100);
+                            }}
+                          >
+                            {history.poNumber}
+                          </div>
                           <div className="text-xs text-slate-500">{history.clientName}</div>
                         </TableCell>
                         <TableCell className="font-medium">{history.itemName}</TableCell>
