@@ -2588,12 +2588,8 @@ export default function App() {
                         <TableHead className="text-center w-[120px]">Diterima Klien?</TableHead>
                         {(user.role === 'admin' || user.role === 'supplier') && (
                           <>
-                            {selectedOrder.status !== 'INVOICED' && (
-                              <>
-                                <TableHead className="text-right w-[120px]">HPP</TableHead>
-                                <TableHead className="text-center w-[120px]">Status Transfer</TableHead>
-                              </>
-                            )}
+                            <TableHead className="text-right w-[120px]">HPP</TableHead>
+                            <TableHead className="text-center w-[120px]">Status Transfer</TableHead>
                             <TableHead className="text-center w-[120px]">Rekap Supplier</TableHead>
                           </>
                         )}
@@ -2674,18 +2670,14 @@ export default function App() {
                           </TableCell>
                           {(user.role === 'admin' || user.role === 'supplier') && (
                             <>
-                              {selectedOrder.status !== 'INVOICED' && (
-                                <>
-                                  <TableCell className="text-right">
-                                    <HppInput item={item} orderId={selectedOrder.id} handleUpdateHpp={handleUpdateHpp} />
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    <Badge variant={item.isTransferred ? "default" : "outline"} className={item.isTransferred ? 'bg-emerald-600' : 'text-slate-500'}>
-                                      {item.isTransferred ? 'Sudah' : 'Belum'}
-                                    </Badge>
-                                  </TableCell>
-                                </>
-                              )}
+                              <TableCell className="text-right">
+                                <HppInput item={item} orderId={selectedOrder.id} handleUpdateHpp={handleUpdateHpp} />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant={item.isTransferred ? "default" : "outline"} className={item.isTransferred ? 'bg-emerald-600' : 'text-slate-500'}>
+                                  {item.isTransferred ? 'Sudah' : 'Belum'}
+                                </Badge>
+                              </TableCell>
                               <TableCell className="text-center">
                                 <Button
                                   variant="outline"
