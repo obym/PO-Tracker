@@ -58,7 +58,7 @@ interface UserProfile {
   uid: string;
   email: string;
   name: string;
-  role: 'admin' | 'driver' | 'client' | 'kitchen';
+  role: 'admin' | 'driver' | 'client' | 'supplier';
   phone?: string;
   address?: string;
   district?: string;
@@ -1189,7 +1189,8 @@ export default function App() {
     o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (o.poNumber && o.poNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
     o.items.some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))) &&
-    !(user.role === 'driver' && o.deliveredBy === 'Dikirim Supplier')
+    !(user.role === 'driver' && o.deliveredBy === 'Dikirim Supplier') &&
+    !(user.role === 'supplier' && !o.items.some(item => item.supplier === user.name))
   ).sort((a, b) => {
     const poA = a.poNumber || a.id;
     const poB = b.poNumber || b.id;
@@ -1254,7 +1255,9 @@ export default function App() {
                 
                 {['INVOICED', 'DELIVERING', 'PO_RECEIVED'].includes(status) && expandedCards[order.id] && (
                   <div className="mb-3 space-y-1">
-                    {order.items.map((item, idx) => (
+                    {order.items
+                      .filter(item => user.role !== 'supplier' || item.supplier === user.name)
+                      .map((item, idx) => (
                       <div key={idx} className="text-xs text-slate-600 flex justify-between border-b border-slate-100 pb-1">
                         <span className="truncate pr-2">{item.name}</span>
                         <span className="shrink-0 font-medium">{item.quantity} {item.unit}</span>
@@ -1267,11 +1270,11 @@ export default function App() {
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1">
                       <Package className="w-3.5 h-3.5" />
-                      <span>{order.items.length} items</span>
+                      <span>{order.items.filter(item => user.role !== 'supplier' || item.supplier === user.name).length} items</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>{order.items.filter(i => i.isReceived).length} diterima</span>
+                      <span>{order.items.filter(i => i.isReceived && (user.role !== 'supplier' || i.supplier === user.name)).length} diterima</span>
                     </div>
                   </div>
                   {['INVOICED', 'DELIVERING', 'PO_RECEIVED'].includes(status) && (
@@ -2130,7 +2133,7 @@ export default function App() {
                                   onChange={(e) => handleUpdateUserRole(u.uid, e.target.value)}
                                 >
                                   <option value="admin">Admin</option>
-                                  <option value="kitchen">Kitchen</option>
+                                  <option value="supplier">Supplier</option>
                                   <option value="driver">Driver</option>
                                   <option value="client">Client</option>
                                 </select>
@@ -2574,7 +2577,7 @@ export default function App() {
                     <TableHeader className="bg-slate-50">
                       <TableRow>
                         <TableHead>Barang</TableHead>
-                        {(user.role === 'admin' || user.role === 'kitchen') && <TableHead>Supplier</TableHead>}
+                        {(user.role === 'admin' || user.role === 'supplier') && <TableHead>Supplier</TableHead>}
                         {!(user.role === 'driver' && selectedOrder.deliveredBy === 'Dikirim Supplier') && (
                           <>
                             <TableHead className="text-center w-[120px]">Diorder?</TableHead>
@@ -2583,20 +2586,22 @@ export default function App() {
                           </>
                         )}
                         <TableHead className="text-center w-[120px]">Diterima Klien?</TableHead>
-                        {(user.role === 'admin' || user.role === 'kitchen') && (
+                        {(user.role === 'admin' || user.role === 'supplier') && (
                           <TableHead className="text-center w-[120px]">Rekap Supplier</TableHead>
                         )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedOrder.items.map((item) => (
+                      {selectedOrder.items
+                        .filter(item => user.role !== 'supplier' || item.supplier === user.name)
+                        .map((item) => (
                         <TableRow key={item.id} className={item.isReceived ? 'bg-emerald-50/50' : ''}>
                           <TableCell>
                             <div className="font-medium text-slate-800">{item.name}</div>
                             <div className="text-xs text-slate-500">{item.quantity} {item.unit}</div>
                           </TableCell>
                           
-                          {(user.role === 'admin' || user.role === 'kitchen') && (
+                          {(user.role === 'admin' || user.role === 'supplier') && (
                             <TableCell>
                               <Badge variant="outline" className="bg-white text-slate-600 font-normal">
                                 {item.supplier}
@@ -2610,7 +2615,7 @@ export default function App() {
                                 <Button
                                   variant={item.isOrdered ? "default" : "outline"}
                                   size="sm"
-                                  disabled={user.role !== 'kitchen' && user.role !== 'admin'}
+                                  disabled={user.role !== 'supplier' && user.role !== 'admin'}
                                   className={`w-full ${item.isOrdered ? 'bg-indigo-600 hover:bg-indigo-700' : 'text-slate-500'}`}
                                   onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isOrdered')}
                                 >
@@ -2636,7 +2641,7 @@ export default function App() {
                                 <Button
                                   variant={item.isAtKitchen ? "default" : "outline"}
                                   size="sm"
-                                  disabled={user.role !== 'kitchen' && user.role !== 'admin' && user.role !== 'driver'}
+                                  disabled={user.role !== 'supplier' && user.role !== 'admin' && user.role !== 'driver'}
                                   className={`w-full ${item.isAtKitchen ? 'bg-orange-600 hover:bg-orange-700' : 'text-slate-500'}`}
                                   onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isAtKitchen')}
                                 >
@@ -2659,7 +2664,7 @@ export default function App() {
                               {item.isReceived ? 'Ya' : 'Belum'}
                             </Button>
                           </TableCell>
-                          {(user.role === 'admin' || user.role === 'kitchen') && (
+                          {(user.role === 'admin' || user.role === 'supplier') && (
                             <TableCell className="text-center">
                               <Button
                                 variant="outline"

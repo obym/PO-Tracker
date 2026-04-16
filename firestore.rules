@@ -13,7 +13,7 @@ service cloud.firestore {
     //   - uid: string (required, immutable)
     //   - email: string (required)
     //   - name: string (required)
-    //   - role: string (required, enum: ['admin', 'driver', 'client', 'kitchen'])
+    //   - role: string (required, enum: ['admin', 'driver', 'client', 'supplier'])
     //   - clientId: string (optional)
     //   - phone: string (optional)
     //   - address: string (optional)
@@ -77,8 +77,8 @@ service cloud.firestore {
       return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('role', '') == 'driver';
     }
     
-    function isKitchen() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('role', '') == 'kitchen';
+    function isSupplier() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('role', '') == 'supplier';
     }
     
     function isClient() {
@@ -110,7 +110,7 @@ service cloud.firestore {
              data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
              data.email is string && isValidEmail(data.email) && data.email.size() < 100 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.role in ['admin', 'driver', 'client', 'kitchen'] &&
+             data.role in ['admin', 'driver', 'client', 'supplier'] &&
              (!('clientId' in data) || (data.clientId is string && data.clientId.size() < 100)) &&
              (!('phone' in data) || (data.phone is string && data.phone.size() < 50)) &&
              (!('address' in data) || (data.address is string && data.address.size() < 500)) &&
@@ -176,13 +176,13 @@ service cloud.firestore {
     }
 
     match /purchaseOrders/{orderId} {
-      // Admin sees all. Driver sees all (to know what to deliver). Kitchen sees all. Client sees only their own.
-      allow read: if isAuthenticated() && (isAdmin() || isDriver() || isKitchen() || (isClient() && resource.data.clientId == request.auth.uid));
+      // Admin sees all. Driver sees all (to know what to deliver). Supplier sees all. Client sees only their own.
+      allow read: if isAuthenticated() && (isAdmin() || isDriver() || isSupplier() || (isClient() && resource.data.clientId == request.auth.uid));
       
       // Only admin can create POs
       allow create: if isAdmin() && isValidPurchaseOrder(request.resource.data);
       
-      // Admin can update anything. Driver can update status/items. Kitchen can update status/items. Client can update status/items.
+      // Admin can update anything. Driver can update status/items. Supplier can update status/items. Client can update status/items.
       // We protect immutable fields so they can't change the PO owner or ID.
       allow update: if isAuthenticated() && isValidPurchaseOrder(request.resource.data) &&
                     areImmutableFieldsUnchanged(['id']) &&
@@ -190,7 +190,7 @@ service cloud.firestore {
                       isAdmin() || 
                       (
                         areImmutableFieldsUnchanged(['date', 'clientId', 'clientName']) &&
-                        (isDriver() || isKitchen() || (isClient() && resource.data.clientId == request.auth.uid))
+                        (isDriver() || isSupplier() || (isClient() && resource.data.clientId == request.auth.uid))
                       )
                     );
                     
