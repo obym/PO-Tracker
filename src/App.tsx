@@ -1149,6 +1149,7 @@ export default function App() {
     const history: {
       orderId: string;
       date: string;
+      deliveryDate?: string;
       poNumber: string;
       clientName: string;
       itemName: string;
@@ -1166,6 +1167,7 @@ export default function App() {
           history.push({
             orderId: order.id,
             date: order.date,
+            deliveryDate: order.deliveryDate,
             poNumber: order.poNumber || order.id,
             clientName: order.clientName,
             itemName: item.name,
@@ -1388,9 +1390,16 @@ export default function App() {
                           </CardDescription>
                         </div>
                         <div className="text-right flex flex-col items-end gap-2">
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                            INVOICED
-                          </Badge>
+                          <div className="flex gap-2">
+                            {order.items.length > 0 && order.items.every(item => item.isTransferred) && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                DONE
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                              INVOICED
+                            </Badge>
+                          </div>
                           <div className="text-sm font-bold text-emerald-700">
                             Rp {orderTotalProfit.toLocaleString('id-ID')}
                           </div>
@@ -2447,7 +2456,7 @@ export default function App() {
                 <Table className="min-w-[800px]">
                   <TableHeader className="bg-slate-50">
                     <TableRow>
-                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Tanggal Kirim</TableHead>
                       <TableHead>PO / Klien</TableHead>
                       <TableHead>Barang</TableHead>
                       <TableHead className="text-center">Qty</TableHead>
@@ -2461,7 +2470,10 @@ export default function App() {
                     {getProductHistory().map((history, index) => (
                       <TableRow key={index}>
                         <TableCell>
-                          {new Date(history.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {history.deliveryDate 
+                            ? new Date(history.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                            : new Date(history.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                          }
                         </TableCell>
                         <TableCell>
                           <div 
