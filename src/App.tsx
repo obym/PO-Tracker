@@ -2587,7 +2587,11 @@ export default function App() {
                         )}
                         <TableHead className="text-center w-[120px]">Diterima Klien?</TableHead>
                         {(user.role === 'admin' || user.role === 'supplier') && (
-                          <TableHead className="text-center w-[120px]">Rekap Supplier</TableHead>
+                          <>
+                            <TableHead className="text-right w-[120px]">HPP</TableHead>
+                            <TableHead className="text-center w-[120px]">Status Transfer</TableHead>
+                            <TableHead className="text-center w-[120px]">Rekap Supplier</TableHead>
+                          </>
                         )}
                       </TableRow>
                     </TableHeader>
@@ -2665,18 +2669,28 @@ export default function App() {
                             </Button>
                           </TableCell>
                           {(user.role === 'admin' || user.role === 'supplier') && (
-                            <TableCell className="text-center">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                                onClick={() => handleRekapSupplier(item.supplier)}
-                                disabled={!item.supplier}
-                              >
-                                <MessageSquare className="w-4 h-4 mr-1" />
-                                Rekap
-                              </Button>
-                            </TableCell>
+                            <>
+                              <TableCell className="text-right">
+                                <HppInput item={item} orderId={selectedOrder.id} handleUpdateHpp={handleUpdateHpp} />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant={item.isTransferred ? "default" : "outline"} className={item.isTransferred ? 'bg-emerald-600' : 'text-slate-500'}>
+                                  {item.isTransferred ? 'Sudah' : 'Belum'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                                  onClick={() => handleRekapSupplier(item.supplier)}
+                                  disabled={!item.supplier}
+                                >
+                                  <MessageSquare className="w-4 h-4 mr-1" />
+                                  Rekap
+                                </Button>
+                              </TableCell>
+                            </>
                           )}
                         </TableRow>
                       ))}
