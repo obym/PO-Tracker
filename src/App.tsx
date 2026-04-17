@@ -1213,6 +1213,77 @@ export default function App() {
       return null;
     }
 
+    const renderKanbanCard = (order: PurchaseOrder, status: OrderStatus, customConfig?: { color: string, label: string }) => {
+      const config = customConfig || statusConfig[status];
+      return (
+        <Card 
+          key={order.id} 
+          className="cursor-pointer hover:border-slate-400 transition-colors shadow-sm p-0 gap-0 shrink-0"
+          onClick={() => {
+            setSelectedOrder(order);
+            setIsDetailOpen(true);
+          }}
+        >
+          <CardHeader className="p-4 pb-2">
+            <div className="flex justify-between items-start gap-2">
+              <CardTitle className="text-sm font-bold text-slate-800 break-words">{order.poNumber || order.id}</CardTitle>
+              <Badge className={`${config.color} shrink-0`} variant="outline">{config.label}</Badge>
+            </div>
+            <CardDescription className="text-xs mt-1 text-slate-500">
+              {status === 'INVOICED' && order.invoiceDate 
+                ? new Date(order.invoiceDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                : new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+              }
+              {order.deliveryDate && (
+                <span className="block mt-0.5 text-indigo-600 font-medium">
+                  Kirim: {new Date(order.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <p className="font-medium text-slate-700 mb-2">{order.clientName}</p>
+            
+            {['INVOICED', 'DELIVERING', 'PO_RECEIVED'].includes(status) && expandedCards[order.id] && (
+              <div className="mb-3 space-y-1">
+                {order.items
+                  .filter(item => user.role !== 'supplier' || item.supplier === user.name)
+                  .map((item, idx) => (
+                  <div key={idx} className="text-xs text-slate-600 flex justify-between border-b border-slate-100 pb-1">
+                    <span className="truncate pr-2">{item.name}</span>
+                    <span className="shrink-0 font-medium">{item.quantity} {item.unit}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
+                  <Package className="w-3.5 h-3.5" />
+                  <span>{order.items.filter(item => user.role !== 'supplier' || item.supplier === user.name).length} items</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>{order.items.filter(i => i.isReceived && (user.role !== 'supplier' || i.supplier === user.name)).length} diterima</span>
+                </div>
+              </div>
+              {['INVOICED', 'DELIVERING', 'PO_RECEIVED'].includes(status) && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs"
+                  onClick={(e) => toggleCardExpand(e, order.id)}
+                >
+                  {expandedCards[order.id] ? 'Tutup' : 'Detail'}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
       <div key={customTitle || status} className="flex flex-col bg-slate-50 rounded-xl w-[85vw] sm:w-[300px] sm:min-w-[300px] sm:max-w-[350px] shrink-0 snap-center border border-slate-200 shadow-sm overflow-hidden">
         <div className={`flex items-center justify-between p-3 border-b border-slate-200/50 ${config.color.split(' ')[0]}`}>
@@ -1224,73 +1295,7 @@ export default function App() {
         </div>
         
         <div className="flex flex-col gap-3 overflow-y-auto p-3 pr-2" style={{ maxHeight: 'calc(100vh - 240px)' }}>
-          {columnOrders.map(order => (
-            <Card 
-              key={order.id} 
-              className="cursor-pointer hover:border-slate-400 transition-colors shadow-sm p-0 gap-0 shrink-0"
-              onClick={() => {
-                setSelectedOrder(order);
-                setIsDetailOpen(true);
-              }}
-            >
-              <CardHeader className="p-4 pb-2">
-                <div className="flex justify-between items-start gap-2">
-                  <CardTitle className="text-sm font-bold text-slate-800 break-words">{order.poNumber || order.id}</CardTitle>
-                  <Badge className={`${config.color} shrink-0`} variant="outline">{config.label}</Badge>
-                </div>
-                <CardDescription className="text-xs mt-1 text-slate-500">
-                  {status === 'INVOICED' && order.invoiceDate 
-                    ? new Date(order.invoiceDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                    : new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                  }
-                  {order.deliveryDate && (
-                    <span className="block mt-0.5 text-indigo-600 font-medium">
-                      Kirim: {new Date(order.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </span>
-                  )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <p className="font-medium text-slate-700 mb-2">{order.clientName}</p>
-                
-                {['INVOICED', 'DELIVERING', 'PO_RECEIVED'].includes(status) && expandedCards[order.id] && (
-                  <div className="mb-3 space-y-1">
-                    {order.items
-                      .filter(item => user.role !== 'supplier' || item.supplier === user.name)
-                      .map((item, idx) => (
-                      <div key={idx} className="text-xs text-slate-600 flex justify-between border-b border-slate-100 pb-1">
-                        <span className="truncate pr-2">{item.name}</span>
-                        <span className="shrink-0 font-medium">{item.quantity} {item.unit}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between text-xs text-slate-500">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                      <Package className="w-3.5 h-3.5" />
-                      <span>{order.items.filter(item => user.role !== 'supplier' || item.supplier === user.name).length} items</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>{order.items.filter(i => i.isReceived && (user.role !== 'supplier' || i.supplier === user.name)).length} diterima</span>
-                    </div>
-                  </div>
-                  {['INVOICED', 'DELIVERING', 'PO_RECEIVED'].includes(status) && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-6 px-2 text-xs"
-                      onClick={(e) => toggleCardExpand(e, order.id)}
-                    >
-                      {expandedCards[order.id] ? 'Tutup' : 'Detail'}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {columnOrders.map(order => renderKanbanCard(order, status))}
           {columnOrders.length === 0 && (
             <div className="text-center p-6 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-sm">
               Tidak ada PO
@@ -1335,9 +1340,68 @@ export default function App() {
     const columns = [];
     
     // Always render these three, even if empty, per request:
-    columns.push(renderKanbanColumn('COMPLETED', 'Diterima Klien SPPG Ngasem', ordersByClient['SPPG Ngasem']));
-    columns.push(renderKanbanColumn('COMPLETED', 'Diterima Klien SPPG Tugurejo', ordersByClient['SPPG Tugurejo']));
-    columns.push(renderKanbanColumn('COMPLETED', 'Diterima Klien Pagu', ordersByClient['Pagu']));
+    columns.push(
+      <div key="Ngasem" className="flex flex-col bg-slate-50 rounded-xl w-[85vw] sm:w-[300px] sm:min-w-[300px] sm:max-w-[350px] shrink-0 snap-center border border-slate-200 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between p-3 border-b border-indigo-200/50 bg-indigo-100 text-indigo-800">
+          <div className="flex items-center gap-2 text-indigo-800">
+            <CheckCircle2 className="w-5 h-5" />
+            <h3 className="font-semibold">Diterima Klien SPPG Ngasem</h3>
+          </div>
+          <Badge variant="secondary" className="bg-white/60 text-slate-800 border-none">{ordersByClient['SPPG Ngasem'].length}</Badge>
+        </div>
+        
+        <div className="flex flex-col gap-3 overflow-y-auto p-3 pr-2" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+          {ordersByClient['SPPG Ngasem'].map(order => renderKanbanCard(order, 'COMPLETED', { color: 'bg-indigo-100 text-indigo-800', label: 'Selesai (Diterima Klien)' }))}
+          {ordersByClient['SPPG Ngasem'].length === 0 && (
+            <div className="text-center p-6 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-sm">
+              Tidak ada PO
+            </div>
+          )}
+        </div>
+      </div>
+    );
+
+    columns.push(
+      <div key="Tugurejo" className="flex flex-col bg-slate-50 rounded-xl w-[85vw] sm:w-[300px] sm:min-w-[300px] sm:max-w-[350px] shrink-0 snap-center border border-slate-200 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between p-3 border-b border-sky-200/50 bg-sky-100 text-sky-800">
+          <div className="flex items-center gap-2 text-sky-800">
+            <CheckCircle2 className="w-5 h-5" />
+            <h3 className="font-semibold">Diterima Klien SPPG Tugurejo</h3>
+          </div>
+          <Badge variant="secondary" className="bg-white/60 text-slate-800 border-none">{ordersByClient['SPPG Tugurejo'].length}</Badge>
+        </div>
+        
+        <div className="flex flex-col gap-3 overflow-y-auto p-3 pr-2" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+          {ordersByClient['SPPG Tugurejo'].map(order => renderKanbanCard(order, 'COMPLETED', { color: 'bg-sky-100 text-sky-800', label: 'Selesai (Diterima Klien)' }))}
+          {ordersByClient['SPPG Tugurejo'].length === 0 && (
+            <div className="text-center p-6 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-sm">
+              Tidak ada PO
+            </div>
+          )}
+        </div>
+      </div>
+    );
+
+    columns.push(
+      <div key="Pagu" className="flex flex-col bg-slate-50 rounded-xl w-[85vw] sm:w-[300px] sm:min-w-[300px] sm:max-w-[350px] shrink-0 snap-center border border-slate-200 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between p-3 border-b border-fuchsia-200/50 bg-fuchsia-100 text-fuchsia-800">
+          <div className="flex items-center gap-2 text-fuchsia-800">
+            <CheckCircle2 className="w-5 h-5" />
+            <h3 className="font-semibold">Diterima Klien Pagu</h3>
+          </div>
+          <Badge variant="secondary" className="bg-white/60 text-slate-800 border-none">{ordersByClient['Pagu'].length}</Badge>
+        </div>
+        
+        <div className="flex flex-col gap-3 overflow-y-auto p-3 pr-2" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+          {ordersByClient['Pagu'].map(order => renderKanbanCard(order, 'COMPLETED', { color: 'bg-fuchsia-100 text-fuchsia-800', label: 'Selesai (Diterima Klien)' }))}
+          {ordersByClient['Pagu'].length === 0 && (
+            <div className="text-center p-6 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-sm">
+              Tidak ada PO
+            </div>
+          )}
+        </div>
+      </div>
+    );
 
     // Append any other clients if they exist
     Object.entries(otherClients).forEach(([clientName, orders]) => {
@@ -2474,7 +2538,7 @@ export default function App() {
           renderFinanceDashboard()
         ) : (
           <div className="flex gap-4 sm:gap-6 min-w-max pb-4">
-            {renderKanbanColumn('PO_RECEIVED')}
+            {user.role !== 'supplier' && user.role !== 'kitchen' && renderKanbanColumn('PO_RECEIVED')}
             {(user.role !== 'supplier' && user.role !== 'kitchen') && renderKanbanColumn('ORDERING')}
             {(user.role !== 'supplier' && user.role !== 'kitchen') && renderKanbanColumn('DELIVERING')}
             {(user.role !== 'supplier' && user.role !== 'kitchen') && renderKanbanColumn('AT_KITCHEN')}
