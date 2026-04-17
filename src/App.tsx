@@ -1301,6 +1301,52 @@ export default function App() {
     );
   };
 
+  const renderCompletedColumnsPerClientForSupplier = () => {
+    const completedOrInvoicedOrders = filteredOrders.filter(o => o.status === 'COMPLETED' || o.status === 'INVOICED');
+    if (completedOrInvoicedOrders.length === 0) {
+      return renderKanbanColumn('COMPLETED');
+    }
+
+    const ordersByClient: Record<string, PurchaseOrder[]> = {
+      'SPPG Ngasem': [],
+      'SPPG Tugurejo': [],
+      'Pagu': [] // You can add or adjust actual client names as observed from DB
+    };
+    
+    // Fallback for an generic unmapped client just in case
+    const otherClients: Record<string, PurchaseOrder[]> = {};
+
+    completedOrInvoicedOrders.forEach(order => {
+      // Find matching key (case-insensitive include check)
+      if (order.clientName.toLowerCase().includes('ngasem')) {
+        ordersByClient['SPPG Ngasem'].push(order);
+      } else if (order.clientName.toLowerCase().includes('tugurejo')) {
+        ordersByClient['SPPG Tugurejo'].push(order);
+      } else if (order.clientName.toLowerCase().includes('pagu')) {
+        ordersByClient['Pagu'].push(order);
+      } else {
+        if (!otherClients[order.clientName]) {
+          otherClients[order.clientName] = [];
+        }
+        otherClients[order.clientName].push(order);
+      }
+    });
+
+    const columns = [];
+    
+    // Always render these three, even if empty, per request:
+    columns.push(renderKanbanColumn('COMPLETED', 'Diterima Klien SPPG Ngasem', ordersByClient['SPPG Ngasem']));
+    columns.push(renderKanbanColumn('COMPLETED', 'Diterima Klien SPPG Tugurejo', ordersByClient['SPPG Tugurejo']));
+    columns.push(renderKanbanColumn('COMPLETED', 'Diterima Klien Pagu', ordersByClient['Pagu']));
+
+    // Append any other clients if they exist
+    Object.entries(otherClients).forEach(([clientName, orders]) => {
+      columns.push(renderKanbanColumn('COMPLETED', `Diterima Klien ${clientName}`, orders));
+    });
+
+    return columns;
+  };
+
   const renderInvoicedColumnsPerClient = () => {
     const invoicedOrders = filteredOrders.filter(o => o.status === 'INVOICED');
     if (invoicedOrders.length === 0) {
@@ -2432,7 +2478,7 @@ export default function App() {
             {(user.role !== 'supplier' && user.role !== 'kitchen') && renderKanbanColumn('ORDERING')}
             {(user.role !== 'supplier' && user.role !== 'kitchen') && renderKanbanColumn('DELIVERING')}
             {(user.role !== 'supplier' && user.role !== 'kitchen') && renderKanbanColumn('AT_KITCHEN')}
-            {renderKanbanColumn('COMPLETED')}
+            {user.role === 'supplier' ? renderCompletedColumnsPerClientForSupplier() : renderKanbanColumn('COMPLETED')}
             {user.role === 'admin' && renderInvoicedColumnsPerClient()}
           </div>
         )}
