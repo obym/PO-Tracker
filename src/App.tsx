@@ -1190,7 +1190,7 @@ export default function App() {
     (o.poNumber && o.poNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
     o.items.some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))) &&
     !(user.role === 'driver' && o.deliveredBy === 'Dikirim Supplier') &&
-    !(user.role === 'supplier' && !o.items.some(item => item.supplier === user.name))
+    !((user.role === 'supplier' || user.role === 'kitchen') && !o.items.some(item => item.supplier === user.name))
   ).sort((a, b) => {
     const poA = a.poNumber || a.id;
     const poB = b.poNumber || b.id;
@@ -2429,9 +2429,9 @@ export default function App() {
         ) : (
           <div className="flex gap-4 sm:gap-6 min-w-max pb-4">
             {renderKanbanColumn('PO_RECEIVED')}
-            {user.role !== 'supplier' && renderKanbanColumn('ORDERING')}
-            {user.role !== 'supplier' && renderKanbanColumn('DELIVERING')}
-            {user.role !== 'supplier' && renderKanbanColumn('AT_KITCHEN')}
+            {(user.role !== 'supplier' && user.role !== 'kitchen') && renderKanbanColumn('ORDERING')}
+            {(user.role !== 'supplier' && user.role !== 'kitchen') && renderKanbanColumn('DELIVERING')}
+            {(user.role !== 'supplier' && user.role !== 'kitchen') && renderKanbanColumn('AT_KITCHEN')}
             {renderKanbanColumn('COMPLETED')}
             {user.role === 'admin' && renderInvoicedColumnsPerClient()}
           </div>
@@ -2577,7 +2577,7 @@ export default function App() {
                     <TableHeader className="bg-slate-50">
                       <TableRow>
                         <TableHead>Barang</TableHead>
-                        {(user.role === 'admin' || user.role === 'supplier') && <TableHead>Supplier</TableHead>}
+                        {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && <TableHead>Supplier</TableHead>}
                         {!(user.role === 'driver' && selectedOrder.deliveredBy === 'Dikirim Supplier') && (
                           <>
                             <TableHead className="text-center w-[120px]">Diorder?</TableHead>
@@ -2586,7 +2586,7 @@ export default function App() {
                           </>
                         )}
                         <TableHead className="text-center w-[120px]">Diterima Klien?</TableHead>
-                        {(user.role === 'admin' || user.role === 'supplier') && (
+                        {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && (
                           <>
                             <TableHead className="text-right w-[120px]">HPP</TableHead>
                             <TableHead className="text-center w-[120px]">Status Transfer</TableHead>
@@ -2605,7 +2605,7 @@ export default function App() {
                             <div className="text-xs text-slate-500">{item.quantity} {item.unit}</div>
                           </TableCell>
                           
-                          {(user.role === 'admin' || user.role === 'supplier') && (
+                          {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && (
                             <TableCell>
                               <Badge variant="outline" className="bg-white text-slate-600 font-normal">
                                 {item.supplier}
@@ -2668,15 +2668,21 @@ export default function App() {
                               {item.isReceived ? 'Ya' : 'Belum'}
                             </Button>
                           </TableCell>
-                          {(user.role === 'admin' || user.role === 'supplier') && (
+                          {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && (
                             <>
                               <TableCell className="text-right">
                                 <HppInput item={item} orderId={selectedOrder.id} handleUpdateHpp={handleUpdateHpp} />
                               </TableCell>
                               <TableCell className="text-center">
-                                <Badge variant={item.isTransferred ? "default" : "outline"} className={item.isTransferred ? 'bg-emerald-600' : 'text-slate-500'}>
+                                <Button
+                                  variant={item.isTransferred ? "default" : "outline"}
+                                  size="sm"
+                                  className={`w-full ${item.isTransferred ? 'bg-emerald-600 hover:bg-emerald-700' : 'text-slate-500'}`}
+                                  onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isTransferred')}
+                                >
+                                  {item.isTransferred ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Clock className="w-4 h-4 mr-1" />}
                                   {item.isTransferred ? 'Sudah' : 'Belum'}
-                                </Badge>
+                                </Button>
                               </TableCell>
                               <TableCell className="text-center">
                                 <Button
