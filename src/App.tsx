@@ -2429,9 +2429,9 @@ export default function App() {
         ) : (
           <div className="flex gap-4 sm:gap-6 min-w-max pb-4">
             {renderKanbanColumn('PO_RECEIVED')}
-            {renderKanbanColumn('ORDERING')}
-            {renderKanbanColumn('DELIVERING')}
-            {renderKanbanColumn('AT_KITCHEN')}
+            {user.role !== 'supplier' && renderKanbanColumn('ORDERING')}
+            {user.role !== 'supplier' && renderKanbanColumn('DELIVERING')}
+            {user.role !== 'supplier' && renderKanbanColumn('AT_KITCHEN')}
             {renderKanbanColumn('COMPLETED')}
             {user.role === 'admin' && renderInvoicedColumnsPerClient()}
           </div>
