@@ -1197,6 +1197,77 @@ export default function App() {
     return poB.localeCompare(poA, undefined, { numeric: true, sensitivity: 'base' });
   });
 
+  const renderKanbanCard = (order: PurchaseOrder, status: OrderStatus, customConfig?: { color: string, label: string }) => {
+    const config = customConfig || statusConfig[status];
+    return (
+      <Card 
+        key={order.id} 
+        className="cursor-pointer hover:border-slate-400 transition-colors shadow-sm p-0 gap-0 shrink-0"
+        onClick={() => {
+          setSelectedOrder(order);
+          setIsDetailOpen(true);
+        }}
+      >
+        <CardHeader className="p-4 pb-2">
+          <div className="flex justify-between items-start gap-2">
+            <CardTitle className="text-sm font-bold text-slate-800 break-words">{order.poNumber || order.id}</CardTitle>
+            <Badge className={`${config.color} shrink-0`} variant="outline">{config.label}</Badge>
+          </div>
+          <CardDescription className="text-xs mt-1 text-slate-500">
+            {status === 'INVOICED' && order.invoiceDate 
+              ? new Date(order.invoiceDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+              : new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+            }
+            {order.deliveryDate && (
+              <span className="block mt-0.5 text-indigo-600 font-medium">
+                Kirim: {new Date(order.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
+          <p className="font-medium text-slate-700 mb-2">{order.clientName}</p>
+          
+          {['INVOICED', 'DELIVERING', 'PO_RECEIVED'].includes(status) && expandedCards[order.id] && (
+            <div className="mb-3 space-y-1">
+              {order.items
+                .filter(item => user.role !== 'supplier' || item.supplier === user.name)
+                .map((item, idx) => (
+                <div key={idx} className="text-xs text-slate-600 flex justify-between border-b border-slate-100 pb-1">
+                  <span className="truncate pr-2">{item.name}</span>
+                  <span className="shrink-0 font-medium">{item.quantity} {item.unit}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1">
+                <Package className="w-3.5 h-3.5" />
+                <span>{order.items.filter(item => user.role !== 'supplier' || item.supplier === user.name).length} items</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                <span>{order.items.filter(i => i.isReceived && (user.role !== 'supplier' || i.supplier === user.name)).length} diterima</span>
+              </div>
+            </div>
+            {['INVOICED', 'DELIVERING', 'PO_RECEIVED'].includes(status) && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 px-2 text-xs"
+                onClick={(e) => toggleCardExpand(e, order.id)}
+              >
+                {expandedCards[order.id] ? 'Tutup' : 'Detail'}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const renderKanbanColumn = (status: OrderStatus, customTitle?: string, customOrders?: PurchaseOrder[]) => {
     let columnOrders = customOrders || filteredOrders.filter(o => o.status === status);
     
@@ -1211,77 +1282,6 @@ export default function App() {
     // Filter for driver: only show ORDERING, DELIVERING, and AT_KITCHEN
     if (user.role === 'driver' && status !== 'ORDERING' && status !== 'DELIVERING' && status !== 'AT_KITCHEN') {
       return null;
-    }
-
-    const renderKanbanCard = (order: PurchaseOrder, status: OrderStatus, customConfig?: { color: string, label: string }) => {
-      const config = customConfig || statusConfig[status];
-      return (
-        <Card 
-          key={order.id} 
-          className="cursor-pointer hover:border-slate-400 transition-colors shadow-sm p-0 gap-0 shrink-0"
-          onClick={() => {
-            setSelectedOrder(order);
-            setIsDetailOpen(true);
-          }}
-        >
-          <CardHeader className="p-4 pb-2">
-            <div className="flex justify-between items-start gap-2">
-              <CardTitle className="text-sm font-bold text-slate-800 break-words">{order.poNumber || order.id}</CardTitle>
-              <Badge className={`${config.color} shrink-0`} variant="outline">{config.label}</Badge>
-            </div>
-            <CardDescription className="text-xs mt-1 text-slate-500">
-              {status === 'INVOICED' && order.invoiceDate 
-                ? new Date(order.invoiceDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                : new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-              }
-              {order.deliveryDate && (
-                <span className="block mt-0.5 text-indigo-600 font-medium">
-                  Kirim: {new Date(order.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </span>
-              )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="font-medium text-slate-700 mb-2">{order.clientName}</p>
-            
-            {['INVOICED', 'DELIVERING', 'PO_RECEIVED'].includes(status) && expandedCards[order.id] && (
-              <div className="mb-3 space-y-1">
-                {order.items
-                  .filter(item => user.role !== 'supplier' || item.supplier === user.name)
-                  .map((item, idx) => (
-                  <div key={idx} className="text-xs text-slate-600 flex justify-between border-b border-slate-100 pb-1">
-                    <span className="truncate pr-2">{item.name}</span>
-                    <span className="shrink-0 font-medium">{item.quantity} {item.unit}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1">
-                  <Package className="w-3.5 h-3.5" />
-                  <span>{order.items.filter(item => user.role !== 'supplier' || item.supplier === user.name).length} items</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>{order.items.filter(i => i.isReceived && (user.role !== 'supplier' || i.supplier === user.name)).length} diterima</span>
-                </div>
-              </div>
-              {['INVOICED', 'DELIVERING', 'PO_RECEIVED'].includes(status) && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-2 text-xs"
-                  onClick={(e) => toggleCardExpand(e, order.id)}
-                >
-                  {expandedCards[order.id] ? 'Tutup' : 'Detail'}
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      );
     }
 
     return (
