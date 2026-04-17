@@ -13,7 +13,7 @@ service cloud.firestore {
     //   - uid: string (required, immutable)
     //   - email: string (required)
     //   - name: string (required)
-    //   - role: string (required, enum: ['admin', 'driver', 'client', 'supplier', 'kitchen'])
+    //   - role: string (required, enum: ['admin', 'driver', 'client', 'supplier'])
     //   - clientId: string (optional)
     //   - phone: string (optional)
     //   - address: string (optional)
@@ -78,7 +78,7 @@ service cloud.firestore {
     }
     
     function isSupplier() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (getUserData().get('role', '') == 'supplier' || getUserData().get('role', '') == 'kitchen');
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('role', '') == 'supplier';
     }
     
     function isClient() {
@@ -110,7 +110,7 @@ service cloud.firestore {
              data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
              data.email is string && isValidEmail(data.email) && data.email.size() < 100 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.role in ['admin', 'driver', 'client', 'supplier', 'kitchen'] &&
+             data.role in ['admin', 'driver', 'client', 'supplier'] &&
              (!('clientId' in data) || (data.clientId is string && data.clientId.size() < 100)) &&
              (!('phone' in data) || (data.phone is string && data.phone.size() < 50)) &&
              (!('address' in data) || (data.address is string && data.address.size() < 500)) &&

@@ -2578,7 +2578,7 @@ export default function App() {
                       <TableRow>
                         <TableHead>Barang</TableHead>
                         {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && <TableHead>Supplier</TableHead>}
-                        {!(user.role === 'driver' && selectedOrder.deliveredBy === 'Dikirim Supplier') && (
+                        {!(user.role === 'driver' && selectedOrder.deliveredBy === 'Dikirim Supplier') && user.role !== 'supplier' && user.role !== 'kitchen' && (
                           <>
                             <TableHead className="text-center w-[120px]">Diorder?</TableHead>
                             <TableHead className="text-center w-[120px]">Dikirim?</TableHead>
@@ -2613,7 +2613,7 @@ export default function App() {
                             </TableCell>
                           )}
 
-                          {!(user.role === 'driver' && selectedOrder.deliveredBy === 'Dikirim Supplier') && (
+                          {!(user.role === 'driver' && selectedOrder.deliveredBy === 'Dikirim Supplier') && user.role !== 'supplier' && user.role !== 'kitchen' && (
                             <>
                               <TableCell className="text-center">
                                 <Button
@@ -2679,6 +2679,7 @@ export default function App() {
                                   size="sm"
                                   className={`w-full ${item.isTransferred ? 'bg-emerald-600 hover:bg-emerald-700' : 'text-slate-500'}`}
                                   onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isTransferred')}
+                                  disabled={user.role !== 'admin' && user.role !== 'supplier' && user.role !== 'kitchen'}
                                 >
                                   {item.isTransferred ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Clock className="w-4 h-4 mr-1" />}
                                   {item.isTransferred ? 'Sudah' : 'Belum'}
