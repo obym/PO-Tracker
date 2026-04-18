@@ -2674,8 +2674,19 @@ export default function App() {
                   <p className="font-semibold text-slate-800 text-lg">{selectedOrder.clientName}</p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                  <p className="text-sm text-slate-500 mb-1">Catatan</p>
-                  <p className="font-medium text-slate-700">{selectedOrder.notes || '-'}</p>
+                  <p className="text-sm text-slate-500 mb-1">
+                    {user?.role === 'supplier' ? 'Total Jumlah Transfer' : 'Catatan'}
+                  </p>
+                  <p className="font-medium text-slate-700">
+                    {user?.role === 'supplier'
+                      ? (() => {
+                          const items = selectedOrder.items.filter(item => item.supplier === user.name);
+                          const totalTransfer = items.reduce((sum, item) => sum + (((item.unitPrice || 0) - (item.hpp || 0)) * (typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity)), 0);
+                          return `Rp ${totalTransfer.toLocaleString('id-ID')}`;
+                        })()
+                      : (selectedOrder.notes || '-')
+                    }
+                  </p>
                 </div>
               </div>
 
@@ -2698,7 +2709,9 @@ export default function App() {
                         <TableHead className="text-center w-[120px]">Diterima Klien?</TableHead>
                         {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && (
                           <>
+                            {user.role === 'supplier' && <TableHead className="text-right w-[130px]">Harga Invoice/Nota</TableHead>}
                             <TableHead className="text-right w-[120px]">HPP</TableHead>
+                            {user.role === 'supplier' && <TableHead className="text-right w-[130px]">Jumlah Transfer</TableHead>}
                             <TableHead className="text-center w-[120px]">Status Transfer</TableHead>
                             <TableHead className="text-center w-[120px]">Rekap Supplier</TableHead>
                           </>
@@ -2780,9 +2793,19 @@ export default function App() {
                           </TableCell>
                           {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && (
                             <>
+                              {user.role === 'supplier' && (
+                                <TableCell className="text-right font-medium text-slate-700 whitespace-nowrap">
+                                  Rp {(item.unitPrice || 0).toLocaleString('id-ID')}
+                                </TableCell>
+                              )}
                               <TableCell className="text-right">
                                 <HppInput item={item} orderId={selectedOrder.id} handleUpdateHpp={handleUpdateHpp} />
                               </TableCell>
+                              {user.role === 'supplier' && (
+                                <TableCell className="text-right font-medium text-indigo-600 whitespace-nowrap">
+                                  Rp {((item.unitPrice || 0) - (item.hpp || 0)).toLocaleString('id-ID')}
+                                </TableCell>
+                              )}
                               <TableCell className="text-center">
                                 <Button
                                   variant={item.isTransferred ? "default" : "outline"}
