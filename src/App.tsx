@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2, Edit, Receipt, Printer, Download, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, FileText, Package, Truck, CheckCircle2, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, ShoppingCart, Clock, LogOut, User as UserIcon, Trash2, Edit, Receipt, Printer, Download, MessageSquare, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -191,6 +191,7 @@ export default function App() {
 
   // Invoice State
   const [invoiceOrder, setInvoiceOrder] = useState<PurchaseOrder | null>(null);
+  const [selectedInvoiceItems, setSelectedInvoiceItems] = useState<string[]>([]);
   const [rekapSupplierData, setRekapSupplierData] = useState<{order: PurchaseOrder, supplierName: string} | null>(null);
 
   // New Client Form State
@@ -623,6 +624,7 @@ export default function App() {
 
   const handleOpenInvoice = async (order: PurchaseOrder) => {
     setInvoiceOrder(order);
+    setSelectedInvoiceItems(order.items.map(item => item.id));
     setIsDetailOpen(false); // Close detail modal
     
     // If status is COMPLETED, update it to INVOICED
@@ -939,6 +941,8 @@ export default function App() {
   }
 
   if (invoiceOrder) {
+    const printableItems = invoiceOrder.items.filter(item => selectedInvoiceItems.includes(item.id));
+    
     return (
       <div className="min-h-screen bg-slate-100 flex flex-col">
         {/* Print controls (hidden in print) */}
@@ -949,6 +953,48 @@ export default function App() {
            <Button onClick={handlePrintInvoice} className="bg-indigo-600 hover:bg-indigo-700">
              <Printer className="w-4 h-4 mr-2" /> Cetak Nota
            </Button>
+        </div>
+        
+        {/* Selection Area (hidden in print) */}
+        <div className="print:hidden bg-indigo-50 border-b border-indigo-100 p-4 sticky top-[72px] z-10 shadow-sm">
+           <h3 className="font-semibold text-indigo-900 mb-3 text-sm">Pilih Barang yang akan Dicetak pada Nota:</h3>
+           <div className="flex flex-wrap gap-2 mb-3">
+             <Button 
+                variant="outline" 
+                size="sm" 
+                className="bg-white text-xs h-7 hover:bg-indigo-100 border-indigo-200 text-indigo-700"
+                onClick={() => setSelectedInvoiceItems(invoiceOrder.items.map(i => i.id))}
+             >
+                <CheckCircle2 className="w-3 h-3 mr-1" /> Pilih Semua
+             </Button>
+             <Button 
+                variant="outline" 
+                size="sm" 
+                className="bg-white text-xs h-7 hover:bg-red-50 border-red-200 text-red-600"
+                onClick={() => setSelectedInvoiceItems([])}
+             >
+                <X className="w-3 h-3 mr-1" /> Hapus Semua Pilihan
+             </Button>
+           </div>
+           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-[200px] overflow-y-auto">
+             {invoiceOrder.items.map(item => (
+                <label key={item.id} className="flex items-start gap-2 text-sm text-slate-700 bg-white p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    className="mt-1 shrink-0 accent-indigo-600"
+                    checked={selectedInvoiceItems.includes(item.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedInvoiceItems([...selectedInvoiceItems, item.id]);
+                      } else {
+                        setSelectedInvoiceItems(selectedInvoiceItems.filter(id => id !== item.id));
+                      }
+                    }}
+                  />
+                  <span className="leading-tight break-words">{item.name} <br/><span className="text-slate-400 text-xs">({item.quantity} {item.unit})</span></span>
+                </label>
+             ))}
+           </div>
         </div>
         
         {/* Invoice content */}
@@ -1015,12 +1061,12 @@ export default function App() {
               </thead>
               <tbody>
                 {/* Bahan Baku */}
-                {invoiceOrder.items.filter(item => item.category === 'Bahan Baku' || !item.category).length > 0 && (
+                {printableItems.filter(item => item.category === 'Bahan Baku' || !item.category).length > 0 && (
                   <>
                     <tr className="bg-gray-100 font-bold">
                       <td colSpan={6} className="border border-black p-2">Bahan Baku</td>
                     </tr>
-                    {invoiceOrder.items.filter(item => item.category === 'Bahan Baku' || !item.category).map((item, index) => {
+                    {printableItems.filter(item => item.category === 'Bahan Baku' || !item.category).map((item, index) => {
                       const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
                       const price = item.unitPrice || 0;
                       const subtotal = qty * price;
@@ -1043,7 +1089,7 @@ export default function App() {
                       <td colSpan={4} className="border-t border-black"></td>
                       <td className="border border-black p-2 text-right font-bold">Subtotal Bahan Baku</td>
                       <td className="border border-black p-2 text-right font-bold">
-                        {invoiceOrder.items.filter(item => item.category === 'Bahan Baku' || !item.category).reduce((sum, item) => {
+                        {printableItems.filter(item => item.category === 'Bahan Baku' || !item.category).reduce((sum, item) => {
                           const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
                           const price = item.unitPrice || 0;
                           return sum + (qty * price);
@@ -1054,12 +1100,12 @@ export default function App() {
                 )}
 
                 {/* Bahan Operasional */}
-                {invoiceOrder.items.filter(item => item.category === 'Bahan Operasional').length > 0 && (
+                {printableItems.filter(item => item.category === 'Bahan Operasional').length > 0 && (
                   <>
                     <tr className="bg-gray-100 font-bold">
                       <td colSpan={6} className="border border-black p-2">Bahan Operasional</td>
                     </tr>
-                    {invoiceOrder.items.filter(item => item.category === 'Bahan Operasional').map((item, index) => {
+                    {printableItems.filter(item => item.category === 'Bahan Operasional').map((item, index) => {
                       const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
                       const price = item.unitPrice || 0;
                       const subtotal = qty * price;
@@ -1082,7 +1128,7 @@ export default function App() {
                       <td colSpan={4} className="border-t border-black"></td>
                       <td className="border border-black p-2 text-right font-bold">Subtotal Bahan Operasional</td>
                       <td className="border border-black p-2 text-right font-bold">
-                        {invoiceOrder.items.filter(item => item.category === 'Bahan Operasional').reduce((sum, item) => {
+                        {printableItems.filter(item => item.category === 'Bahan Operasional').reduce((sum, item) => {
                           const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
                           const price = item.unitPrice || 0;
                           return sum + (qty * price);
@@ -1096,7 +1142,7 @@ export default function App() {
                   <td colSpan={4} className="border-t border-black"></td>
                   <td className="border border-black p-2 text-right font-bold bg-gray-200">TOTAL KESELURUHAN</td>
                   <td className="border border-black p-2 text-right font-bold bg-gray-200">
-                    {invoiceOrder.items.reduce((sum, item) => {
+                    {printableItems.reduce((sum, item) => {
                       const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
                       const price = item.unitPrice || 0;
                       return sum + (qty * price);
@@ -1110,7 +1156,7 @@ export default function App() {
             <div className="mb-6">
               <p className="font-bold mb-1">Terbilang :</p>
               <div className="border border-black p-2 inline-block min-w-[50%] italic">
-                {terbilang(invoiceOrder.items.reduce((sum, item) => {
+                {terbilang(printableItems.reduce((sum, item) => {
                   const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
                   const price = item.unitPrice || 0;
                   return sum + (qty * price);
