@@ -944,9 +944,9 @@ export default function App() {
     const printableItems = invoiceOrder.items.filter(item => selectedInvoiceItems.includes(item.id));
     
     return (
-      <div className="min-h-screen bg-slate-100 flex flex-col">
+      <div className="h-screen bg-slate-100 flex flex-col overflow-hidden">
         {/* Print controls (hidden in print) */}
-        <div className="print:hidden p-4 border-b border-slate-200 flex justify-between items-center bg-white shadow-sm sticky top-0 z-10">
+        <div className="print:hidden p-4 border-b border-slate-200 flex justify-between items-center bg-white shadow-sm z-20 shrink-0">
            <Button variant="outline" onClick={() => setInvoiceOrder(null)}>
              <ChevronLeft className="w-4 h-4 mr-2" /> Kembali
            </Button>
@@ -955,51 +955,57 @@ export default function App() {
            </Button>
         </div>
         
-        {/* Selection Area (hidden in print) */}
-        <div className="print:hidden bg-indigo-50 border-b border-indigo-100 p-4 sticky top-[72px] z-10 shadow-sm">
-           <h3 className="font-semibold text-indigo-900 mb-3 text-sm">Pilih Barang yang akan Dicetak pada Nota:</h3>
-           <div className="flex flex-wrap gap-2 mb-3">
-             <Button 
-                variant="outline" 
-                size="sm" 
-                className="bg-white text-xs h-7 hover:bg-indigo-100 border-indigo-200 text-indigo-700"
-                onClick={() => setSelectedInvoiceItems(invoiceOrder.items.map(i => i.id))}
-             >
-                <CheckCircle2 className="w-3 h-3 mr-1" /> Pilih Semua
-             </Button>
-             <Button 
-                variant="outline" 
-                size="sm" 
-                className="bg-white text-xs h-7 hover:bg-red-50 border-red-200 text-red-600"
-                onClick={() => setSelectedInvoiceItems([])}
-             >
-                <X className="w-3 h-3 mr-1" /> Hapus Semua Pilihan
-             </Button>
-           </div>
-           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-[200px] overflow-y-auto">
-             {invoiceOrder.items.map(item => (
-                <label key={item.id} className="flex items-start gap-2 text-sm text-slate-700 bg-white p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
-                  <input 
-                    type="checkbox" 
-                    className="mt-1 shrink-0 accent-indigo-600"
-                    checked={selectedInvoiceItems.includes(item.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedInvoiceItems([...selectedInvoiceItems, item.id]);
-                      } else {
-                        setSelectedInvoiceItems(selectedInvoiceItems.filter(id => id !== item.id));
-                      }
-                    }}
-                  />
-                  <span className="leading-tight break-words">{item.name} <br/><span className="text-slate-400 text-xs">({item.quantity} {item.unit})</span></span>
-                </label>
-             ))}
-           </div>
-        </div>
-        
-        {/* Invoice content */}
-        <div className="flex-1 p-2 sm:p-8 overflow-auto flex justify-center">
-          <div id="print-area" className="bg-white text-black p-4 sm:p-12 font-sans text-xs sm:text-sm w-full max-w-4xl shadow-lg border border-slate-200 overflow-x-auto">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden print:block print:overflow-visible">
+          {/* Selection Area (hidden in print) */}
+          <div className="print:hidden w-full md:w-80 lg:w-96 bg-white border-r border-slate-200 p-4 flex flex-col shadow-lg z-10 shrink-0 overflow-y-auto max-h-[300px] md:max-h-full">
+             <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
+               <CheckCircle2 className="w-4 h-4 text-indigo-600" /> Pilih Barang Dicetak:
+             </h3>
+             <div className="flex gap-2 mb-4">
+               <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-indigo-50 text-xs h-8 hover:bg-indigo-100 border-indigo-200 text-indigo-700 flex-1"
+                  onClick={() => setSelectedInvoiceItems(invoiceOrder.items.map(i => i.id))}
+               >
+                  Pilih Semua
+               </Button>
+               <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-red-50 text-xs h-8 hover:bg-red-100 border-red-200 text-red-600 flex-1"
+                  onClick={() => setSelectedInvoiceItems([])}
+               >
+                  Hapus Semua
+               </Button>
+             </div>
+             <div className="flex flex-col gap-2 overflow-y-auto pr-1 pb-4">
+               {invoiceOrder.items.map((item, i) => (
+                  <label key={item.id} className="flex items-start gap-3 text-sm text-slate-700 bg-slate-50 hover:bg-indigo-50/50 p-3 rounded-lg border border-slate-200 cursor-pointer transition-colors shadow-sm">
+                    <input 
+                      type="checkbox" 
+                      className="mt-1 shrink-0 accent-indigo-600 w-4 h-4 cursor-pointer"
+                      checked={selectedInvoiceItems.includes(item.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedInvoiceItems([...selectedInvoiceItems, item.id]);
+                        } else {
+                          setSelectedInvoiceItems(selectedInvoiceItems.filter(id => id !== item.id));
+                        }
+                      }}
+                    />
+                    <div className="flex-1">
+                      <span className="font-semibold text-slate-800">{item.name}</span>
+                      <span className="text-slate-500 font-medium text-xs mt-1 block">Qty: {item.quantity} {item.unit}</span>
+                    </div>
+                  </label>
+               ))}
+             </div>
+          </div>
+          
+          {/* Invoice content */}
+          <div className="flex-1 p-4 sm:p-8 overflow-y-auto flex justify-center bg-slate-200/60 print:p-0 print:bg-white print:block">
+            <div id="print-area" className="bg-white text-black p-8 sm:p-12 font-sans text-xs sm:text-sm w-full max-w-4xl shadow-xl border border-slate-300 lg:rounded-lg mx-auto h-fit print:shadow-none print:border-none print:rounded-none">
             <div className="min-w-[600px]">
               {/* Header */}
             <div className="text-center mb-6">
@@ -1184,6 +1190,7 @@ export default function App() {
             </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
     );
