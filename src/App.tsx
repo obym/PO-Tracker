@@ -25,6 +25,7 @@ interface OrderItem {
   category?: 'Bahan Baku' | 'Bahan Operasional';
   unitPrice?: number;
   hpp?: number;
+  supplierCost?: number;
   isOrdered: boolean;
   isAtKitchen: boolean;
   isDelivered: boolean;
@@ -99,6 +100,38 @@ const HppInput = ({ item, orderId, handleUpdateHpp }: { item: any, orderId: stri
         const val = rawValue ? parseInt(rawValue, 10) : 0;
         if (val !== (item.hpp || 0)) {
           handleUpdateHpp(orderId, item.id, val);
+        }
+      }}
+    />
+  );
+};
+
+const SupplierCostInput = ({ item, orderId, handleUpdateSupplierCost }: { item: any, orderId: string, handleUpdateSupplierCost: (orderId: string, itemId: string, cost: number) => void }) => {
+  const [value, setValue] = useState(item.supplierCost ? item.supplierCost.toLocaleString('id-ID') : '');
+
+  useEffect(() => {
+    setValue(item.supplierCost ? item.supplierCost.toLocaleString('id-ID') : '');
+  }, [item.supplierCost]);
+
+  return (
+    <Input 
+      type="text" 
+      className="w-28 text-right ml-auto h-8"
+      placeholder="0"
+      value={value}
+      onChange={(e) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        if (rawValue) {
+          setValue(parseInt(rawValue, 10).toLocaleString('id-ID'));
+        } else {
+          setValue('');
+        }
+      }}
+      onBlur={() => {
+        const rawValue = value.replace(/\D/g, '');
+        const val = rawValue ? parseInt(rawValue, 10) : 0;
+        if (val !== (item.supplierCost || 0)) {
+          handleUpdateSupplierCost(orderId, item.id, val);
         }
       }}
     />
@@ -572,11 +605,31 @@ export default function App() {
       await updateDoc(doc(db, 'purchaseOrders', orderId), {
         items: updatedItems
       });
-      setGlobalSuccess('HPP berhasil disimpan.');
+      setGlobalSuccess('Harga Berhasil Disimpan.');
       setTimeout(() => setGlobalSuccess(null), 3000);
     } catch (error) {
       console.error("Error updating HPP:", error);
-      setGlobalError('Gagal menyimpan HPP.');
+      setGlobalError('Gagal menyimpan harga.');
+    }
+  };
+
+  const handleUpdateSupplierCost = async (orderId: string, itemId: string, costValue: number) => {
+    try {
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+      
+      const updatedItems = order.items.map(item => 
+        item.id === itemId ? { ...item, supplierCost: costValue } : item
+      );
+      
+      await updateDoc(doc(db, 'purchaseOrders', orderId), {
+        items: updatedItems
+      });
+      setGlobalSuccess('Harga Perolehan berhasil disimpan.');
+      setTimeout(() => setGlobalSuccess(null), 3000);
+    } catch (error) {
+      console.error("Error updating Supplier Cost:", error);
+      setGlobalError('Gagal menyimpan harga perolehan.');
     }
   };
 
@@ -1210,6 +1263,7 @@ export default function App() {
       unit: string;
       price: number;
       hpp: number;
+      supplierCost: number;
     }[] = [];
 
     const lowerSearch = productHistorySearchTerm.toLowerCase();
@@ -1227,7 +1281,8 @@ export default function App() {
             quantity: item.quantity,
             unit: item.unit,
             price: item.unitPrice || 0,
-            hpp: item.hpp || 0
+            hpp: item.hpp || 0,
+            supplierCost: item.supplierCost || 0
           });
         }
       });
@@ -2626,9 +2681,18 @@ export default function App() {
                       <TableHead>PO / Klien</TableHead>
                       <TableHead>Barang</TableHead>
                       <TableHead className="text-center">Qty</TableHead>
-                      <TableHead className="text-right">Harga Satuan</TableHead>
-                      {(user.role === 'admin' || user.role === 'finance') && (
-                        <TableHead className="text-right">HPP</TableHead>
+                      {user.role === 'supplier' ? (
+                        <>
+                          <TableHead className="text-right">Harga Jual Ke Dapur</TableHead>
+                          <TableHead className="text-right">Harga Perolehan</TableHead>
+                        </>
+                      ) : (
+                        <>
+                          <TableHead className="text-right">Harga Satuan</TableHead>
+                          {(user.role === 'admin' || user.role === 'finance') && (
+                            <TableHead className="text-right">HPP</TableHead>
+                          )}
+                        </>
                       )}
                     </TableRow>
                   </TableHeader>
@@ -2663,9 +2727,18 @@ export default function App() {
                         </TableCell>
                         <TableCell className="font-medium">{history.itemName}</TableCell>
                         <TableCell className="text-center">{history.quantity} {history.unit}</TableCell>
-                        <TableCell className="text-right">Rp {(history.price || 0).toLocaleString('id-ID')}</TableCell>
-                        {(user.role === 'admin' || user.role === 'finance') && (
-                          <TableCell className="text-right text-emerald-600">Rp {(history.hpp || 0).toLocaleString('id-ID')}</TableCell>
+                        {user.role === 'supplier' ? (
+                          <>
+                            <TableCell className="text-right text-slate-700">Rp {(history.hpp || 0).toLocaleString('id-ID')}</TableCell>
+                            <TableCell className="text-right text-emerald-600">Rp {(history.supplierCost || 0).toLocaleString('id-ID')}</TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell className="text-right">Rp {(history.price || 0).toLocaleString('id-ID')}</TableCell>
+                            {(user.role === 'admin' || user.role === 'finance') && (
+                              <TableCell className="text-right text-emerald-600">Rp {(history.hpp || 0).toLocaleString('id-ID')}</TableCell>
+                            )}
+                          </>
                         )}
                       </TableRow>
                     ))}
@@ -2734,7 +2807,7 @@ export default function App() {
                     {user?.role === 'supplier'
                       ? (() => {
                           const items = selectedOrder.items.filter(item => item.supplier === user.name);
-                          const totalTransfer = items.reduce((sum, item) => sum + (((item.unitPrice || 0) - (item.hpp || 0)) * (typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity)), 0);
+                          const totalTransfer = items.reduce((sum, item) => sum + (((item.hpp || 0) - (item.supplierCost || 0)) * (typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity)), 0);
                           return `Rp ${totalTransfer.toLocaleString('id-ID')}`;
                         })()
                       : (selectedOrder.notes || '-')
@@ -2762,8 +2835,8 @@ export default function App() {
                         <TableHead className="text-center w-[120px]">Diterima Klien?</TableHead>
                         {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && (
                           <>
-                            {user.role === 'supplier' && <TableHead className="text-right w-[130px]">Harga Invoice/Nota</TableHead>}
-                            <TableHead className="text-right w-[120px]">HPP</TableHead>
+                            {user.role === 'supplier' && <TableHead className="text-right w-[140px]">Harga Jual Ke Dapur</TableHead>}
+                            <TableHead className="text-right w-[120px]">{user.role === 'supplier' ? 'Harga Perolehan' : 'HPP'}</TableHead>
                             {user.role === 'supplier' && <TableHead className="text-right w-[130px]">Jumlah Transfer</TableHead>}
                             <TableHead className="text-center w-[120px]">Status Transfer</TableHead>
                             <TableHead className="text-center w-[120px]">Rekap Supplier</TableHead>
@@ -2847,16 +2920,20 @@ export default function App() {
                           {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && (
                             <>
                               {user.role === 'supplier' && (
-                                <TableCell className="text-right font-medium text-slate-700 whitespace-nowrap">
-                                  Rp {(item.unitPrice || 0).toLocaleString('id-ID')}
+                                <TableCell className="text-right">
+                                  <HppInput item={item} orderId={selectedOrder.id} handleUpdateHpp={handleUpdateHpp} />
                                 </TableCell>
                               )}
                               <TableCell className="text-right">
-                                <HppInput item={item} orderId={selectedOrder.id} handleUpdateHpp={handleUpdateHpp} />
+                                {user.role === 'supplier' ? (
+                                  <SupplierCostInput item={item} orderId={selectedOrder.id} handleUpdateSupplierCost={handleUpdateSupplierCost} />
+                                ) : (
+                                  <HppInput item={item} orderId={selectedOrder.id} handleUpdateHpp={handleUpdateHpp} />
+                                )}
                               </TableCell>
                               {user.role === 'supplier' && (
                                 <TableCell className="text-right font-medium text-indigo-600 whitespace-nowrap">
-                                  Rp {((item.unitPrice || 0) - (item.hpp || 0)).toLocaleString('id-ID')}
+                                  Rp {((item.hpp || 0) - (item.supplierCost || 0)).toLocaleString('id-ID')}
                                 </TableCell>
                               )}
                               <TableCell className="text-center">
