@@ -708,13 +708,21 @@ export default function App() {
     const supplierItems = selectedOrder.items.filter(item => item.supplier === supplierName);
     if (supplierItems.length === 0) return;
 
+    // Find chronological sequence of this order for this supplier
+    const supplierOrders = orders
+      .filter(o => o.items.some(i => i.supplier === supplierName))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    const seqIndex = supplierOrders.findIndex(o => o.id === selectedOrder.id);
+    const seqNum = seqIndex >= 0 ? seqIndex + 1 : 1;
+    const seqNumString = seqNum.toString().padStart(3, '0');
+
     // Generate Invoice Number for Supplier
-    const randomNum = Math.floor(100 + Math.random() * 900);
     const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
     const romanMonths = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
     const currentMonth = romanMonths[new Date().getMonth()];
     const currentYear = new Date().getFullYear();
-    const invoiceNumber = `${randomNum}/${getInitials(supplierName)}/${currentMonth}/${currentYear}`;
+    const invoiceNumber = `${seqNumString}/${getInitials(supplierName)}/${currentMonth}/${currentYear}`;
 
     setRekapSupplierData({ order: selectedOrder, supplierName, invoiceNumber });
     setIsDetailOpen(false);
@@ -929,7 +937,7 @@ export default function App() {
                 <table className="w-full">
                   <tbody>
                     <tr>
-                      <td className="w-24">Nomor PO</td>
+                      <td className="w-24">Nomor Nota</td>
                       <td className="w-4">:</td>
                       <td>{invoiceNumber}</td>
                     </tr>
@@ -1026,8 +1034,8 @@ export default function App() {
             <div className="flex justify-end mt-8">
               <div className="text-center w-48">
                 <p className="mb-16">Hormat Kami,</p>
-                <div className="border-b border-black font-semibold text-sm pb-1">
-                  {suppliers.find(s => s.name === supplierName)?.picName || '(...........................)'}
+                <div className="border-b border-black font-semibold text-sm pb-1 min-h-[24px]">
+                  {suppliers.find(s => s.name === supplierName)?.picName || ''}
                 </div>
               </div>
             </div>
