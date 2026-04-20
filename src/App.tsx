@@ -2805,6 +2805,11 @@ export default function App() {
                         <Receipt className="w-4 h-4 mr-2" /> Cetak Nota
                       </Button>
                     )}
+                    {user.role === 'supplier' && selectedOrder.items.some(item => item.supplier === user.name) && (
+                      <Button variant="outline" size="sm" className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100" onClick={() => handleRekapSupplier(user.name)}>
+                        <Receipt className="w-4 h-4 mr-2" /> Cetak Nota
+                      </Button>
+                    )}
                     {user.role === 'admin' && (
                       <>
                         <Button variant="outline" size="sm" onClick={() => openEditPO(selectedOrder)}>
@@ -2872,7 +2877,9 @@ export default function App() {
                             <TableHead className="text-right w-[120px]">{user.role === 'supplier' ? 'Harga Perolehan' : 'HPP'}</TableHead>
                             {user.role === 'supplier' && <TableHead className="text-right w-[130px]">Jumlah Transfer</TableHead>}
                             <TableHead className="text-center w-[120px]">Status Transfer</TableHead>
-                            <TableHead className="text-center w-[120px]">{user.role === 'supplier' ? 'Nota' : 'Rekap Supplier'}</TableHead>
+                            {user.role !== 'supplier' && (
+                              <TableHead className="text-center w-[120px]">Rekap Supplier</TableHead>
+                            )}
                           </>
                         )}
                       </TableRow>
@@ -2981,18 +2988,20 @@ export default function App() {
                                   {item.isTransferred ? 'Sudah' : 'Belum'}
                                 </Button>
                               </TableCell>
-                              <TableCell className="text-center">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                                  onClick={() => handleRekapSupplier(item.supplier)}
-                                  disabled={!item.supplier}
-                                >
-                                  {user.role === 'supplier' ? <Receipt className="w-4 h-4 mr-1" /> : <MessageSquare className="w-4 h-4 mr-1" />}
-                                  {user.role === 'supplier' ? 'Nota' : 'Rekap'}
-                                </Button>
-                              </TableCell>
+                              {user.role !== 'supplier' && (
+                                <TableCell className="text-center">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                                    onClick={() => handleRekapSupplier(item.supplier)}
+                                    disabled={!item.supplier}
+                                  >
+                                    <MessageSquare className="w-4 h-4 mr-1" />
+                                    Rekap
+                                  </Button>
+                                </TableCell>
+                              )}
                             </>
                           )}
                         </TableRow>
