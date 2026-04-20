@@ -50,6 +50,7 @@ interface PurchaseOrder {
 interface Supplier {
   id: string;
   name: string;
+  picName?: string;
   phone?: string;
   address?: string;
   district?: string;
@@ -192,6 +193,7 @@ export default function App() {
   const [isNewSupplierOpen, setIsNewSupplierOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [supplierName, setSupplierName] = useState('');
+  const [supplierPicName, setSupplierPicName] = useState('');
   const [supplierPhone, setSupplierPhone] = useState('');
   const [supplierAddress, setSupplierAddress] = useState('');
   const [supplierDistrict, setSupplierDistrict] = useState('');
@@ -422,6 +424,7 @@ export default function App() {
       const newSupplier: Supplier = {
         id: newId,
         name: supplierName,
+        picName: supplierPicName,
         phone: supplierPhone,
         address: supplierAddress,
         district: supplierDistrict
@@ -430,6 +433,7 @@ export default function App() {
       await setDoc(doc(db, 'suppliers', newId), newSupplier);
       setIsNewSupplierOpen(false);
       setSupplierName('');
+      setSupplierPicName('');
       setSupplierPhone('');
       setSupplierAddress('');
       setSupplierDistrict('');
@@ -442,6 +446,7 @@ export default function App() {
   const openEditSupplier = (supplier: Supplier) => {
     setEditingSupplier(supplier);
     setSupplierName(supplier.name);
+    setSupplierPicName(supplier.picName || '');
     setSupplierPhone(supplier.phone || '');
     setSupplierAddress(supplier.address || '');
     setSupplierDistrict(supplier.district || '');
@@ -459,6 +464,7 @@ export default function App() {
     try {
       await updateDoc(doc(db, 'suppliers', editingSupplier.id), {
         name: supplierName,
+        picName: supplierPicName,
         phone: supplierPhone,
         address: supplierAddress,
         district: supplierDistrict
@@ -1020,7 +1026,9 @@ export default function App() {
             <div className="flex justify-end mt-8">
               <div className="text-center w-48">
                 <p className="mb-16">Hormat Kami,</p>
-                <p className="border-b border-black"></p>
+                <div className="border-b border-black font-semibold text-sm pb-1">
+                  {suppliers.find(s => s.name === supplierName)?.picName || '(...........................)'}
+                </div>
               </div>
             </div>
             </div>
@@ -2293,6 +2301,7 @@ export default function App() {
                         <TableHeader className="bg-slate-50">
                           <TableRow>
                             <TableHead className="text-base">Nama</TableHead>
+                            <TableHead className="text-base">Nama PIC</TableHead>
                             <TableHead className="text-base">Telepon</TableHead>
                             <TableHead className="text-base">Alamat</TableHead>
                             <TableHead className="text-base">Kecamatan/Kabupaten</TableHead>
@@ -2303,6 +2312,7 @@ export default function App() {
                           {suppliers.map((s) => (
                             <TableRow key={s.id}>
                               <TableCell className="font-medium text-base">{s.name}</TableCell>
+                              <TableCell className="text-base">{s.picName || '-'}</TableCell>
                               <TableCell className="text-base">{s.phone || '-'}</TableCell>
                               <TableCell className="text-base">{s.address || '-'}</TableCell>
                               <TableCell className="text-base">{s.district || '-'}</TableCell>
@@ -2332,7 +2342,7 @@ export default function App() {
                           ))}
                           {suppliers.length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={5} className="text-center text-slate-500 py-4">Belum ada data supplier.</TableCell>
+                              <TableCell colSpan={6} className="text-center text-slate-500 py-4">Belum ada data supplier.</TableCell>
                             </TableRow>
                           )}
                         </TableBody>
@@ -2545,6 +2555,14 @@ export default function App() {
                       />
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="supplierPicName">Nama PIC</Label>
+                      <Input 
+                        id="supplierPicName" 
+                        value={supplierPicName}
+                        onChange={(e) => setSupplierPicName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="supplierPhone">Telepon</Label>
                       <Input 
                         id="supplierPhone" 
@@ -2599,6 +2617,14 @@ export default function App() {
                         id="editSupplierName" 
                         value={supplierName}
                         onChange={(e) => setSupplierName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editSupplierPicName">Nama PIC</Label>
+                      <Input 
+                        id="editSupplierPicName" 
+                        value={supplierPicName}
+                        onChange={(e) => setSupplierPicName(e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
