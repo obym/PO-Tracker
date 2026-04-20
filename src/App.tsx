@@ -225,7 +225,7 @@ export default function App() {
   // Invoice State
   const [invoiceOrder, setInvoiceOrder] = useState<PurchaseOrder | null>(null);
   const [selectedInvoiceItems, setSelectedInvoiceItems] = useState<string[]>([]);
-  const [rekapSupplierData, setRekapSupplierData] = useState<{order: PurchaseOrder, supplierName: string} | null>(null);
+  const [rekapSupplierData, setRekapSupplierData] = useState<{order: PurchaseOrder, supplierName: string, invoiceNumber: string} | null>(null);
 
   // New Client Form State
   const [newClientName, setNewClientName] = useState('');
@@ -702,7 +702,15 @@ export default function App() {
     const supplierItems = selectedOrder.items.filter(item => item.supplier === supplierName);
     if (supplierItems.length === 0) return;
 
-    setRekapSupplierData({ order: selectedOrder, supplierName });
+    // Generate Invoice Number for Supplier
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
+    const romanMonths = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+    const currentMonth = romanMonths[new Date().getMonth()];
+    const currentYear = new Date().getFullYear();
+    const invoiceNumber = `${randomNum}/${getInitials(supplierName)}/${currentMonth}/${currentYear}`;
+
+    setRekapSupplierData({ order: selectedOrder, supplierName, invoiceNumber });
     setIsDetailOpen(false);
   };
 
@@ -878,7 +886,7 @@ export default function App() {
   }
 
   if (rekapSupplierData) {
-    const { order, supplierName } = rekapSupplierData;
+    const { order, supplierName, invoiceNumber } = rekapSupplierData;
     const supplierItems = order.items.filter(item => item.supplier === supplierName);
 
     return (
@@ -902,7 +910,7 @@ export default function App() {
             <div className="min-w-[600px]">
               {/* Header */}
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold border-2 border-black inline-block px-16 py-1 mb-2 tracking-widest">PEMBELIAN BARANG</h1>
+              <h1 className="text-2xl font-bold border-2 border-black inline-block px-16 py-1 mb-2 tracking-widest">NOTA</h1>
               <h2 className="text-xl font-bold uppercase">{supplierName}</h2>
               <p>{suppliers.find(s => s.name === supplierName)?.address || ''}</p>
               <p>{suppliers.find(s => s.name === supplierName)?.district || ''}</p>
@@ -917,7 +925,7 @@ export default function App() {
                     <tr>
                       <td className="w-24">Nomor PO</td>
                       <td className="w-4">:</td>
-                      <td>{order.poNumber || order.id}</td>
+                      <td>{invoiceNumber}</td>
                     </tr>
                     <tr>
                       <td>Tanggal Order</td>
@@ -1009,11 +1017,7 @@ export default function App() {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-between mt-8">
-              <div className="text-center w-48">
-                <p className="mb-16">Penerima,</p>
-                <p className="border-b border-black"></p>
-              </div>
+            <div className="flex justify-end mt-8">
               <div className="text-center w-48">
                 <p className="mb-16">Hormat Kami,</p>
                 <p className="border-b border-black"></p>
