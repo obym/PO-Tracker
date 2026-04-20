@@ -884,7 +884,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-100 flex flex-col">
         {/* Print controls (hidden in print) */}
-        <div className="print:hidden p-4 border-b border-slate-200 flex justify-between items-center bg-white shadow-sm sticky top-0 z-10">
+         <div className="print:hidden p-4 border-b border-slate-200 flex justify-between items-center bg-white shadow-sm sticky top-0 z-10">
            <Button variant="outline" onClick={() => {
              setRekapSupplierData(null);
              setIsDetailOpen(true);
@@ -892,7 +892,7 @@ export default function App() {
              <ChevronLeft className="w-4 h-4 mr-2" /> Kembali
            </Button>
            <Button onClick={handlePrintInvoice} className="bg-indigo-600 hover:bg-indigo-700">
-             <Printer className="w-4 h-4 mr-2" /> Cetak Rekap
+             <Printer className="w-4 h-4 mr-2" /> Cetak Nota
            </Button>
         </div>
         
@@ -903,10 +903,10 @@ export default function App() {
               {/* Header */}
             <div className="text-center mb-6">
               <h1 className="text-2xl font-bold border-2 border-black inline-block px-16 py-1 mb-2 tracking-widest">PEMBELIAN BARANG</h1>
-              <h2 className="text-xl font-bold uppercase">KOPERASI GARUDA MERAH PUTIH</h2>
-              <p>Dsn. Padangan RT 02 RW 03 Ds. Pagu</p>
-              <p>Kec. Pagu Kab. Kediri</p>
-              <p>Phone : 0812-5278-8733</p>
+              <h2 className="text-xl font-bold uppercase">{supplierName}</h2>
+              <p>{suppliers.find(s => s.name === supplierName)?.address || ''}</p>
+              <p>{suppliers.find(s => s.name === supplierName)?.district || ''}</p>
+              <p>{suppliers.find(s => s.name === supplierName)?.phone ? `Phone : ${suppliers.find(s => s.name === supplierName)?.phone}` : ''}</p>
             </div>
 
             {/* Info */}
@@ -936,12 +936,12 @@ export default function App() {
               </div>
               <div>
                 <p className="font-bold">Kepada :</p>
-                <p className="font-bold">{supplierName}</p>
-                {suppliers.find(s => s.name === supplierName)?.address && (
-                  <p>{suppliers.find(s => s.name === supplierName)?.address}</p>
+                <p className="font-bold">{clients.find(c => c.uid === order.clientId)?.name || order.clientName}</p>
+                {clients.find(c => c.uid === order.clientId)?.address && (
+                  <p>{clients.find(c => c.uid === order.clientId)?.address}</p>
                 )}
-                {suppliers.find(s => s.name === supplierName)?.district && (
-                  <p>{suppliers.find(s => s.name === supplierName)?.district}</p>
+                {clients.find(c => c.uid === order.clientId)?.district && (
+                  <p>{clients.find(c => c.uid === order.clientId)?.district}</p>
                 )}
                 <div className="mt-4">
                   <p className="font-bold">Pemesan :</p>
@@ -958,22 +958,55 @@ export default function App() {
                   <th className="border border-black p-2 text-left">NAMA BARANG</th>
                   <th className="border border-black p-2 text-center w-16">QTY</th>
                   <th className="border border-black p-2 text-center w-24">SATUAN</th>
+                  <th className="border border-black p-2 text-right w-32">HARGA</th>
+                  <th className="border border-black p-2 text-right w-32">SUBTOTAL</th>
                 </tr>
               </thead>
               <tbody>
                 {supplierItems.map((item, index) => {
                   const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                  const price = item.hpp || 0;
+                  const subtotal = qty * price;
                   return (
                     <tr key={item.id}>
                       <td className="border border-black p-2 text-center">{index + 1}</td>
                       <td className="border border-black p-2">{item.name}</td>
                       <td className="border border-black p-2 text-center">{qty}</td>
                       <td className="border border-black p-2 text-center">{item.unit}</td>
+                      <td className="border border-black p-2 text-right">
+                        {price > 0 ? price.toLocaleString('id-ID') : '-'}
+                      </td>
+                      <td className="border border-black p-2 text-right">
+                        {subtotal > 0 ? subtotal.toLocaleString('id-ID') : '-'}
+                      </td>
                     </tr>
                   );
                 })}
+                <tr>
+                  <td colSpan={4} className="border-t border-black"></td>
+                  <td className="border border-black p-2 text-right font-bold bg-gray-200">TOTAL KESELURUHAN</td>
+                  <td className="border border-black p-2 text-right font-bold bg-gray-200">
+                    {supplierItems.reduce((sum, item) => {
+                      const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                      const price = item.hpp || 0;
+                      return sum + (qty * price);
+                    }, 0).toLocaleString('id-ID')}
+                  </td>
+                </tr>
               </tbody>
             </table>
+
+            {/* Terbilang */}
+            <div className="mb-6">
+              <p className="font-bold mb-1">Terbilang :</p>
+              <div className="border border-black p-2 inline-block min-w-[50%] italic">
+                {terbilang(supplierItems.reduce((sum, item) => {
+                  const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+                  const price = item.hpp || 0;
+                  return sum + (qty * price);
+                }, 0))} Rupiah
+              </div>
+            </div>
 
             {/* Footer */}
             <div className="flex justify-between mt-8">
@@ -2839,7 +2872,7 @@ export default function App() {
                             <TableHead className="text-right w-[120px]">{user.role === 'supplier' ? 'Harga Perolehan' : 'HPP'}</TableHead>
                             {user.role === 'supplier' && <TableHead className="text-right w-[130px]">Jumlah Transfer</TableHead>}
                             <TableHead className="text-center w-[120px]">Status Transfer</TableHead>
-                            <TableHead className="text-center w-[120px]">Rekap Supplier</TableHead>
+                            <TableHead className="text-center w-[120px]">{user.role === 'supplier' ? 'Nota' : 'Rekap Supplier'}</TableHead>
                           </>
                         )}
                       </TableRow>
@@ -2956,8 +2989,8 @@ export default function App() {
                                   onClick={() => handleRekapSupplier(item.supplier)}
                                   disabled={!item.supplier}
                                 >
-                                  <MessageSquare className="w-4 h-4 mr-1" />
-                                  Rekap
+                                  {user.role === 'supplier' ? <Receipt className="w-4 h-4 mr-1" /> : <MessageSquare className="w-4 h-4 mr-1" />}
+                                  {user.role === 'supplier' ? 'Nota' : 'Rekap'}
                                 </Button>
                               </TableCell>
                             </>
