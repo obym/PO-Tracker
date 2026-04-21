@@ -3,167 +3,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: users
-    // Document ID: {userId} (matches auth.uid)
-    // Fields:
-    //   - uid: string (required, immutable)
-    //   - email: string (required)
-    //   - name: string (required)
-    //   - role: string (required, enum: ['admin', 'driver', 'client', 'supplier'])
-    //   - clientId: string (optional)
-    //   - phone: string (optional)
-    //   - address: string (optional)
-    //   - district: string (optional)
-    //
-    // Collection: suppliers
-    // Document ID: {supplierId}
-    // Fields:
-    //   - id: string (required, immutable)
-    //   - name: string (required)
-    //   - phone: string (optional)
-    //   - address: string (optional)
-    //   - district: string (optional)
-    //
-    // Collection: purchaseOrders
-    // Document ID: {orderId}
-    // Fields:
-    //   - id: string (required, immutable)
-    //   - clientId: string (required, immutable)
-    //   - clientName: string (required, immutable)
-    //   - date: string (required, immutable)
-    //   - status: string (required, enum: ['PO_RECEIVED', 'ORDERING', 'AT_KITCHEN', 'DELIVERING', 'COMPLETED', 'INVOICED'])
-    //   - notes: string (required)
-    //   - items: list of objects (required)
-    //     - id: string
-    //     - name: string
-    //     - quantity: number
-    //     - unit: string
-    //     - supplier: string
-    //     - isOrdered: boolean
-    //     - isAtKitchen: boolean
-    //     - isDelivered: boolean
-    //     - isReceived: boolean
-    //
-    // ===============================================================
-
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-    
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-    
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-    
-    function isAdmin() {
-      return isAuthenticated() && (
-        ('email' in request.auth.token && request.auth.token.email == "obym.ppngroup@gmail.com") ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
-      );
-    }
-    
-    function isDriver() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'driver';
-    }
-    
-    function isSupplier() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'supplier';
-    }
-    
-    function isClient() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'client';
-    }
-    
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
-    }
-    
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
-    }
-    
-    function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    }
-    
-    function areImmutableFieldsUnchanged(fields) {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
-    }
-
-    // ===============================================================
-    // Domain Validators
-    // ===============================================================
-    
-    function isValidUser(data) {
-      return hasRequiredFields(['uid', 'email', 'name', 'role']) &&
-             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
-             data.email is string && isValidEmail(data.email) && data.email.size() < 100 &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.role in ['admin', 'driver', 'client', 'supplier'] &&
-             (!('clientId' in data) || (data.clientId is string && data.clientId.size() < 100)) &&
-             (!('phone' in data) || (data.phone is string && data.phone.size() < 50)) &&
-             (!('address' in data) || (data.address is string && data.address.size() < 500)) &&
-             (!('district' in data) || (data.district is string && data.district.size() < 100));
-    }
-    
-    function isValidSupplier(data) {
-      return hasRequiredFields(['id', 'name']) &&
-             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             (!('phone' in data) || (data.phone is string && data.phone.size() < 50)) &&
-             (!('address' in data) || (data.address is string && data.address.size() < 500)) &&
-             (!('district' in data) || (data.district is string && data.district.size() < 100));
-    }
-
-    function isValidPurchaseOrder(data) {
-      return hasRequiredFields(['id', 'clientId', 'status', 'items']) &&
-             data.id is string &&
-             data.clientId is string &&
-             data.status in ['PO_RECEIVED', 'ORDERING', 'AT_KITCHEN', 'DELIVERING', 'COMPLETED', 'INVOICED'] &&
-             data.items is list && data.items.size() <= 100;
-    }
-
-    // ===============================================================
-    // Rules
-    // ===============================================================
 
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && (isAdmin() || isOwner(userId));
+      allow read, write: if isAuthenticated();
     }
 
     match /suppliers/{supplierId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow read, write: if isAuthenticated();
     }
 
     match /purchaseOrders/{orderId} {
-      allow read: if isAuthenticated() && (isAdmin() || isDriver() || isSupplier() || resource.data.clientId == request.auth.uid);
-      
-      allow create: if isAuthenticated() && isValidPurchaseOrder(request.resource.data) &&
-                    (isAdmin() || request.resource.data.clientId == request.auth.uid);
-      
-      allow update: if isAuthenticated() && isValidPurchaseOrder(request.resource.data) &&
-                    areImmutableFieldsUnchanged(['id', 'clientId']) &&
-                    (
-                      isAdmin() || 
-                      isDriver() || 
-                      isSupplier() || 
-                      resource.data.clientId == request.auth.uid
-                    );
-                    
-      allow delete: if isAdmin();
+      allow read, write: if isAuthenticated();
     }
   }
 }
