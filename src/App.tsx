@@ -561,9 +561,11 @@ export default function App() {
     const client = clients.find(c => c.uid === newClientId);
     if (!client) return;
 
+    const uniqueId = `PO-${new Date().getFullYear()}-${Date.now()}`;
+    
     const newPO: PurchaseOrder | any = {
-      id: `PO-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`,
-      poNumber: newPoNumber,
+      id: uniqueId,
+      poNumber: newPoNumber || uniqueId,
       deliveredBy: newDeliveredBy,
       deliveryDate: newDeliveryDate ? new Date(newDeliveryDate).toISOString() : null,
       invoiceDate: newInvoiceDate ? new Date(newInvoiceDate).toISOString() : null,
@@ -608,9 +610,13 @@ export default function App() {
 
     if (!user) return;
 
+    const uniqueId = `PO-${new Date().getFullYear()}-${Date.now()}`;
+    const formattedDatePart = new Date().toISOString().split('T')[0].replace(/-/g, '').slice(2);
+    const orderCountString = String(orders.length + 1).padStart(3, '0');
+
     const newPO: PurchaseOrder | any = {
-      id: `PO-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`,
-      poNumber: `PO-${String(orders.length + 1).padStart(3, '0')}`,
+      id: uniqueId,
+      poNumber: `PO-${formattedDatePart}-${orderCountString}`,
       deliveredBy: 'Dikirim Koperasi',
       deliveryDate: clientDeliveryDate ? new Date(clientDeliveryDate).toISOString() : null,
       invoiceDate: new Date(clientPoDate).toISOString(),
