@@ -215,8 +215,8 @@ export default function App() {
   // Client New PO Form State
   const [clientPoDate, setClientPoDate] = useState(new Date().toISOString().split('T')[0]);
   const [clientDeliveryDate, setClientDeliveryDate] = useState('');
-  const [clientItems, setClientItems] = useState<{name: string, quantity: number | string}[]>([
-    { name: '', quantity: 1 }
+  const [clientItems, setClientItems] = useState<{name: string, quantity: number | string, unit: string, category: 'Bahan Baku' | 'Bahan Operasional'}[]>([
+    { name: '', quantity: 1, unit: 'pcs', category: 'Bahan Baku' }
   ]);
 
   // Edit PO Form State
@@ -617,9 +617,9 @@ export default function App() {
         id: `i-${Date.now()}-${i}`,
         name: item.name,
         quantity: typeof item.quantity === 'string' ? parseFloat(item.quantity) || 0 : item.quantity,
-        unit: 'pcs',
+        unit: item.unit,
         supplier: 'Belum Ditentukan',
-        category: 'Bahan Tambahan',
+        category: item.category,
         unitPrice: 0,
         isOrdered: false,
         isAtKitchen: false,
@@ -634,7 +634,7 @@ export default function App() {
       setIsClientNewPoOpen(false);
       setClientPoDate(new Date().toISOString().split('T')[0]);
       setClientDeliveryDate('');
-      setClientItems([{ name: '', quantity: 1 }]);
+      setClientItems([{ name: '', quantity: 1, unit: 'pcs', category: 'Bahan Baku' }]);
     } catch (error) {
       console.error("Error creating PO from client:", error);
       setNewPoError("Gagal membuat PO. Periksa koneksi Anda.");
@@ -2145,16 +2145,18 @@ export default function App() {
                      <div className="space-y-2">
                        <div className="flex justify-between items-center mb-2">
                          <Label>Daftar Barang <span className="text-red-500">*</span></Label>
-                         <Button type="button" variant="outline" size="sm" onClick={() => setClientItems([...clientItems, { name: '', quantity: 1 }])}>
+                         <Button type="button" variant="outline" size="sm" onClick={() => setClientItems([...clientItems, { name: '', quantity: 1, unit: 'pcs', category: 'Bahan Baku' }])}>
                            <Plus className="w-4 h-4 mr-2" /> Tambah Barang
                          </Button>
                        </div>
                        <div className="border rounded-md overflow-x-auto">
-                         <Table className="min-w-[400px]">
+                         <Table className="min-w-[600px]">
                            <TableHeader className="bg-slate-50">
                              <TableRow>
                                <TableHead>Nama Barang <span className="text-red-500">*</span></TableHead>
-                               <TableHead className="w-[150px]">Qty <span className="text-red-500">*</span></TableHead>
+                               <TableHead className="w-[120px]">Qty <span className="text-red-500">*</span></TableHead>
+                               <TableHead className="w-[120px]">Satuan</TableHead>
+                               <TableHead className="w-[180px]">Kategori</TableHead>
                                <TableHead className="w-[60px] text-center">Aksi</TableHead>
                              </TableRow>
                            </TableHeader>
@@ -2185,6 +2187,31 @@ export default function App() {
                                      }}
                                    />
                                  </TableCell>
+                                 <TableCell className="p-2">
+                                   <Input 
+                                     placeholder="kg, pcs..." 
+                                     value={item.unit}
+                                     onChange={(e) => {
+                                       const newIt = [...clientItems];
+                                       newIt[index].unit = e.target.value;
+                                       setClientItems(newIt);
+                                     }}
+                                   />
+                                 </TableCell>
+                                  <TableCell className="p-2">
+                                    <select
+                                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                      value={item.category || 'Bahan Baku'}
+                                      onChange={(e) => {
+                                        const newIt = [...clientItems];
+                                        newIt[index].category = e.target.value as 'Bahan Baku' | 'Bahan Operasional';
+                                        setClientItems(newIt);
+                                      }}
+                                    >
+                                      <option value="Bahan Baku">Bahan Baku</option>
+                                      <option value="Bahan Operasional">Bahan Operasional</option>
+                                    </select>
+                                  </TableCell>
                                  <TableCell className="p-2 text-center">
                                    <Button 
                                      type="button" 
