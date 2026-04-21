@@ -561,12 +561,12 @@ export default function App() {
     const client = clients.find(c => c.uid === newClientId);
     if (!client) return;
 
-    const newPO: PurchaseOrder = {
+    const newPO: PurchaseOrder | any = {
       id: `PO-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`,
       poNumber: newPoNumber,
       deliveredBy: newDeliveredBy,
-      deliveryDate: newDeliveryDate ? new Date(newDeliveryDate).toISOString() : undefined,
-      invoiceDate: newInvoiceDate ? new Date(newInvoiceDate).toISOString() : undefined,
+      deliveryDate: newDeliveryDate ? new Date(newDeliveryDate).toISOString() : null,
+      invoiceDate: newInvoiceDate ? new Date(newInvoiceDate).toISOString() : null,
       clientId: client.uid,
       clientName: client.name,
       date: new Date(newPoDate).toISOString(),
@@ -608,11 +608,11 @@ export default function App() {
 
     if (!user) return;
 
-    const newPO: PurchaseOrder = {
+    const newPO: PurchaseOrder | any = {
       id: `PO-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`,
       poNumber: `PO-${String(orders.length + 1).padStart(3, '0')}`,
       deliveredBy: 'Dikirim Koperasi',
-      deliveryDate: clientDeliveryDate ? new Date(clientDeliveryDate).toISOString() : undefined,
+      deliveryDate: clientDeliveryDate ? new Date(clientDeliveryDate).toISOString() : null,
       invoiceDate: new Date(clientPoDate).toISOString(),
       clientId: user.uid,
       clientName: user.name,
@@ -641,9 +641,9 @@ export default function App() {
       setClientPoDate(new Date().toISOString().split('T')[0]);
       setClientDeliveryDate('');
       setClientItems([{ name: '', quantity: 1, unit: 'pcs', category: 'Bahan Baku' }]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating PO from client:", error);
-      setNewPoError("Gagal membuat PO. Periksa koneksi Anda.");
+      setNewPoError("Gagal membuat PO. " + (error.message || "Periksa koneksi Anda."));
     }
   };
 
