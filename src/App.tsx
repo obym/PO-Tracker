@@ -3280,6 +3280,11 @@ export default function App() {
                         </Button>
                       </>
                     )}
+                    {user.role === 'client' && selectedOrder.status === 'PO_RECEIVED' && (
+                      <Button variant="outline" size="sm" onClick={() => openEditPO(selectedOrder)}>
+                        <Edit className="w-4 h-4 mr-2" /> Edit PO
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <DialogDescription className="text-slate-500 mt-1">
