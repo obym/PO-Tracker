@@ -179,8 +179,9 @@ service cloud.firestore {
       // Admin sees all. Driver sees all (to know what to deliver). Supplier sees all. Client sees only their own.
       allow read: if isAuthenticated() && (isAdmin() || isDriver() || isSupplier() || (isClient() && resource.data.clientId == request.auth.uid));
       
-      // Only admin can create POs
-      allow create: if isAdmin() && isValidPurchaseOrder(request.resource.data);
+      // Admin can create POs. Client can create POs for themselves.
+      allow create: if isAuthenticated() && isValidPurchaseOrder(request.resource.data) &&
+                    (isAdmin() || (isClient() && request.resource.data.clientId == request.auth.uid));
       
       // Admin can update anything. Driver can update status/items. Supplier can update status/items. Client can update status/items.
       // We protect immutable fields so they can't change the PO owner or ID.
