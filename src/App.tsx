@@ -152,6 +152,7 @@ export default function App() {
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isNewOpen, setIsNewOpen] = useState(false);
+  const [isClientNewPoOpen, setIsClientNewPoOpen] = useState(false);
   const [isUserManageOpen, setIsUserManageOpen] = useState(false);
   const [isSupplierManageOpen, setIsSupplierManageOpen] = useState(false);
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
@@ -209,6 +210,13 @@ export default function App() {
   const [newNotes, setNewNotes] = useState('');
   const [newItems, setNewItems] = useState<Omit<OrderItem, 'id' | 'isOrdered' | 'isAtKitchen' | 'isDelivered' | 'isReceived' | 'isTransferred'>[]>([
     { name: '', quantity: 1, unit: 'pcs', supplier: '', category: 'Bahan Baku', unitPrice: 0 }
+  ]);
+
+  // Client New PO Form State
+  const [clientPoDate, setClientPoDate] = useState(new Date().toISOString().split('T')[0]);
+  const [clientDeliveryDate, setClientDeliveryDate] = useState('');
+  const [clientItems, setClientItems] = useState<{name: string, quantity: number | string}[]>([
+    { name: '', quantity: 1 }
   ]);
 
   // Edit PO Form State
@@ -363,6 +371,25 @@ export default function App() {
   const handleUpdateUserRole = async (userId: string, newRole: string) => {
     try {
       await updateDoc(doc(db, 'users', userId), { role: newRole });
+      
+      if (newRole === 'supplier') {
+        const userToUpdate = allUsers.find(u => u.uid === userId);
+        if (userToUpdate && userToUpdate.name) {
+          const supplierExists = suppliers.some(s => s.name.toLowerCase() === userToUpdate.name.toLowerCase());
+          if (!supplierExists) {
+            const newId = `supplier-${Date.now()}`;
+            const newSupplier: Supplier = {
+              id: newId,
+              name: userToUpdate.name,
+              picName: userToUpdate.name,
+              phone: userToUpdate.phone || '',
+              address: userToUpdate.address || '',
+              district: userToUpdate.district || ''
+            };
+            await setDoc(doc(db, 'suppliers', newId), newSupplier);
+          }
+        }
+      }
     } catch (error) {
       console.error("Error updating user role:", error);
       alert("Gagal mengupdate role. Periksa koneksi atau hak akses Anda.");
@@ -563,6 +590,54 @@ export default function App() {
     } catch (error) {
       console.error("Error creating PO:", error);
       setNewPoError("Gagal membuat PO. Pastikan Anda memiliki akses Admin.");
+    }
+  };
+
+  const handleClientCreatePO = async () => {
+    setNewPoError(null);
+    if (clientItems.length === 0 || clientItems.some(i => !i.name)) {
+      setNewPoError('Mohon lengkapi daftar barang (Nama Barang wajib diisi).');
+      return;
+    }
+
+    if (!user) return;
+
+    const newPO: PurchaseOrder = {
+      id: `PO-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`,
+      poNumber: `PO-${String(orders.length + 1).padStart(3, '0')}`,
+      deliveredBy: 'Dikirim Koperasi',
+      deliveryDate: clientDeliveryDate ? new Date(clientDeliveryDate).toISOString() : undefined,
+      invoiceDate: new Date(clientPoDate).toISOString(),
+      clientId: user.uid,
+      clientName: user.name,
+      date: new Date(clientPoDate).toISOString(),
+      status: 'PO_RECEIVED',
+      notes: '',
+      items: clientItems.map((item, i) => ({
+        id: `i-${Date.now()}-${i}`,
+        name: item.name,
+        quantity: typeof item.quantity === 'string' ? parseFloat(item.quantity) || 0 : item.quantity,
+        unit: 'pcs',
+        supplier: 'Belum Ditentukan',
+        category: 'Bahan Tambahan',
+        unitPrice: 0,
+        isOrdered: false,
+        isAtKitchen: false,
+        isDelivered: false,
+        isReceived: false,
+        isTransferred: false,
+      })),
+    };
+
+    try {
+      await setDoc(doc(db, 'purchaseOrders', newPO.id), newPO);
+      setIsClientNewPoOpen(false);
+      setClientPoDate(new Date().toISOString().split('T')[0]);
+      setClientDeliveryDate('');
+      setClientItems([{ name: '', quantity: 1 }]);
+    } catch (error) {
+      console.error("Error creating PO from client:", error);
+      setNewPoError("Gagal membuat PO. Periksa koneksi Anda.");
     }
   };
 
@@ -2027,6 +2102,114 @@ export default function App() {
                 </DialogContent>
               </Dialog>
               </>
+            )}
+
+            {user.role === 'client' && (
+               <Dialog open={isClientNewPoOpen} onOpenChange={setIsClientNewPoOpen}>
+                 <DialogTrigger render={<Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm px-3 shrink-0" />}>
+                   <Plus className="w-4 h-4 sm:mr-2" />
+                   <span className="hidden sm:inline">+ PO Baru</span>
+                 </DialogTrigger>
+                 <DialogContent className="max-w-3xl sm:max-w-3xl w-[95vw] max-h-[90vh] overflow-y-auto">
+                   <DialogHeader>
+                     <DialogTitle>Buat Purchase Order Baru</DialogTitle>
+                   </DialogHeader>
+                   
+                   {newPoError && (
+                     <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
+                       {newPoError}
+                     </div>
+                   )}
+
+                   <div className="grid gap-6 py-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <div className="space-y-2">
+                         <Label htmlFor="clientPoDate">Tanggal PO <span className="text-red-500">*</span></Label>
+                         <Input 
+                           id="clientPoDate"
+                           type="date"
+                           value={clientPoDate}
+                           onChange={(e) => setClientPoDate(e.target.value)}
+                         />
+                       </div>
+                       <div className="space-y-2">
+                         <Label htmlFor="clientDeliveryDate">Tanggal Kirim</Label>
+                         <Input 
+                           id="clientDeliveryDate"
+                           type="date"
+                           value={clientDeliveryDate}
+                           onChange={(e) => setClientDeliveryDate(e.target.value)}
+                         />
+                       </div>
+                     </div>
+                     <div className="space-y-2">
+                       <div className="flex justify-between items-center mb-2">
+                         <Label>Daftar Barang <span className="text-red-500">*</span></Label>
+                         <Button type="button" variant="outline" size="sm" onClick={() => setClientItems([...clientItems, { name: '', quantity: 1 }])}>
+                           <Plus className="w-4 h-4 mr-2" /> Tambah Barang
+                         </Button>
+                       </div>
+                       <div className="border rounded-md overflow-x-auto">
+                         <Table className="min-w-[400px]">
+                           <TableHeader className="bg-slate-50">
+                             <TableRow>
+                               <TableHead>Nama Barang <span className="text-red-500">*</span></TableHead>
+                               <TableHead className="w-[150px]">Qty <span className="text-red-500">*</span></TableHead>
+                               <TableHead className="w-[60px] text-center">Aksi</TableHead>
+                             </TableRow>
+                           </TableHeader>
+                           <TableBody>
+                             {clientItems.map((item, index) => (
+                               <TableRow key={index}>
+                                 <TableCell className="p-2">
+                                   <Input 
+                                     placeholder="Nama barang..." 
+                                     value={item.name}
+                                     onChange={(e) => {
+                                       const newIt = [...clientItems];
+                                       newIt[index].name = e.target.value;
+                                       setClientItems(newIt);
+                                     }}
+                                   />
+                                 </TableCell>
+                                 <TableCell className="p-2">
+                                   <Input 
+                                     type="number"
+                                     step="0.01"
+                                     min="0.1"
+                                     value={item.quantity}
+                                     onChange={(e) => {
+                                       const newIt = [...clientItems];
+                                       newIt[index].quantity = e.target.value;
+                                       setClientItems(newIt);
+                                     }}
+                                   />
+                                 </TableCell>
+                                 <TableCell className="p-2 text-center">
+                                   <Button 
+                                     type="button" 
+                                     variant="ghost" 
+                                     size="icon" 
+                                     className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                     onClick={() => setClientItems(clientItems.filter((_, i) => i !== index))}
+                                     disabled={clientItems.length === 1}
+                                   >
+                                     &times;
+                                   </Button>
+                                 </TableCell>
+                               </TableRow>
+                             ))}
+                           </TableBody>
+                         </Table>
+                       </div>
+                     </div>
+                   </div>
+                   <DialogFooter>
+                     <Button variant="outline" onClick={() => setIsClientNewPoOpen(false)}>Batal</Button>
+                     <Button onClick={handleClientCreatePO} className="bg-indigo-600 hover:bg-indigo-700">Simpan PO</Button>
+                   </DialogFooter>
+                 </DialogContent>
+               </Dialog>
             )}
 
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
