@@ -561,9 +561,27 @@ export default function App() {
     const client = clients.find(c => c.uid === newClientId);
     if (!client) return;
 
+    const currentYear = new Date().getFullYear();
+    const poPrefix = `PO-${currentYear}-`;
+    const relevantOrders = orders.filter(o => o.poNumber && o.poNumber.startsWith(poPrefix));
+    let maxSeq = 0;
+    for (const order of relevantOrders) {
+      const parts = order.poNumber.split('-');
+      if (parts.length === 3) {
+        const seqNum = parseInt(parts[2], 10);
+        if (!isNaN(seqNum) && seqNum > maxSeq) {
+          maxSeq = seqNum;
+        }
+      }
+    }
+    const nextSeq = maxSeq + 1;
+    
+    // Generate a strictly unique ID so we never overwrite an existing document
+    const poId = `doc-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
     const newPO: PurchaseOrder | any = {
-      id: `PO-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`,
-      poNumber: newPoNumber,
+      id: poId,
+      poNumber: newPoNumber || `PO-${currentYear}-${String(nextSeq).padStart(3, '0')}`,
       deliveredBy: newDeliveredBy,
       deliveryDate: newDeliveryDate ? new Date(newDeliveryDate).toISOString() : null,
       invoiceDate: newInvoiceDate ? new Date(newInvoiceDate).toISOString() : null,
@@ -608,9 +626,26 @@ export default function App() {
 
     if (!user) return;
 
+    const currentYear = new Date().getFullYear();
+    const poPrefix = `PO-${currentYear}-`;
+    const relevantOrders = orders.filter(o => o.poNumber && o.poNumber.startsWith(poPrefix));
+    let maxSeq = 0;
+    for (const order of relevantOrders) {
+      const parts = order.poNumber.split('-');
+      if (parts.length === 3) {
+        const seqNum = parseInt(parts[2], 10);
+        if (!isNaN(seqNum) && seqNum > maxSeq) {
+          maxSeq = seqNum;
+        }
+      }
+    }
+    const nextSeq = maxSeq + 1;
+    
+    const poId = `doc-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
     const newPO: PurchaseOrder | any = {
-      id: `PO-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`,
-      poNumber: `PO-${String(orders.length + 1).padStart(3, '0')}`,
+      id: poId,
+      poNumber: `PO-${currentYear}-${String(nextSeq).padStart(3, '0')}`,
       deliveredBy: 'Dikirim Koperasi',
       deliveryDate: clientDeliveryDate ? new Date(clientDeliveryDate).toISOString() : null,
       invoiceDate: new Date(clientPoDate).toISOString(),
