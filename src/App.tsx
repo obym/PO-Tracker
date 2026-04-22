@@ -853,21 +853,22 @@ export default function App() {
     setInvoiceOrder(order);
     setSelectedInvoiceItems(order.items.map(item => item.id));
     setIsDetailOpen(false); // Close detail modal
+  };
+
+  const handlePrintInvoice = async () => {
+    window.print();
     
-    // If status is COMPLETED, update it to INVOICED
-    if (order.status === 'COMPLETED' && user?.role === 'admin') {
+    // Only update if it's admin printing the main invoice
+    if (invoiceOrder && invoiceOrder.status === 'COMPLETED' && user?.role === 'admin') {
       try {
-        await updateDoc(doc(db, 'purchaseOrders', order.id), {
+        await updateDoc(doc(db, 'purchaseOrders', invoiceOrder.id), {
           status: 'INVOICED'
         });
+        setInvoiceOrder({...invoiceOrder, status: 'INVOICED'} as PurchaseOrder);
       } catch (error) {
         console.error("Error updating status to INVOICED:", error);
       }
     }
-  };
-
-  const handlePrintInvoice = () => {
-    window.print();
   };
 
   const handleRekapSupplier = (supplierName: string) => {
@@ -1288,16 +1289,22 @@ export default function App() {
           
           {/* Invoice content */}
           <div className="flex-1 p-4 sm:p-8 overflow-y-auto flex justify-center bg-slate-200/60 print:p-0 print:bg-white print:block">
-            <div id="print-area" className="bg-white text-black p-8 sm:p-12 font-sans text-xs sm:text-sm w-full max-w-4xl shadow-xl border border-slate-300 lg:rounded-lg mx-auto h-fit print:shadow-none print:border-none print:rounded-none">
-            <div className="min-w-[600px]">
-              {/* Header */}
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold border-2 border-black inline-block px-16 py-1 mb-2 tracking-widest">NOTA</h1>
-              <h2 className="text-xl font-bold uppercase">KOPERASI GARUDA MERAH PUTIH</h2>
-              <p>Dsn. Padangan RT 02 RW 03 Ds. Pagu</p>
-              <p>Kec. Pagu Kab. Kediri</p>
-              <p>Phone : 0812-5278-8733</p>
-            </div>
+            <div id="print-area" className="w-full max-w-4xl mx-auto h-fit">
+              {Array.from(new Set(printableItems.map(item => item.supplier || 'Belum Ditentukan'))).map((supplierName, supIndex) => {
+                const supplierItems = printableItems.filter(item => (item.supplier || 'Belum Ditentukan') === supplierName);
+                const supplierData = suppliers.find(s => s.name === supplierName) || { name: supplierName, address: '', district: '', phone: '' };
+
+                return (
+                  <div key={supplierName} className={`bg-white text-black p-8 sm:p-12 font-sans text-xs sm:text-sm shadow-xl border border-slate-300 lg:rounded-lg mb-8 print:mb-0 print:shadow-none print:border-none print:rounded-none ${supIndex > 0 ? 'print:break-before-page print:mt-12' : ''}`}>
+                    <div className="min-w-[600px]">
+                      {/* Header */}
+                      <div className="text-center mb-6">
+                        <h1 className="text-2xl font-bold border-2 border-black inline-block px-16 py-1 mb-2 tracking-widest">NOTA</h1>
+                        <h2 className="text-xl font-bold uppercase">{supplierData.name}</h2>
+                        {supplierData.address && <p>{supplierData.address}</p>}
+                        {supplierData.district && <p>{supplierData.district}</p>}
+                        {supplierData.phone && <p>Phone : {supplierData.phone}</p>}
+                      </div>
 
             {/* Info */}
             <div className="grid grid-cols-2 gap-4 mb-6">
@@ -1350,14 +1357,14 @@ export default function App() {
               </thead>
               <tbody>
                 {/* Bahan Baku */}
-                {printableItems.filter(item => item.category === 'Bahan Baku' || !item.category).length > 0 && (
+                {supplierItems.filter(item => item.category === 'Bahan Baku' || !item.category).length > 0 && (
                   <>
                     <tr className="bg-gray-100 font-bold">
                       <td colSpan={6} className="border border-black p-2">Bahan Baku</td>
                     </tr>
-                    {printableItems.filter(item => item.category === 'Bahan Baku' || !item.category).map((item, index) => {
+                    {supplierItems.filter(item => item.category === 'Bahan Baku' || !item.category).map((item, index) => {
                       const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                      const price = item.unitPrice || 0;
+                      const price = item.supplierCost || 0;
                       const subtotal = qty * price;
                       return (
                         <tr key={item.id}>
@@ -1378,9 +1385,9 @@ export default function App() {
                       <td colSpan={4} className="border-t border-black"></td>
                       <td className="border border-black p-2 text-right font-bold">Subtotal Bahan Baku</td>
                       <td className="border border-black p-2 text-right font-bold">
-                        {printableItems.filter(item => item.category === 'Bahan Baku' || !item.category).reduce((sum, item) => {
+                        {supplierItems.filter(item => item.category === 'Bahan Baku' || !item.category).reduce((sum, item) => {
                           const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                          const price = item.unitPrice || 0;
+                          const price = item.supplierCost || 0;
                           return sum + (qty * price);
                         }, 0).toLocaleString('id-ID')}
                       </td>
@@ -1389,14 +1396,14 @@ export default function App() {
                 )}
 
                 {/* Bahan Operasional */}
-                {printableItems.filter(item => item.category === 'Bahan Operasional').length > 0 && (
+                {supplierItems.filter(item => item.category === 'Bahan Operasional').length > 0 && (
                   <>
                     <tr className="bg-gray-100 font-bold">
                       <td colSpan={6} className="border border-black p-2">Bahan Operasional</td>
                     </tr>
-                    {printableItems.filter(item => item.category === 'Bahan Operasional').map((item, index) => {
+                    {supplierItems.filter(item => item.category === 'Bahan Operasional').map((item, index) => {
                       const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                      const price = item.unitPrice || 0;
+                      const price = item.supplierCost || 0;
                       const subtotal = qty * price;
                       return (
                         <tr key={item.id}>
@@ -1417,9 +1424,9 @@ export default function App() {
                       <td colSpan={4} className="border-t border-black"></td>
                       <td className="border border-black p-2 text-right font-bold">Subtotal Bahan Operasional</td>
                       <td className="border border-black p-2 text-right font-bold">
-                        {printableItems.filter(item => item.category === 'Bahan Operasional').reduce((sum, item) => {
+                        {supplierItems.filter(item => item.category === 'Bahan Operasional').reduce((sum, item) => {
                           const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                          const price = item.unitPrice || 0;
+                          const price = item.supplierCost || 0;
                           return sum + (qty * price);
                         }, 0).toLocaleString('id-ID')}
                       </td>
@@ -1431,9 +1438,9 @@ export default function App() {
                   <td colSpan={4} className="border-t border-black"></td>
                   <td className="border border-black p-2 text-right font-bold bg-gray-200">TOTAL KESELURUHAN</td>
                   <td className="border border-black p-2 text-right font-bold bg-gray-200">
-                    {printableItems.reduce((sum, item) => {
+                    {supplierItems.reduce((sum, item) => {
                       const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                      const price = item.unitPrice || 0;
+                      const price = item.supplierCost || 0;
                       return sum + (qty * price);
                     }, 0).toLocaleString('id-ID')}
                   </td>
@@ -1445,9 +1452,9 @@ export default function App() {
             <div className="mb-6">
               <p className="font-bold mb-1">Terbilang :</p>
               <div className="border border-black p-2 inline-block min-w-[50%] italic">
-                {terbilang(printableItems.reduce((sum, item) => {
+                {terbilang(supplierItems.reduce((sum, item) => {
                   const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                  const price = item.unitPrice || 0;
+                  const price = item.supplierCost || 0;
                   return sum + (qty * price);
                 }, 0))} Rupiah
               </div>
@@ -1473,7 +1480,10 @@ export default function App() {
             </div>
             </div>
           </div>
-        </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     );
