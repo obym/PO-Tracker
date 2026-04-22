@@ -1148,7 +1148,7 @@ export default function App() {
               <tbody>
                 {supplierItems.map((item, index) => {
                   const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                  const price = item.hpp || 0;
+                  const price = item.supplierCost || 0;
                   const subtotal = qty * price;
                   return (
                     <tr key={item.id}>
@@ -1171,7 +1171,7 @@ export default function App() {
                   <td className="border border-black p-2 text-right font-bold bg-gray-200">
                     {supplierItems.reduce((sum, item) => {
                       const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                      const price = item.hpp || 0;
+                      const price = item.supplierCost || 0;
                       return sum + (qty * price);
                     }, 0).toLocaleString('id-ID')}
                   </td>
@@ -1185,7 +1185,7 @@ export default function App() {
               <div className="border border-black p-2 inline-block min-w-[50%] italic">
                 {terbilang(supplierItems.reduce((sum, item) => {
                   const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                  const price = item.hpp || 0;
+                  const price = item.supplierCost || 0;
                   return sum + (qty * price);
                 }, 0))} Rupiah
               </div>
@@ -3145,12 +3145,13 @@ export default function App() {
           renderFinanceDashboard()
         ) : (
           <div className="flex gap-4 sm:gap-6 min-w-max pb-4">
-            {user.role !== 'supplier' && user.role !== 'kitchen' && renderKanbanColumn('PO_RECEIVED')}
-            {(user.role !== 'supplier' && user.role !== 'kitchen') && renderKanbanColumn('ORDERING')}
-            {(user.role !== 'supplier' && user.role !== 'kitchen') && renderKanbanColumn('DELIVERING')}
-            {(user.role !== 'supplier' && user.role !== 'kitchen') && renderKanbanColumn('AT_KITCHEN')}
+            {user.role !== 'kitchen' && renderKanbanColumn('PO_RECEIVED')}
+            {user.role !== 'kitchen' && renderKanbanColumn('ORDERING')}
+            {user.role !== 'kitchen' && renderKanbanColumn('DELIVERING')}
+            {user.role !== 'kitchen' && renderKanbanColumn('AT_KITCHEN')}
             {user.role === 'supplier' ? renderCompletedColumnsPerClientForSupplier() : renderKanbanColumn('COMPLETED')}
             {user.role === 'admin' && renderInvoicedColumnsPerClient()}
+            {user.role === 'supplier' && renderKanbanColumn('INVOICED')}
           </div>
         )}
       </main>
@@ -3182,8 +3183,8 @@ export default function App() {
                       <TableHead className="text-center">Qty</TableHead>
                       {user.role === 'supplier' ? (
                         <>
-                          <TableHead className="text-right">Harga Jual Ke Dapur</TableHead>
                           <TableHead className="text-right">Harga Perolehan</TableHead>
+                          <TableHead className="text-right">Harga Jual Ke Dapur</TableHead>
                         </>
                       ) : (
                         <>
@@ -3316,7 +3317,7 @@ export default function App() {
                     {user?.role === 'supplier'
                       ? (() => {
                           const items = selectedOrder.items.filter(item => item.supplier === user.name);
-                          const totalTransfer = items.reduce((sum, item) => sum + (((item.hpp || 0) - (item.supplierCost || 0)) * (typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity)), 0);
+                          const totalTransfer = items.reduce((sum, item) => sum + (((item.supplierCost || 0) - (item.hpp || 0)) * (typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity)), 0);
                           return `Rp ${totalTransfer.toLocaleString('id-ID')}`;
                         })()
                       : (selectedOrder.notes || '-')
@@ -3344,8 +3345,8 @@ export default function App() {
                         <TableHead className="text-center w-[120px]">Diterima Klien?</TableHead>
                         {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && (
                           <>
-                            {user.role === 'supplier' && <TableHead className="text-right w-[140px]">Harga Jual Ke Dapur</TableHead>}
-                            <TableHead className="text-right w-[120px]">{user.role === 'supplier' ? 'Harga Perolehan' : 'HPP'}</TableHead>
+                            {user.role === 'supplier' && <TableHead className="text-right w-[140px]">Harga Perolehan</TableHead>}
+                            <TableHead className="text-right w-[120px]">{user.role === 'supplier' ? 'Harga Jual Ke Dapur' : 'HPP'}</TableHead>
                             {user.role === 'supplier' && <TableHead className="text-right w-[130px]">Jumlah Transfer</TableHead>}
                             <TableHead className="text-center w-[120px]">Status Transfer</TableHead>
                             {user.role !== 'supplier' && (
@@ -3444,7 +3445,7 @@ export default function App() {
                               </TableCell>
                               {user.role === 'supplier' && (
                                 <TableCell className="text-right font-medium text-indigo-600 whitespace-nowrap">
-                                  Rp {((item.hpp || 0) - (item.supplierCost || 0)).toLocaleString('id-ID')}
+                                  Rp {((item.supplierCost || 0) - (item.hpp || 0)).toLocaleString('id-ID')}
                                 </TableCell>
                               )}
                               <TableCell className="text-center">
