@@ -1217,58 +1217,67 @@ export default function App() {
            <Button variant="outline" onClick={() => setInvoiceOrder(null)}>
              <ChevronLeft className="w-4 h-4 mr-2" /> Kembali
            </Button>
-           <Button onClick={handlePrintInvoice} className="bg-indigo-600 hover:bg-indigo-700">
-             <Printer className="w-4 h-4 mr-2" /> Cetak Nota
-           </Button>
+           {user?.role === 'admin' && (
+             <Button onClick={handlePrintInvoice} className="bg-indigo-600 hover:bg-indigo-700">
+               <Printer className="w-4 h-4 mr-2" /> Cetak Nota
+             </Button>
+           )}
+           {user?.role === 'client' && (
+             <Button onClick={handlePrintInvoice} className="bg-indigo-600 hover:bg-indigo-700">
+               <Printer className="w-4 h-4 mr-2" /> Download Nota
+             </Button>
+           )}
         </div>
         
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden print:block print:overflow-visible">
-          {/* Selection Area (hidden in print) */}
-          <div className="print:hidden w-full md:w-80 lg:w-96 bg-white border-r border-slate-200 p-4 flex flex-col shadow-lg z-10 shrink-0 overflow-y-auto max-h-[300px] md:max-h-full">
-             <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
-               <CheckCircle2 className="w-4 h-4 text-indigo-600" /> Pilih Barang Dicetak:
-             </h3>
-             <div className="flex gap-2 mb-4">
-               <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="bg-indigo-50 text-xs h-8 hover:bg-indigo-100 border-indigo-200 text-indigo-700 flex-1"
-                  onClick={() => setSelectedInvoiceItems(invoiceOrder.items.map(i => i.id))}
-               >
-                  Pilih Semua
-               </Button>
-               <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="bg-red-50 text-xs h-8 hover:bg-red-100 border-red-200 text-red-600 flex-1"
-                  onClick={() => setSelectedInvoiceItems([])}
-               >
-                  Hapus Semua
-               </Button>
-             </div>
-             <div className="flex flex-col gap-2 overflow-y-auto pr-1 pb-4">
-               {invoiceOrder.items.map((item, i) => (
-                  <label key={item.id} className="flex items-start gap-3 text-sm text-slate-700 bg-slate-50 hover:bg-indigo-50/50 p-3 rounded-lg border border-slate-200 cursor-pointer transition-colors shadow-sm">
-                    <input 
-                      type="checkbox" 
-                      className="mt-1 shrink-0 accent-indigo-600 w-4 h-4 cursor-pointer"
-                      checked={selectedInvoiceItems.includes(item.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedInvoiceItems([...selectedInvoiceItems, item.id]);
-                        } else {
-                          setSelectedInvoiceItems(selectedInvoiceItems.filter(id => id !== item.id));
-                        }
-                      }}
-                    />
-                    <div className="flex-1">
-                      <span className="font-semibold text-slate-800">{item.name}</span>
-                      <span className="text-slate-500 font-medium text-xs mt-1 block">Qty: {item.quantity} {item.unit}</span>
-                    </div>
-                  </label>
-               ))}
-             </div>
-          </div>
+          {/* Selection Area (hidden in print) - Admin Only */}
+          {user?.role === 'admin' && (
+            <div className="print:hidden w-full md:w-80 lg:w-96 bg-white border-r border-slate-200 p-4 flex flex-col shadow-lg z-10 shrink-0 overflow-y-auto max-h-[300px] md:max-h-full">
+               <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
+                 <CheckCircle2 className="w-4 h-4 text-indigo-600" /> Pilih Barang Dicetak:
+               </h3>
+               <div className="flex gap-2 mb-4">
+                 <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="bg-indigo-50 text-xs h-8 hover:bg-indigo-100 border-indigo-200 text-indigo-700 flex-1"
+                    onClick={() => setSelectedInvoiceItems(invoiceOrder.items.map(i => i.id))}
+                 >
+                    Pilih Semua
+                 </Button>
+                 <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="bg-red-50 text-xs h-8 hover:bg-red-100 border-red-200 text-red-600 flex-1"
+                    onClick={() => setSelectedInvoiceItems([])}
+                 >
+                    Hapus Semua
+                 </Button>
+               </div>
+               <div className="flex flex-col gap-2 overflow-y-auto pr-1 pb-4">
+                 {invoiceOrder.items.map((item, i) => (
+                    <label key={item.id} className="flex items-start gap-3 text-sm text-slate-700 bg-slate-50 hover:bg-indigo-50/50 p-3 rounded-lg border border-slate-200 cursor-pointer transition-colors shadow-sm">
+                      <input 
+                        type="checkbox" 
+                        className="mt-1 shrink-0 accent-indigo-600 w-4 h-4 cursor-pointer"
+                        checked={selectedInvoiceItems.includes(item.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedInvoiceItems([...selectedInvoiceItems, item.id]);
+                          } else {
+                            setSelectedInvoiceItems(selectedInvoiceItems.filter(id => id !== item.id));
+                          }
+                        }}
+                      />
+                      <div className="flex-1">
+                        <span className="font-semibold text-slate-800">{item.name}</span>
+                        <span className="text-slate-500 font-medium text-xs mt-1 block">Qty: {item.quantity} {item.unit}</span>
+                      </div>
+                    </label>
+                 ))}
+               </div>
+            </div>
+          )}
           
           {/* Invoice content */}
           <div className="flex-1 p-4 sm:p-8 overflow-y-auto flex justify-center bg-slate-200/60 print:p-0 print:bg-white print:block">
@@ -1593,8 +1602,8 @@ export default function App() {
   const renderKanbanColumn = (status: OrderStatus, customTitle?: string, customOrders?: PurchaseOrder[]) => {
     let columnOrders = customOrders || filteredOrders.filter(o => o.status === status);
     
-    // Jika bukan admin, gabungkan INVOICED ke dalam COMPLETED
-    if (status === 'COMPLETED' && user.role !== 'admin' && !customOrders) {
+    // Jika bukan admin/supplier/client, gabungkan INVOICED ke dalam COMPLETED
+    if (status === 'COMPLETED' && user.role !== 'admin' && user.role !== 'supplier' && user.role !== 'client' && !customOrders) {
       columnOrders = filteredOrders.filter(o => o.status === 'COMPLETED' || o.status === 'INVOICED');
     }
 
@@ -3151,7 +3160,7 @@ export default function App() {
             {user.role !== 'kitchen' && renderKanbanColumn('AT_KITCHEN')}
             {user.role === 'supplier' ? renderCompletedColumnsPerClientForSupplier() : renderKanbanColumn('COMPLETED')}
             {user.role === 'admin' && renderInvoicedColumnsPerClient()}
-            {user.role === 'supplier' && renderKanbanColumn('INVOICED')}
+            {(user.role === 'supplier' || user.role === 'client') && renderKanbanColumn('INVOICED')}
           </div>
         )}
       </main>
@@ -3267,9 +3276,9 @@ export default function App() {
                     </Badge>
                   </DialogTitle>
                   <div className="flex gap-2">
-                    {(selectedOrder.status === 'COMPLETED' || selectedOrder.status === 'INVOICED') && user.role === 'admin' && (
+                    {(selectedOrder.status === 'COMPLETED' || selectedOrder.status === 'INVOICED') && (user.role === 'admin' || user.role === 'client') && (
                       <Button variant="outline" size="sm" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100" onClick={() => handleOpenInvoice(selectedOrder)}>
-                        <Receipt className="w-4 h-4 mr-2" /> Cetak Nota
+                        <Receipt className="w-4 h-4 mr-2" /> Lihat Nota
                       </Button>
                     )}
                     {user.role === 'supplier' && selectedOrder.items.some(item => item.supplier === user.name) && (
