@@ -213,17 +213,19 @@ export default function App() {
   ]);
 
   // Client New PO Form State
+  const [clientPoNumber, setClientPoNumber] = useState('');
   const [clientPoDate, setClientPoDate] = useState(new Date().toISOString().split('T')[0]);
   const [clientDeliveryDate, setClientDeliveryDate] = useState('');
-  const [clientItems, setClientItems] = useState<{name: string, quantity: number | string, unit: string, category: 'Bahan Baku' | 'Bahan Operasional'}[]>([
-    { name: '', quantity: 1, unit: 'pcs', category: 'Bahan Baku' }
+  const [clientItems, setClientItems] = useState<{name: string, quantity: number | string, unit: string, category: 'Bahan Baku' | 'Bahan Operasional', supplier: string}>([
+    { name: '', quantity: 1, unit: 'pcs', category: 'Bahan Baku', supplier: '' }
   ]);
 
   // Client Edit PO Form State
   const [isClientEditPoOpen, setIsClientEditPoOpen] = useState(false);
+  const [clientEditPoNumber, setClientEditPoNumber] = useState('');
   const [clientEditPoDate, setClientEditPoDate] = useState(new Date().toISOString().split('T')[0]);
   const [clientEditDeliveryDate, setClientEditDeliveryDate] = useState('');
-  const [clientEditItems, setClientEditItems] = useState<{id?: string, name: string, quantity: number | string, unit: string, category: 'Bahan Baku' | 'Bahan Operasional'}[]>([]);
+  const [clientEditItems, setClientEditItems] = useState<{id?: string, name: string, quantity: number | string, unit: string, category: 'Bahan Baku' | 'Bahan Operasional', supplier: string}[]>([]);
 
   // Edit PO Form State
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -616,7 +618,7 @@ export default function App() {
 
     const newPO: PurchaseOrder | any = {
       id: uniqueId,
-      poNumber: `PO-${formattedDatePart}-${orderCountString}`,
+      poNumber: clientPoNumber || `PO-${formattedDatePart}-${orderCountString}`,
       deliveredBy: 'Dikirim Koperasi',
       deliveryDate: clientDeliveryDate ? new Date(clientDeliveryDate).toISOString() : null,
       invoiceDate: new Date(clientPoDate).toISOString(),
@@ -630,7 +632,7 @@ export default function App() {
         name: item.name,
         quantity: typeof item.quantity === 'string' ? parseFloat(item.quantity) || 0 : item.quantity,
         unit: item.unit,
-        supplier: 'Belum Ditentukan',
+        supplier: item.supplier || 'Belum Ditentukan',
         category: item.category,
         unitPrice: 0,
         isOrdered: false,
@@ -644,9 +646,10 @@ export default function App() {
     try {
       await setDoc(doc(db, 'purchaseOrders', newPO.id), newPO);
       setIsClientNewPoOpen(false);
+      setClientPoNumber('');
       setClientPoDate(new Date().toISOString().split('T')[0]);
       setClientDeliveryDate('');
-      setClientItems([{ name: '', quantity: 1, unit: 'pcs', category: 'Bahan Baku' }]);
+      setClientItems([{ name: '', quantity: 1, unit: 'pcs', category: 'Bahan Baku', supplier: '' }]);
     } catch (error: any) {
       console.error("Error creating PO from client:", error);
       setNewPoError("Gagal membuat PO. " + (error.message || "Periksa koneksi Anda."));
@@ -660,6 +663,7 @@ export default function App() {
          return;
       }
       setEditingPO(po);
+      setClientEditPoNumber(po.poNumber || '');
       setClientEditPoDate(new Date(po.date).toISOString().split('T')[0]);
       setClientEditDeliveryDate(po.deliveryDate ? new Date(po.deliveryDate).toISOString().split('T')[0] : '');
       setClientEditItems(po.items.map(item => ({
@@ -667,7 +671,8 @@ export default function App() {
         name: item.name,
         quantity: item.quantity,
         unit: item.unit,
-        category: (item.category as 'Bahan Baku' | 'Bahan Operasional') || 'Bahan Baku'
+        category: (item.category as 'Bahan Baku' | 'Bahan Operasional') || 'Bahan Baku',
+        supplier: item.supplier !== 'Belum Ditentukan' ? item.supplier : ''
       })));
       setEditError(null);
       setIsClientEditPoOpen(true);
@@ -773,8 +778,9 @@ export default function App() {
           quantity: typeof item.quantity === 'string' ? parseFloat(item.quantity) || 0 : item.quantity,
           unit: item.unit,
           category: item.category,
+          // Update supplier from client if provided, otherwise preserve existing or default
+          supplier: item.supplier || existingItem?.supplier || 'Belum Ditentukan',
           // Preserve server-side flags and other fields not editable by client
-          supplier: existingItem?.supplier || 'Belum Ditentukan',
           unitPrice: existingItem?.unitPrice || 0,
           isOrdered: existingItem?.isOrdered || false,
           isAtKitchen: existingItem?.isAtKitchen || false,
@@ -784,7 +790,8 @@ export default function App() {
         };
       });
 
-      const updatedData = {
+      const updatedData: any = {
+        poNumber: clientEditPoNumber,
         date: new Date(clientEditPoDate).toISOString(),
         invoiceDate: new Date(clientEditPoDate).toISOString(),
         deliveryDate: clientEditDeliveryDate ? new Date(clientEditDeliveryDate).toISOString() : null,
@@ -2240,18 +2247,19 @@ export default function App() {
                      <div className="space-y-2">
                        <div className="flex justify-between items-center mb-2">
                          <Label>Daftar Barang <span className="text-red-500">*</span></Label>
-                         <Button type="button" variant="outline" size="sm" onClick={() => setClientItems([...clientItems, { name: '', quantity: 1, unit: 'pcs', category: 'Bahan Baku' }])}>
+                         <Button type="button" variant="outline" size="sm" onClick={() => setClientItems([...clientItems, { name: '', quantity: 1, unit: 'pcs', category: 'Bahan Baku', supplier: '' }])}>
                            <Plus className="w-4 h-4 mr-2" /> Tambah Barang
                          </Button>
                        </div>
                        <div className="border rounded-md overflow-x-auto">
-                         <Table className="min-w-[600px]">
+                         <Table className="min-w-[800px]">
                            <TableHeader className="bg-slate-50">
                              <TableRow>
                                <TableHead>Nama Barang <span className="text-red-500">*</span></TableHead>
-                               <TableHead className="w-[120px]">Qty <span className="text-red-500">*</span></TableHead>
-                               <TableHead className="w-[120px]">Satuan</TableHead>
-                               <TableHead className="w-[180px]">Kategori</TableHead>
+                               <TableHead className="w-[100px]">Qty <span className="text-red-500">*</span></TableHead>
+                               <TableHead className="w-[100px]">Satuan</TableHead>
+                               <TableHead className="w-[150px]">Kategori</TableHead>
+                               <TableHead className="w-[150px]">Supplier</TableHead>
                                <TableHead className="w-[60px] text-center">Aksi</TableHead>
                              </TableRow>
                            </TableHeader>
@@ -2307,6 +2315,17 @@ export default function App() {
                                       <option value="Bahan Operasional">Bahan Operasional</option>
                                     </select>
                                   </TableCell>
+                                  <TableCell className="p-2">
+                                    <Input 
+                                      placeholder="Nama Supplier" 
+                                      value={item.supplier || ''}
+                                      onChange={(e) => {
+                                        const newIt = [...clientItems];
+                                        newIt[index].supplier = e.target.value;
+                                        setClientItems(newIt);
+                                      }}
+                                    />
+                                  </TableCell>
                                  <TableCell className="p-2 text-center">
                                    <Button 
                                      type="button" 
@@ -2349,7 +2368,7 @@ export default function App() {
                   )}
 
                   <div className="grid gap-6 py-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="clientEditPoDate">Tanggal PO <span className="text-red-500">*</span></Label>
                         <Input 
@@ -2368,22 +2387,32 @@ export default function App() {
                           onChange={(e) => setClientEditDeliveryDate(e.target.value)}
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="clientEditPoNumber">Nomor PO</Label>
+                        <Input 
+                          id="clientEditPoNumber"
+                          placeholder="Nomor PO"
+                          value={clientEditPoNumber}
+                          onChange={(e) => setClientEditPoNumber(e.target.value)}
+                        />
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between items-center mb-2">
                         <Label>Daftar Barang <span className="text-red-500">*</span></Label>
-                        <Button type="button" variant="outline" size="sm" onClick={() => setClientEditItems([...clientEditItems, { name: '', quantity: 1, unit: 'pcs', category: 'Bahan Baku' }])}>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setClientEditItems([...clientEditItems, { name: '', quantity: 1, unit: 'pcs', category: 'Bahan Baku', supplier: '' }])}>
                           <Plus className="w-4 h-4 mr-2" /> Tambah Barang
                         </Button>
                       </div>
                       <div className="border rounded-md overflow-x-auto">
-                        <Table className="min-w-[600px]">
+                        <Table className="min-w-[800px]">
                           <TableHeader className="bg-slate-50">
                             <TableRow>
                               <TableHead>Nama Barang <span className="text-red-500">*</span></TableHead>
-                              <TableHead className="w-[120px]">Qty <span className="text-red-500">*</span></TableHead>
-                              <TableHead className="w-[120px]">Satuan</TableHead>
-                              <TableHead className="w-[180px]">Kategori</TableHead>
+                              <TableHead className="w-[100px]">Qty <span className="text-red-500">*</span></TableHead>
+                              <TableHead className="w-[100px]">Satuan</TableHead>
+                              <TableHead className="w-[150px]">Kategori</TableHead>
+                              <TableHead className="w-[150px]">Supplier</TableHead>
                               <TableHead className="w-[60px] text-center">Aksi</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -2438,6 +2467,17 @@ export default function App() {
                                     <option value="Bahan Baku">Bahan Baku</option>
                                     <option value="Bahan Operasional">Bahan Operasional</option>
                                   </select>
+                                </TableCell>
+                                <TableCell className="p-2">
+                                  <Input 
+                                    placeholder="Nama Supplier" 
+                                    value={item.supplier || ''}
+                                    onChange={(e) => {
+                                      const newIt = [...clientEditItems];
+                                      newIt[index].supplier = e.target.value;
+                                      setClientEditItems(newIt);
+                                    }}
+                                  />
                                 </TableCell>
                                 <TableCell className="p-2 text-center">
                                   <Button 
