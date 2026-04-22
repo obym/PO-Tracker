@@ -3445,7 +3445,7 @@ export default function App() {
                               </TableCell>
                               {user.role === 'supplier' && (
                                 <TableCell className="text-right font-medium text-indigo-600 whitespace-nowrap">
-                                  Rp {((item.supplierCost || 0) - (item.hpp || 0)).toLocaleString('id-ID')}
+                                  Rp {(((item.supplierCost || 0) - (item.hpp || 0)) * (typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity)).toLocaleString('id-ID')}
                                 </TableCell>
                               )}
                               <TableCell className="text-center">
