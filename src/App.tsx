@@ -54,6 +54,7 @@ interface Supplier {
   phone?: string;
   address?: string;
   district?: string;
+  bankAccount?: string;
 }
 
 interface UserProfile {
@@ -198,6 +199,7 @@ export default function App() {
   const [supplierPhone, setSupplierPhone] = useState('');
   const [supplierAddress, setSupplierAddress] = useState('');
   const [supplierDistrict, setSupplierDistrict] = useState('');
+  const [supplierBankAccount, setSupplierBankAccount] = useState('');
   const [supplierError, setSupplierError] = useState<string | null>(null);
 
   // New PO Form State
@@ -462,7 +464,8 @@ export default function App() {
         picName: supplierPicName,
         phone: supplierPhone,
         address: supplierAddress,
-        district: supplierDistrict
+        district: supplierDistrict,
+        bankAccount: supplierBankAccount
       };
       
       await setDoc(doc(db, 'suppliers', newId), newSupplier);
@@ -472,6 +475,7 @@ export default function App() {
       setSupplierPhone('');
       setSupplierAddress('');
       setSupplierDistrict('');
+      setSupplierBankAccount('');
     } catch (error) {
       console.error("Error creating supplier:", error);
       setSupplierError("Gagal membuat supplier. Pastikan Anda memiliki akses Admin.");
@@ -485,6 +489,7 @@ export default function App() {
     setSupplierPhone(supplier.phone || '');
     setSupplierAddress(supplier.address || '');
     setSupplierDistrict(supplier.district || '');
+    setSupplierBankAccount(supplier.bankAccount || '');
     setSupplierError(null);
     setIsEditSupplierOpen(true);
   };
@@ -502,7 +507,8 @@ export default function App() {
         picName: supplierPicName,
         phone: supplierPhone,
         address: supplierAddress,
-        district: supplierDistrict
+        district: supplierDistrict,
+        bankAccount: supplierBankAccount
       });
       setIsEditSupplierOpen(false);
       setEditingSupplier(null);
@@ -1290,21 +1296,54 @@ export default function App() {
           {/* Invoice content */}
           <div className="flex-1 p-4 sm:p-8 overflow-y-auto flex justify-center bg-slate-200/60 print:p-0 print:bg-white print:block">
             <div id="print-area" className="w-full max-w-4xl mx-auto h-fit">
-              {Array.from(new Set(printableItems.map(item => item.supplier || 'Belum Ditentukan'))).map((supplierName, supIndex) => {
-                const supplierItems = printableItems.filter(item => (item.supplier || 'Belum Ditentukan') === supplierName);
-                const supplierData = suppliers.find(s => s.name === supplierName) || { name: supplierName, address: '', district: '', phone: '' };
+              {(() => {
+                let invoicesToRender: any[] = [];
+                if (user?.role === 'admin' || user?.role === 'finance') {
+                  invoicesToRender = [{
+                    title: 'KOPERASI GARUDA MERAH PUTIH',
+                    address: 'Dsn. Padangan RT 02 RW 03 Ds. Pagu',
+                    district: 'Kec. Pagu Kab. Kediri',
+                    phone: 'Phone : 0812-5278-8733',
+                    items: printableItems,
+                    getPrice: (item: any) => item.unitPrice || 0,
+                    bankAccount: 'Bank Mandiri : 171-00-1986218-7',
+                    signerName: 'Hariaji',
+                    signerTitle: 'Ketua Koperasi',
+                    useSignatureImg: true,
+                    key: 'master-invoice'
+                  }];
+                } else {
+                  invoicesToRender = Array.from(new Set(printableItems.map(item => item.supplier || 'Belum Ditentukan'))).map(supplierName => {
+                    const sItems = printableItems.filter(item => (item.supplier || 'Belum Ditentukan') === supplierName);
+                    const sData = suppliers.find(s => s.name === supplierName) || { name: supplierName, address: '', district: '', phone: '', bankAccount: '', picName: '' };
+                    return {
+                      title: sData.name,
+                      address: sData.address,
+                      district: sData.district,
+                      phone: sData.phone ? `Phone : ${sData.phone}` : '',
+                      items: sItems,
+                      getPrice: (item: any) => item.supplierCost || 0,
+                      bankAccount: sData.bankAccount || '-',
+                      signerName: sData.picName || '',
+                      signerTitle: '',
+                      useSignatureImg: false,
+                      key: supplierName
+                    };
+                  });
+                }
 
-                return (
-                  <div key={supplierName} className={`bg-white text-black p-8 sm:p-12 font-sans text-xs sm:text-sm shadow-xl border border-slate-300 lg:rounded-lg mb-8 print:mb-0 print:shadow-none print:border-none print:rounded-none ${supIndex > 0 ? 'print:break-before-page print:mt-12' : ''}`}>
-                    <div className="min-w-[600px]">
-                      {/* Header */}
-                      <div className="text-center mb-6">
-                        <h1 className="text-2xl font-bold border-2 border-black inline-block px-16 py-1 mb-2 tracking-widest">NOTA</h1>
-                        <h2 className="text-xl font-bold uppercase">{supplierData.name}</h2>
-                        {supplierData.address && <p>{supplierData.address}</p>}
-                        {supplierData.district && <p>{supplierData.district}</p>}
-                        {supplierData.phone && <p>Phone : {supplierData.phone}</p>}
-                      </div>
+                return invoicesToRender.map((invoiceData, supIndex) => {
+                  return (
+                    <div key={invoiceData.key} className={`bg-white text-black p-8 sm:p-12 font-sans text-xs sm:text-sm shadow-xl border border-slate-300 lg:rounded-lg mb-8 print:mb-0 print:shadow-none print:border-none print:rounded-none ${supIndex > 0 ? 'print:break-before-page print:mt-12' : ''}`}>
+                      <div className="min-w-[600px]">
+                        {/* Header */}
+                        <div className="text-center mb-6">
+                          <h1 className="text-2xl font-bold border-2 border-black inline-block px-16 py-1 mb-2 tracking-widest">NOTA</h1>
+                          <h2 className="text-xl font-bold uppercase">{invoiceData.title}</h2>
+                          {invoiceData.address && <p>{invoiceData.address}</p>}
+                          {invoiceData.district && <p>{invoiceData.district}</p>}
+                          {invoiceData.phone && <p>{invoiceData.phone}</p>}
+                        </div>
 
             {/* Info */}
             <div className="grid grid-cols-2 gap-4 mb-6">
@@ -1357,14 +1396,14 @@ export default function App() {
               </thead>
               <tbody>
                 {/* Bahan Baku */}
-                {supplierItems.filter(item => item.category === 'Bahan Baku' || !item.category).length > 0 && (
+                {invoiceData.items.filter((item: any) => item.category === 'Bahan Baku' || !item.category).length > 0 && (
                   <>
                     <tr className="bg-gray-100 font-bold">
                       <td colSpan={6} className="border border-black p-2">Bahan Baku</td>
                     </tr>
-                    {supplierItems.filter(item => item.category === 'Bahan Baku' || !item.category).map((item, index) => {
+                    {invoiceData.items.filter((item: any) => item.category === 'Bahan Baku' || !item.category).map((item: any, index: number) => {
                       const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                      const price = item.supplierCost || 0;
+                      const price = invoiceData.getPrice(item);
                       const subtotal = qty * price;
                       return (
                         <tr key={item.id}>
@@ -1385,9 +1424,9 @@ export default function App() {
                       <td colSpan={4} className="border-t border-black"></td>
                       <td className="border border-black p-2 text-right font-bold">Subtotal Bahan Baku</td>
                       <td className="border border-black p-2 text-right font-bold">
-                        {supplierItems.filter(item => item.category === 'Bahan Baku' || !item.category).reduce((sum, item) => {
+                        {invoiceData.items.filter((item: any) => item.category === 'Bahan Baku' || !item.category).reduce((sum: number, item: any) => {
                           const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                          const price = item.supplierCost || 0;
+                          const price = invoiceData.getPrice(item);
                           return sum + (qty * price);
                         }, 0).toLocaleString('id-ID')}
                       </td>
@@ -1396,14 +1435,14 @@ export default function App() {
                 )}
 
                 {/* Bahan Operasional */}
-                {supplierItems.filter(item => item.category === 'Bahan Operasional').length > 0 && (
+                {invoiceData.items.filter((item: any) => item.category === 'Bahan Operasional').length > 0 && (
                   <>
                     <tr className="bg-gray-100 font-bold">
                       <td colSpan={6} className="border border-black p-2">Bahan Operasional</td>
                     </tr>
-                    {supplierItems.filter(item => item.category === 'Bahan Operasional').map((item, index) => {
+                    {invoiceData.items.filter((item: any) => item.category === 'Bahan Operasional').map((item: any, index: number) => {
                       const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                      const price = item.supplierCost || 0;
+                      const price = invoiceData.getPrice(item);
                       const subtotal = qty * price;
                       return (
                         <tr key={item.id}>
@@ -1424,9 +1463,9 @@ export default function App() {
                       <td colSpan={4} className="border-t border-black"></td>
                       <td className="border border-black p-2 text-right font-bold">Subtotal Bahan Operasional</td>
                       <td className="border border-black p-2 text-right font-bold">
-                        {supplierItems.filter(item => item.category === 'Bahan Operasional').reduce((sum, item) => {
+                        {invoiceData.items.filter((item: any) => item.category === 'Bahan Operasional').reduce((sum: number, item: any) => {
                           const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                          const price = item.supplierCost || 0;
+                          const price = invoiceData.getPrice(item);
                           return sum + (qty * price);
                         }, 0).toLocaleString('id-ID')}
                       </td>
@@ -1438,9 +1477,9 @@ export default function App() {
                   <td colSpan={4} className="border-t border-black"></td>
                   <td className="border border-black p-2 text-right font-bold bg-gray-200">TOTAL KESELURUHAN</td>
                   <td className="border border-black p-2 text-right font-bold bg-gray-200">
-                    {supplierItems.reduce((sum, item) => {
+                    {invoiceData.items.reduce((sum: number, item: any) => {
                       const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                      const price = item.supplierCost || 0;
+                      const price = invoiceData.getPrice(item);
                       return sum + (qty * price);
                     }, 0).toLocaleString('id-ID')}
                   </td>
@@ -1452,9 +1491,9 @@ export default function App() {
             <div className="mb-6">
               <p className="font-bold mb-1">Terbilang :</p>
               <div className="border border-black p-2 inline-block min-w-[50%] italic">
-                {terbilang(supplierItems.reduce((sum, item) => {
+                {terbilang(invoiceData.items.reduce((sum: number, item: any) => {
                   const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                  const price = item.supplierCost || 0;
+                  const price = invoiceData.getPrice(item);
                   return sum + (qty * price);
                 }, 0))} Rupiah
               </div>
@@ -1464,24 +1503,34 @@ export default function App() {
             <div className="flex justify-between mt-8">
               <div>
                 <p>BANK TRANSFER :</p>
-                <p>Rekening Koperasi Garuda Merah Putih</p>
-                <p>Bank Mandiri : 171-00-1986218-7</p>
+                {invoiceData.bankAccount ? (
+                  invoiceData.bankAccount.split('\n').map((line: string, i: number) => (
+                    <p key={i}>{line}</p>
+                  ))
+                ) : (
+                  <p>-</p>
+                )}
               </div>
-              <div className="text-center mr-12">
-                <p>Hormat Kami,</p>
-                <img src="/signature.png" alt="Tanda Tangan Hariaji" className="h-24 mx-auto object-contain mix-blend-multiply" onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                }} />
-                <div className="h-24 hidden"></div>
-                <p className="font-bold">Hariaji</p>
-                <p>Ketua Koperasi</p>
+              <div className="text-center mr-12 w-48">
+                <p className="mb-16">Hormat Kami,</p>
+                {invoiceData.useSignatureImg && (
+                  <img src="/signature.png" alt="Tanda Tangan" className="h-24 mx-auto object-contain mix-blend-multiply absolute -mt-20 ml-6" onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }} />
+                )}
+                <div className="border-b border-black font-semibold text-sm pb-1 min-h-[24px]">
+                  {invoiceData.signerName || ''}
+                </div>
+                {invoiceData.signerTitle && (
+                  <p>{invoiceData.signerTitle}</p>
+                )}
               </div>
             </div>
             </div>
           </div>
                 );
-              })}
+              });
+            })()}
             </div>
           </div>
         </div>
@@ -2796,10 +2845,11 @@ export default function App() {
                         <TableHeader className="bg-slate-50">
                           <TableRow>
                             <TableHead className="text-base">Nama</TableHead>
-                            <TableHead className="text-base">Nama PIC</TableHead>
+                            <TableHead className="text-base">Nama Penandatangan</TableHead>
                             <TableHead className="text-base">Telepon</TableHead>
                             <TableHead className="text-base">Alamat</TableHead>
                             <TableHead className="text-base">Kecamatan/Kabupaten</TableHead>
+                            <TableHead className="text-base">Bank Transfer + Rekening</TableHead>
                             <TableHead className="w-[120px] text-center text-base">Aksi</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -2811,6 +2861,7 @@ export default function App() {
                               <TableCell className="text-base">{s.phone || '-'}</TableCell>
                               <TableCell className="text-base">{s.address || '-'}</TableCell>
                               <TableCell className="text-base">{s.district || '-'}</TableCell>
+                              <TableCell className="text-base">{s.bankAccount || '-'}</TableCell>
                               <TableCell className="text-center">
                                 <div className="flex justify-center gap-1">
                                   <Button 
@@ -3050,11 +3101,20 @@ export default function App() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="supplierPicName">Nama PIC</Label>
+                      <Label htmlFor="supplierPicName">Nama Penandatangan</Label>
                       <Input 
                         id="supplierPicName" 
                         value={supplierPicName}
                         onChange={(e) => setSupplierPicName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="supplierBankAccount">Bank Transfer + Rekening</Label>
+                      <Input 
+                        id="supplierBankAccount" 
+                        value={supplierBankAccount}
+                        onChange={(e) => setSupplierBankAccount(e.target.value)}
+                        placeholder="Contoh: Bank Mandiri : 171-00-1986218-7"
                       />
                     </div>
                     <div className="space-y-2">
@@ -3115,11 +3175,20 @@ export default function App() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="editSupplierPicName">Nama PIC</Label>
+                      <Label htmlFor="editSupplierPicName">Nama Penandatangan</Label>
                       <Input 
                         id="editSupplierPicName" 
                         value={supplierPicName}
                         onChange={(e) => setSupplierPicName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editSupplierBankAccount">Bank Transfer + Rekening</Label>
+                      <Input 
+                        id="editSupplierBankAccount" 
+                        value={supplierBankAccount}
+                        onChange={(e) => setSupplierBankAccount(e.target.value)}
+                        placeholder="Contoh: Bank Mandiri : 171-00-1986218-7"
                       />
                     </div>
                     <div className="space-y-2">
@@ -3393,7 +3462,7 @@ export default function App() {
                     <TableHeader className="bg-slate-50">
                       <TableRow>
                         <TableHead>Barang</TableHead>
-                        {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && <TableHead>Supplier</TableHead>}
+                        <TableHead>Supplier</TableHead>
                         {!(user.role === 'driver' && selectedOrder.deliveredBy === 'Dikirim Supplier') && user.role !== 'supplier' && user.role !== 'kitchen' && (
                           <>
                             <TableHead className="text-center w-[120px]">Diorder?</TableHead>
@@ -3425,13 +3494,11 @@ export default function App() {
                             <div className="text-xs text-slate-500">{item.quantity} {item.unit}</div>
                           </TableCell>
                           
-                          {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && (
-                            <TableCell>
-                              <Badge variant="outline" className="bg-white text-slate-600 font-normal">
-                                {item.supplier}
-                              </Badge>
-                            </TableCell>
-                          )}
+                          <TableCell>
+                            <Badge variant="outline" className="bg-white text-slate-600 font-normal">
+                              {item.supplier}
+                            </Badge>
+                          </TableCell>
 
                           {!(user.role === 'driver' && selectedOrder.deliveredBy === 'Dikirim Supplier') && user.role !== 'supplier' && user.role !== 'kitchen' && (
                             <>
