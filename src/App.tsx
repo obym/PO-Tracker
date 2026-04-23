@@ -65,6 +65,8 @@ interface UserProfile {
   phone?: string;
   address?: string;
   district?: string;
+  bankAccountName?: string;
+  bankAccountNumber?: string;
 }
 
 const statusConfig = {
@@ -188,6 +190,8 @@ export default function App() {
   const [editUserPhone, setEditUserPhone] = useState('');
   const [editUserAddress, setEditUserAddress] = useState('');
   const [editUserDistrict, setEditUserDistrict] = useState('');
+  const [editUserBankAccountName, setEditUserBankAccountName] = useState('');
+  const [editUserBankAccountNumber, setEditUserBankAccountNumber] = useState('');
   const [editUserError, setEditUserError] = useState<string | null>(null);
 
   // Supplier State
@@ -423,6 +427,8 @@ export default function App() {
     setEditUserPhone(user.phone || '');
     setEditUserAddress(user.address || '');
     setEditUserDistrict(user.district || '');
+    setEditUserBankAccountName(user.bankAccountName || '');
+    setEditUserBankAccountNumber(user.bankAccountNumber || '');
     setEditUserError(null);
     setIsEditUserOpen(true);
   };
@@ -439,7 +445,9 @@ export default function App() {
         name: editUserName,
         phone: editUserPhone,
         address: editUserAddress,
-        district: editUserDistrict
+        district: editUserDistrict,
+        bankAccountName: editUserBankAccountName,
+        bankAccountNumber: editUserBankAccountNumber
       });
       setIsEditUserOpen(false);
       setEditingUser(null);
@@ -2994,6 +3002,8 @@ export default function App() {
                             <TableHead className="text-sm">Telepon</TableHead>
                             <TableHead className="text-sm">Alamat</TableHead>
                             <TableHead className="text-sm">Kecamatan/Kabupaten</TableHead>
+                            <TableHead className="text-sm">Nama Rekening</TableHead>
+                            <TableHead className="text-sm">Nomor Rekening</TableHead>
                             <TableHead className="w-[150px] text-sm">Role</TableHead>
                             <TableHead className="w-[120px] text-center text-sm">Aksi</TableHead>
                           </TableRow>
@@ -3006,6 +3016,8 @@ export default function App() {
                               <TableCell className="text-sm">{u.phone || '-'}</TableCell>
                               <TableCell className="text-sm">{u.address || '-'}</TableCell>
                               <TableCell className="text-sm">{u.district || '-'}</TableCell>
+                              <TableCell className="text-sm">{u.bankAccountName || '-'}</TableCell>
+                              <TableCell className="text-sm">{u.bankAccountNumber || '-'}</TableCell>
                               <TableCell>
                                 <select 
                                   className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer hover:bg-slate-50"
@@ -3119,6 +3131,22 @@ export default function App() {
                         id="editUserDistrict" 
                         value={editUserDistrict}
                         onChange={(e) => setEditUserDistrict(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editUserBankAccountName">Nama Rekening</Label>
+                      <Input 
+                        id="editUserBankAccountName" 
+                        value={editUserBankAccountName}
+                        onChange={(e) => setEditUserBankAccountName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editUserBankAccountNumber">Nomor Rekening</Label>
+                      <Input 
+                        id="editUserBankAccountNumber" 
+                        value={editUserBankAccountNumber}
+                        onChange={(e) => setEditUserBankAccountNumber(e.target.value)}
                       />
                     </div>
                   </div>
