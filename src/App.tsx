@@ -1324,7 +1324,7 @@ export default function App() {
                     let signerName = sData.picName || '';
                     let bankAccount = sData.bankAccount || '-';
 
-                    if (supplierName.toLowerCase() === 'srikaya') {
+                    if (supplierName.toLowerCase().includes('srikaya')) {
                       title = 'SRIKAYA';
                       address = 'Dsn. Pojok Ds. Sumberjo';
                       district = 'Kec. Purwoasri Kab. Kediri';
@@ -2392,15 +2392,22 @@ export default function App() {
                                     </select>
                                   </TableCell>
                                   <TableCell className="p-2">
-                                    <Input 
-                                      placeholder="Nama Supplier" 
+                                    <select
+                                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                                       value={item.supplier || ''}
                                       onChange={(e) => {
                                         const newIt = [...clientItems];
                                         newIt[index].supplier = e.target.value;
                                         setClientItems(newIt);
                                       }}
-                                    />
+                                    >
+                                      <option value="" disabled>Pilih Supplier</option>
+                                      <option value="Koperasi Garuda Merah Putih">Koperasi Garuda Merah Putih</option>
+                                      <option value="Puji Sayur dan Buah">Puji Sayur dan Buah</option>
+                                      <option value="UD Srikaya Berkah Rejeki">UD Srikaya Berkah Rejeki</option>
+                                      <option value="UD Airlangga Putra Mas">UD Airlangga Putra Mas</option>
+                                      <option value="UD Wahyu Lumbung Rejeki">UD Wahyu Lumbung Rejeki</option>
+                                    </select>
                                   </TableCell>
                                  <TableCell className="p-2 text-center">
                                    <Button 
@@ -2545,15 +2552,22 @@ export default function App() {
                                   </select>
                                 </TableCell>
                                 <TableCell className="p-2">
-                                  <Input 
-                                    placeholder="Nama Supplier" 
+                                  <select
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                                     value={item.supplier || ''}
                                     onChange={(e) => {
                                       const newIt = [...clientEditItems];
                                       newIt[index].supplier = e.target.value;
                                       setClientEditItems(newIt);
                                     }}
-                                  />
+                                  >
+                                    <option value="" disabled>Pilih Supplier</option>
+                                    <option value="Koperasi Garuda Merah Putih">Koperasi Garuda Merah Putih</option>
+                                    <option value="Puji Sayur dan Buah">Puji Sayur dan Buah</option>
+                                    <option value="UD Srikaya Berkah Rejeki">UD Srikaya Berkah Rejeki</option>
+                                    <option value="UD Airlangga Putra Mas">UD Airlangga Putra Mas</option>
+                                    <option value="UD Wahyu Lumbung Rejeki">UD Wahyu Lumbung Rejeki</option>
+                                  </select>
                                 </TableCell>
                                 <TableCell className="p-2 text-center">
                                   <Button 
