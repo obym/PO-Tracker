@@ -864,8 +864,8 @@ export default function App() {
   const handlePrintInvoice = async () => {
     window.print();
     
-    // Only update if it's admin printing the main invoice
-    if (invoiceOrder && invoiceOrder.status === 'COMPLETED' && user?.role === 'admin') {
+    // Only update if it's admin or client printing the main invoice
+    if (invoiceOrder && invoiceOrder.status === 'COMPLETED' && (user?.role === 'admin' || user?.role === 'client')) {
       try {
         await updateDoc(doc(db, 'purchaseOrders', invoiceOrder.id), {
           status: 'INVOICED'
@@ -1238,7 +1238,7 @@ export default function App() {
            )}
            {user?.role === 'client' && (
              <Button onClick={handlePrintInvoice} className="bg-indigo-600 hover:bg-indigo-700">
-               <Printer className="w-4 h-4 mr-2" /> Download Nota
+               <Printer className="w-4 h-4 mr-2" /> Cetak Nota
              </Button>
            )}
         </div>
@@ -3410,9 +3410,25 @@ export default function App() {
                     </Badge>
                   </DialogTitle>
                   <div className="flex gap-2">
-                    {(selectedOrder.status === 'COMPLETED' || selectedOrder.status === 'INVOICED') && (user.role === 'admin' || user.role === 'client') && (
+                    {(selectedOrder.status === 'COMPLETED' || selectedOrder.status === 'INVOICED') && user.role === 'admin' && (
                       <Button variant="outline" size="sm" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100" onClick={() => handleOpenInvoice(selectedOrder)}>
                         <Receipt className="w-4 h-4 mr-2" /> Lihat Nota
+                      </Button>
+                    )}
+                    {(selectedOrder.status === 'COMPLETED' || selectedOrder.status === 'INVOICED') && user.role === 'client' && (
+                      <Button variant="outline" size="sm" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100" onClick={async () => {
+                        handleOpenInvoice(selectedOrder);
+                        if (selectedOrder.status === 'COMPLETED') {
+                          try {
+                            await updateDoc(doc(db, 'purchaseOrders', selectedOrder.id), {
+                              status: 'INVOICED'
+                            });
+                          } catch (error) {
+                            console.error("Error updating status to INVOICED:", error);
+                          }
+                        }
+                      }}>
+                        <Receipt className="w-4 h-4 mr-2" /> Cetak Nota
                       </Button>
                     )}
                     {user.role === 'supplier' && selectedOrder.items.some(item => item.supplier === user.name) && (
