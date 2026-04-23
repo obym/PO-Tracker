@@ -743,7 +743,7 @@ export default function App() {
       if (!order) return;
       
       const updatedItems = order.items.map(item => 
-        item.id === itemId ? { ...item, supplierCost: costValue } : item
+        item.id === itemId ? { ...item, supplierCost: costValue, unitPrice: costValue } : item
       );
       
       await updateDoc(doc(db, 'purchaseOrders', orderId), {
@@ -2188,7 +2188,8 @@ export default function App() {
                               <TableHead>Nama Barang</TableHead>
                               <TableHead className="w-[100px]">Qty</TableHead>
                               <TableHead className="w-[120px]">Satuan</TableHead>
-                              <TableHead className="w-[150px]">Harga Satuan</TableHead>
+                              <TableHead className="w-[150px]">Harga Jual Ke Dapur</TableHead>
+                              <TableHead className="w-[150px]">Harga Perolehan</TableHead>
                               <TableHead className="w-[150px]">Kategori</TableHead>
                               <TableHead>Supplier</TableHead>
                               <TableHead className="w-[50px]"></TableHead>
@@ -2227,11 +2228,27 @@ export default function App() {
                                   <Input 
                                     type="text" 
                                     placeholder="0"
-                                    value={item.unitPrice ? new Intl.NumberFormat('id-ID').format(Number(item.unitPrice)) : ''}
+                                    value={item.supplierCost !== undefined ? (item.supplierCost ? new Intl.NumberFormat('id-ID').format(Number(item.supplierCost)) : '') : (item.unitPrice ? new Intl.NumberFormat('id-ID').format(Number(item.unitPrice)) : '')}
                                     onChange={(e) => {
                                       const val = e.target.value.replace(/\./g, '');
                                       if (/^\d*$/.test(val)) {
-                                        handleItemChange(index, 'unitPrice', val === '' ? 0 : parseInt(val));
+                                        const numVal = val === '' ? 0 : parseInt(val);
+                                        handleItemChange(index, 'unitPrice', numVal);
+                                        handleItemChange(index, 'supplierCost', numVal);
+                                      }
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell className="p-2">
+                                  <Input 
+                                    type="text" 
+                                    placeholder="0"
+                                    value={item.hpp ? new Intl.NumberFormat('id-ID').format(Number(item.hpp)) : ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value.replace(/\./g, '');
+                                      if (/^\d*$/.test(val)) {
+                                        const numVal = val === '' ? 0 : parseInt(val);
+                                        handleItemChange(index, 'hpp', numVal);
                                       }
                                     }}
                                   />
@@ -2705,7 +2722,8 @@ export default function App() {
                               <TableHead>Nama Barang</TableHead>
                               <TableHead className="w-[100px]">Qty</TableHead>
                               <TableHead className="w-[120px]">Satuan</TableHead>
-                              <TableHead className="w-[150px]">Harga Satuan</TableHead>
+                              <TableHead className="w-[150px]">Harga Jual Ke Dapur</TableHead>
+                              <TableHead className="w-[150px]">Harga Perolehan</TableHead>
                               <TableHead className="w-[150px]">Kategori</TableHead>
                               <TableHead>Supplier</TableHead>
                               <TableHead className="w-[50px]"></TableHead>
@@ -2745,11 +2763,27 @@ export default function App() {
                                   <Input 
                                     type="text" 
                                     placeholder="0"
-                                    value={item.unitPrice ? new Intl.NumberFormat('id-ID').format(Number(item.unitPrice)) : ''}
+                                    value={item.supplierCost !== undefined ? (item.supplierCost ? new Intl.NumberFormat('id-ID').format(Number(item.supplierCost)) : '') : (item.unitPrice ? new Intl.NumberFormat('id-ID').format(Number(item.unitPrice)) : '')}
                                     onChange={(e) => {
                                       const val = e.target.value.replace(/\./g, '');
                                       if (/^\d*$/.test(val)) {
-                                        handleEditItemChange(index, 'unitPrice', val === '' ? 0 : parseInt(val));
+                                        const numVal = val === '' ? 0 : parseInt(val);
+                                        handleEditItemChange(index, 'unitPrice', numVal);
+                                        handleEditItemChange(index, 'supplierCost', numVal);
+                                      }
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell className="p-2">
+                                  <Input 
+                                    type="text" 
+                                    placeholder="0"
+                                    value={item.hpp ? new Intl.NumberFormat('id-ID').format(Number(item.hpp)) : ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value.replace(/\./g, '');
+                                      if (/^\d*$/.test(val)) {
+                                        const numVal = val === '' ? 0 : parseInt(val);
+                                        handleEditItemChange(index, 'hpp', numVal);
                                       }
                                     }}
                                   />
