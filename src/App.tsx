@@ -316,18 +316,17 @@ export default function App() {
       console.error("Error fetching orders:", error);
     });
 
+    const allUsersQuery = query(collection(db, 'users'));
+    const unsubscribeAllUsers = onSnapshot(allUsersQuery, (snapshot) => {
+      setAllUsers(snapshot.docs.map(doc => doc.data() as UserProfile));
+    });
+
     let unsubscribeClients = () => {};
-    let unsubscribeAllUsers = () => {};
     let unsubscribeSuppliers = () => {};
     if (user.role === 'admin') {
       const clientsQuery = query(collection(db, 'users'), where('role', '==', 'client'));
       unsubscribeClients = onSnapshot(clientsQuery, (snapshot) => {
         setClients(snapshot.docs.map(doc => doc.data() as UserProfile));
-      });
-
-      const allUsersQuery = query(collection(db, 'users'));
-      unsubscribeAllUsers = onSnapshot(allUsersQuery, (snapshot) => {
-        setAllUsers(snapshot.docs.map(doc => doc.data() as UserProfile));
       });
 
       const suppliersQuery = query(collection(db, 'suppliers'));
@@ -1141,17 +1140,13 @@ export default function App() {
               </div>
               <div>
                 <p className="font-bold">Kepada :</p>
-                <p className="font-bold">{clients.find(c => c.uid === order.clientId)?.name || order.clientName}</p>
-                {clients.find(c => c.uid === order.clientId)?.address && (
-                  <p>{clients.find(c => c.uid === order.clientId)?.address}</p>
+                <p className="font-bold">{allUsers.find(c => c.uid === order.clientId)?.name || order.clientName}</p>
+                {allUsers.find(c => c.uid === order.clientId)?.address && (
+                  <p>{allUsers.find(c => c.uid === order.clientId)?.address}</p>
                 )}
-                {clients.find(c => c.uid === order.clientId)?.district && (
-                  <p>{clients.find(c => c.uid === order.clientId)?.district}</p>
+                {allUsers.find(c => c.uid === order.clientId)?.district && (
+                  <p>{allUsers.find(c => c.uid === order.clientId)?.district}</p>
                 )}
-                <div className="mt-4">
-                  <p className="font-bold">Pemesan :</p>
-                  <p>{order.clientName}</p>
-                </div>
               </div>
             </div>
 
@@ -1347,15 +1342,6 @@ export default function App() {
                       ? `Rekening ${sUser.bankAccountName || '-'}\n${sUser.bankAccountNumber || '-'}`
                       : '-';
 
-                    if (supplierName.toLowerCase().includes('srikaya')) {
-                      title = 'SRIKAYA';
-                      address = 'Dsn. Pojok Ds. Sumberjo';
-                      district = 'Kec. Purwoasri Kab. Kediri';
-                      phone = 'Phone : 0852-5704-4397';
-                      signerName = 'Sugiono, S.E';
-                      bankAccount = 'Rekening Srikaya\nBank BRI : 6259-0101-1814-6536';
-                    }
-
                     return {
                       title,
                       address,
@@ -1413,11 +1399,11 @@ export default function App() {
               <div>
                 <p className="font-bold">Kepada :</p>
                 <p className="font-bold">{invoiceOrder.clientName}</p>
-                {clients.find(c => c.uid === invoiceOrder.clientId)?.address && (
-                  <p>{clients.find(c => c.uid === invoiceOrder.clientId)?.address}</p>
+                {allUsers.find(c => c.uid === invoiceOrder.clientId)?.address && (
+                  <p>{allUsers.find(c => c.uid === invoiceOrder.clientId)?.address}</p>
                 )}
-                {clients.find(c => c.uid === invoiceOrder.clientId)?.district && (
-                  <p>{clients.find(c => c.uid === invoiceOrder.clientId)?.district}</p>
+                {allUsers.find(c => c.uid === invoiceOrder.clientId)?.district && (
+                  <p>{allUsers.find(c => c.uid === invoiceOrder.clientId)?.district}</p>
                 )}
               </div>
             </div>
