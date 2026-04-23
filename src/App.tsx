@@ -671,7 +671,7 @@ export default function App() {
 
   const openEditPO = (po: PurchaseOrder) => {
     if (user?.role === 'client') {
-      if (po.status !== 'PO_RECEIVED') {
+      if (po.status !== 'PO_RECEIVED' && po.status !== 'ORDERING') {
          setGlobalError('PO ini sudah diproses dan tidak dapat diedit lagi.');
          return;
       }
@@ -773,7 +773,7 @@ export default function App() {
       return;
     }
 
-    if (editingPO.status !== 'PO_RECEIVED') {
+    if (editingPO.status !== 'PO_RECEIVED' && editingPO.status !== 'ORDERING') {
       setEditError('PO ini sudah diproses dan tidak dapat diedit lagi.');
       return;
     }
@@ -3529,7 +3529,7 @@ export default function App() {
                         </Button>
                       </>
                     )}
-                    {user.role === 'client' && selectedOrder.status === 'PO_RECEIVED' && (
+                    {user.role === 'client' && (selectedOrder.status === 'PO_RECEIVED' || selectedOrder.status === 'ORDERING') && (
                       <Button variant="outline" size="sm" onClick={() => openEditPO(selectedOrder)}>
                         <Edit className="w-4 h-4 mr-2" /> Edit PO
                       </Button>
@@ -3620,7 +3620,7 @@ export default function App() {
                                 <Button
                                   variant={item.isOrdered ? "default" : "outline"}
                                   size="sm"
-                                  disabled={user.role !== 'supplier' && user.role !== 'admin'}
+                                  disabled={user.role !== 'supplier' && user.role !== 'admin' && user.role !== 'client'}
                                   className={`w-full ${item.isOrdered ? 'bg-indigo-600 hover:bg-indigo-700' : 'text-slate-500'}`}
                                   onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isOrdered')}
                                 >
@@ -3633,7 +3633,7 @@ export default function App() {
                                 <Button
                                   variant={item.isDelivered ? "default" : "outline"}
                                   size="sm"
-                                  disabled={user.role !== 'driver' && user.role !== 'admin'}
+                                  disabled={user.role !== 'driver' && user.role !== 'admin' && user.role !== 'client'}
                                   className={`w-full ${item.isDelivered ? 'bg-blue-600 hover:bg-blue-700' : 'text-slate-500'}`}
                                   onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isDelivered')}
                                 >
@@ -3646,7 +3646,7 @@ export default function App() {
                                 <Button
                                   variant={item.isAtKitchen ? "default" : "outline"}
                                   size="sm"
-                                  disabled={user.role !== 'supplier' && user.role !== 'admin' && user.role !== 'driver'}
+                                  disabled={user.role !== 'supplier' && user.role !== 'admin' && user.role !== 'driver' && user.role !== 'client'}
                                   className={`w-full ${item.isAtKitchen ? 'bg-orange-600 hover:bg-orange-700' : 'text-slate-500'}`}
                                   onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isAtKitchen')}
                                 >
