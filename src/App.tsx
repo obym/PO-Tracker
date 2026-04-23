@@ -1316,15 +1316,30 @@ export default function App() {
                   invoicesToRender = Array.from(new Set(printableItems.map(item => item.supplier || 'Belum Ditentukan'))).map(supplierName => {
                     const sItems = printableItems.filter(item => (item.supplier || 'Belum Ditentukan') === supplierName);
                     const sData = suppliers.find(s => s.name === supplierName) || { name: supplierName, address: '', district: '', phone: '', bankAccount: '', picName: '' };
+                    
+                    let title = sData.name.toUpperCase();
+                    let address = sData.address;
+                    let district = sData.district;
+                    let phone = sData.phone ? `Phone : ${sData.phone}` : '';
+                    let signerName = sData.picName || '';
+
+                    if (supplierName.toLowerCase() === 'srikaya') {
+                      title = 'SRIKAYA';
+                      address = 'Dsn. Pojok Ds. Sumberjo';
+                      district = 'Kec. Purwoasri Kab. Kediri';
+                      phone = 'Phone : 0852-5704-4397';
+                      signerName = 'Sugiono, S.E';
+                    }
+
                     return {
-                      title: sData.name,
-                      address: sData.address,
-                      district: sData.district,
-                      phone: sData.phone ? `Phone : ${sData.phone}` : '',
+                      title,
+                      address,
+                      district,
+                      phone,
                       items: sItems,
                       getPrice: (item: any) => item.supplierCost || 0,
                       bankAccount: sData.bankAccount || '-',
-                      signerName: sData.picName || '',
+                      signerName,
                       signerTitle: '',
                       useSignatureImg: false,
                       key: supplierName
