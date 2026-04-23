@@ -2407,6 +2407,8 @@ export default function App() {
                                       <option value="UD Srikaya Berkah Rejeki">UD Srikaya Berkah Rejeki</option>
                                       <option value="UD Airlangga Putra Mas">UD Airlangga Putra Mas</option>
                                       <option value="UD Wahyu Lumbung Rejeki">UD Wahyu Lumbung Rejeki</option>
+                                      <option value="Hiqba Madani">Hiqba Madani</option>
+                                      <option value="Cipta Tirta Mandiri">Cipta Tirta Mandiri</option>
                                     </select>
                                   </TableCell>
                                  <TableCell className="p-2 text-center">
@@ -2567,6 +2569,8 @@ export default function App() {
                                     <option value="UD Srikaya Berkah Rejeki">UD Srikaya Berkah Rejeki</option>
                                     <option value="UD Airlangga Putra Mas">UD Airlangga Putra Mas</option>
                                     <option value="UD Wahyu Lumbung Rejeki">UD Wahyu Lumbung Rejeki</option>
+                                    <option value="Hiqba Madani">Hiqba Madani</option>
+                                    <option value="Cipta Tirta Mandiri">Cipta Tirta Mandiri</option>
                                   </select>
                                 </TableCell>
                                 <TableCell className="p-2 text-center">
