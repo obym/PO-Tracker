@@ -3571,7 +3571,129 @@ export default function App() {
               <div className="space-y-4">
                 <h3 className="font-semibold text-slate-800 text-lg border-b pb-2">Daftar Kebutuhan & Status</h3>
                 
-                <div className="border rounded-md overflow-x-auto">
+                {/* Mobile View */}
+                <div className="block xl:hidden space-y-4">
+                  {selectedOrder.items
+                    .filter(item => user.role !== 'supplier' || item.supplier === user.name)
+                    .map((item) => (
+                      <div key={item.id} className={`border p-4 rounded-xl flex flex-col gap-4 shadow-sm ${item.isReceived ? 'bg-emerald-50/50' : 'bg-white'}`}>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-bold text-slate-800 text-base">{item.name}</div>
+                            <div className="text-sm border inline-flex items-center justify-center font-bold px-2 py-1 mt-1 bg-slate-100 rounded text-slate-600">{item.quantity} {item.unit}</div>
+                          </div>
+                          <Badge variant="outline" className="bg-white text-slate-600 font-normal">
+                            {item.supplier}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          {!(user.role === 'driver' && selectedOrder.deliveredBy === 'Dikirim Supplier') && user.role !== 'supplier' && user.role !== 'kitchen' && (
+                            <>
+                              <Button
+                                variant={item.isOrdered ? "default" : "outline"}
+                                size="sm"
+                                disabled={user.role !== 'supplier' && user.role !== 'admin' && user.role !== 'client'}
+                                className={`w-full ${item.isOrdered ? 'bg-indigo-600 hover:bg-indigo-700' : 'text-slate-500'}`}
+                                onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isOrdered')}
+                              >
+                                {item.isOrdered ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Clock className="w-4 h-4 mr-1" />}
+                                {item.isOrdered ? 'Diorder' : 'Diorder?'}
+                              </Button>
+                              <Button
+                                variant={item.isDelivered ? "default" : "outline"}
+                                size="sm"
+                                disabled={user.role !== 'driver' && user.role !== 'admin' && user.role !== 'client'}
+                                className={`w-full ${item.isDelivered ? 'bg-blue-600 hover:bg-blue-700' : 'text-slate-500'}`}
+                                onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isDelivered')}
+                              >
+                                {item.isDelivered ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Truck className="w-4 h-4 mr-1" />}
+                                {item.isDelivered ? 'Dikirim' : 'Dikirim?'}
+                              </Button>
+                              <Button
+                                variant={item.isAtKitchen ? "default" : "outline"}
+                                size="sm"
+                                disabled={user.role !== 'supplier' && user.role !== 'admin' && user.role !== 'driver' && user.role !== 'client'}
+                                className={`w-full ${item.isAtKitchen ? 'bg-orange-600 hover:bg-orange-700' : 'text-slate-500'}`}
+                                onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isAtKitchen')}
+                              >
+                                {item.isAtKitchen ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Package className="w-4 h-4 mr-1" />}
+                                {item.isAtKitchen ? 'Sp Dapur' : 'Sp Dapur?'}
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            variant={item.isReceived ? "default" : "outline"}
+                            size="sm"
+                            disabled={user.role !== 'client' && user.role !== 'admin'}
+                            className={`w-full ${item.isReceived ? 'bg-emerald-600 hover:bg-emerald-700' : 'text-slate-500'}`}
+                            onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isReceived')}
+                          >
+                            {item.isReceived ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Clock className="w-4 h-4 mr-1" />}
+                            {item.isReceived ? 'Diterima' : 'Diterima?'}
+                          </Button>
+                        </div>
+
+                        {(user.role === 'admin' || user.role === 'supplier' || user.role === 'kitchen') && (
+                          <div className="bg-slate-50/80 p-3 rounded-lg border border-slate-200 space-y-3 mt-1 shadow-inner">
+                            {user.role === 'supplier' && (
+                              <div>
+                                <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-1.5">Harga Perolehan</Label>
+                                <HppInput item={item} orderId={selectedOrder.id} handleUpdateHpp={handleUpdateHpp} />
+                              </div>
+                            )}
+                            <div>
+                              <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-1.5">
+                                {user.role === 'supplier' ? 'Harga Jual Ke Dapur' : 'HPP'}
+                              </Label>
+                              {user.role === 'supplier' ? (
+                                <SupplierCostInput item={item} orderId={selectedOrder.id} handleUpdateSupplierCost={handleUpdateSupplierCost} />
+                              ) : (
+                                <HppInput item={item} orderId={selectedOrder.id} handleUpdateHpp={handleUpdateHpp} />
+                              )}
+                            </div>
+                            
+                            {user.role === 'supplier' && (
+                              <div className="pt-3 border-t border-slate-300 flex justify-between items-center">
+                                <span className="text-sm font-semibold text-slate-600">Jumlah Transfer</span>
+                                <span className="font-bold text-indigo-700 text-lg">
+                                  Rp {(((item.supplierCost || 0) - (item.hpp || 0)) * (typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity)).toLocaleString('id-ID')}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="pt-3 border-t border-slate-200/50 flex gap-2">
+                              <Button
+                                variant={item.isTransferred ? "default" : "outline"}
+                                size="sm"
+                                className={`flex-1 ${item.isTransferred ? 'bg-emerald-600 hover:bg-emerald-700' : 'text-slate-500'}`}
+                                onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isTransferred')}
+                                disabled={user.role !== 'admin' && user.role !== 'supplier' && user.role !== 'kitchen'}
+                              >
+                                {item.isTransferred ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <Clock className="w-4 h-4 mr-1" />}
+                                {item.isTransferred ? 'Telah Ditransfer' : 'Belum Ditransfer'}
+                              </Button>
+                              {user.role !== 'supplier' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                                  onClick={() => handleRekapSupplier(item.supplier)}
+                                  disabled={!item.supplier}
+                                >
+                                  <MessageSquare className="w-4 h-4 mr-1" />
+                                  Rekap
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+
+                {/* Desktop View */}
+                <div className="hidden xl:block border rounded-md overflow-x-auto">
                   <Table className="min-w-[800px]">
                     <TableHeader className="bg-slate-50">
                       <TableRow>
