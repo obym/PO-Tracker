@@ -1306,7 +1306,7 @@ export default function App() {
                     phone: 'Phone : 0812-5278-8733',
                     items: printableItems,
                     getPrice: (item: any) => item.unitPrice || 0,
-                    bankAccount: 'Bank Mandiri : 171-00-1986218-7',
+                    bankAccount: 'Rekening Koperasi Garuda Merah Putih\nBank Mandiri : 171-00-1986218-7',
                     signerName: 'Hariaji',
                     signerTitle: 'Ketua Koperasi',
                     useSignatureImg: true,
@@ -1322,6 +1322,7 @@ export default function App() {
                     let district = sData.district;
                     let phone = sData.phone ? `Phone : ${sData.phone}` : '';
                     let signerName = sData.picName || '';
+                    let bankAccount = sData.bankAccount || '-';
 
                     if (supplierName.toLowerCase() === 'srikaya') {
                       title = 'SRIKAYA';
@@ -1329,6 +1330,7 @@ export default function App() {
                       district = 'Kec. Purwoasri Kab. Kediri';
                       phone = 'Phone : 0852-5704-4397';
                       signerName = 'Sugiono, S.E';
+                      bankAccount = 'Rekening Srikaya\nBank BRI : 6259-0101-1814-6536';
                     }
 
                     return {
@@ -1338,7 +1340,7 @@ export default function App() {
                       phone,
                       items: sItems,
                       getPrice: (item: any) => item.supplierCost || 0,
-                      bankAccount: sData.bankAccount || '-',
+                      bankAccount: bankAccount,
                       signerName,
                       signerTitle: '',
                       useSignatureImg: false,
@@ -1533,7 +1535,7 @@ export default function App() {
                     e.currentTarget.style.display = 'none';
                   }} />
                 )}
-                <div className="border-b border-black font-semibold text-sm pb-1 min-h-[24px]">
+                <div className={`font-semibold text-sm pb-1 min-h-[24px] ${invoiceData.key !== 'master-invoice' ? 'border-b border-black' : ''}`}>
                   {invoiceData.signerName || ''}
                 </div>
                 {invoiceData.signerTitle && (
@@ -1719,7 +1721,7 @@ export default function App() {
   };
 
   const renderCompletedColumnsPerClientForSupplier = () => {
-    const completedOrInvoicedOrders = filteredOrders.filter(o => o.status === 'COMPLETED' || o.status === 'INVOICED');
+    const completedOrInvoicedOrders = filteredOrders.filter(o => o.status === 'COMPLETED');
     if (completedOrInvoicedOrders.length === 0) {
       return renderKanbanColumn('COMPLETED');
     }
