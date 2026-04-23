@@ -1109,9 +1109,9 @@ export default function App() {
             <div className="text-center mb-6">
               <h1 className="text-2xl font-bold border-2 border-black inline-block px-16 py-1 mb-2 tracking-widest">NOTA</h1>
               <h2 className="text-xl font-bold uppercase">{supplierName}</h2>
-              <p>{suppliers.find(s => s.name === supplierName)?.address || ''}</p>
-              <p>{suppliers.find(s => s.name === supplierName)?.district || ''}</p>
-              <p>{suppliers.find(s => s.name === supplierName)?.phone ? `Phone : ${suppliers.find(s => s.name === supplierName)?.phone}` : ''}</p>
+              <p>{allUsers.find(u => u.name === supplierName)?.address || ''}</p>
+              <p>{allUsers.find(u => u.name === supplierName)?.district || ''}</p>
+              <p>{allUsers.find(u => u.name === supplierName)?.phone ? `Phone : ${allUsers.find(u => u.name === supplierName)?.phone}` : ''}</p>
             </div>
 
             {/* Info */}
@@ -1214,12 +1214,25 @@ export default function App() {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-end mt-8">
-              <div className="text-center w-48">
+            <div className="flex justify-between mt-8">
+              <div>
+                <p>BANK TRANSFER :</p>
+                {(() => {
+                  const sUser = allUsers.find(u => u.name === supplierName);
+                  if (sUser?.bankAccountName || sUser?.bankAccountNumber) {
+                    return (
+                      <>
+                        <p>Rekening {sUser.bankAccountName || '-'}</p>
+                        <p>{sUser.bankAccountNumber || '-'}</p>
+                      </>
+                    );
+                  }
+                  return <p>-</p>;
+                })()}
+              </div>
+              <div className="text-center mr-12 w-48">
                 <p className="mb-16">Hormat Kami,</p>
-                <div className="border-b border-black font-semibold text-sm pb-1 min-h-[24px]">
-                  {suppliers.find(s => s.name === supplierName)?.picName || ''}
-                </div>
+                <div className="border-b border-black font-semibold text-sm pb-1 min-h-[24px]"></div>
               </div>
             </div>
             </div>
@@ -1323,14 +1336,16 @@ export default function App() {
                 } else {
                   invoicesToRender = Array.from(new Set(printableItems.map(item => item.supplier || 'Belum Ditentukan'))).map(supplierName => {
                     const sItems = printableItems.filter(item => (item.supplier || 'Belum Ditentukan') === supplierName);
-                    const sData = suppliers.find(s => s.name === supplierName) || { name: supplierName, address: '', district: '', phone: '', bankAccount: '', picName: '' };
+                    const sUser = allUsers.find(u => u.name === supplierName);
                     
-                    let title = sData.name.toUpperCase();
-                    let address = sData.address;
-                    let district = sData.district;
-                    let phone = sData.phone ? `Phone : ${sData.phone}` : '';
-                    let signerName = sData.picName || '';
-                    let bankAccount = sData.bankAccount || '-';
+                    let title = (sUser?.name || supplierName).toUpperCase();
+                    let address = sUser?.address || '';
+                    let district = sUser?.district || '';
+                    let phone = sUser?.phone ? `Phone : ${sUser.phone}` : '';
+                    let signerName = '';
+                    let bankAccount = (sUser?.bankAccountName || sUser?.bankAccountNumber)
+                      ? `Rekening ${sUser.bankAccountName || '-'}\n${sUser.bankAccountNumber || '-'}`
+                      : '-';
 
                     if (supplierName.toLowerCase().includes('srikaya')) {
                       title = 'SRIKAYA';
