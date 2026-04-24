@@ -869,17 +869,28 @@ export default function App() {
   };
 
   const handlePrintInvoice = async () => {
-    let shouldUpdate = false;
-    if (invoiceOrder && invoiceOrder.status === 'COMPLETED' && (user?.role === 'admin' || user?.role === 'client')) {
-      shouldUpdate = true;
-    }
+    let orderToUpdate: string | null = null;
+    let currentStatus: string | null = null;
     
-    if (shouldUpdate && invoiceOrder) {
+    if (invoiceOrder && invoiceOrder.status === 'COMPLETED') {
+      orderToUpdate = invoiceOrder.id;
+      currentStatus = invoiceOrder.status;
+    } else if (rekapSupplierData && rekapSupplierData.order.status === 'COMPLETED') {
+      orderToUpdate = rekapSupplierData.order.id;
+      currentStatus = rekapSupplierData.order.status;
+    }
+
+    if (orderToUpdate && currentStatus === 'COMPLETED' && (user?.role === 'admin' || user?.role === 'client')) {
       try {
-        await updateDoc(doc(db, 'purchaseOrders', invoiceOrder.id), {
+        await updateDoc(doc(db, 'purchaseOrders', orderToUpdate), {
           status: 'INVOICED'
         });
-        setInvoiceOrder({...invoiceOrder, status: 'INVOICED'} as PurchaseOrder);
+        if (invoiceOrder && invoiceOrder.id === orderToUpdate) {
+          setInvoiceOrder({...invoiceOrder, status: 'INVOICED'} as PurchaseOrder);
+        }
+        if (rekapSupplierData && rekapSupplierData.order.id === orderToUpdate) {
+          setRekapSupplierData({...rekapSupplierData, order: {...rekapSupplierData.order, status: 'INVOICED'}});
+        }
       } catch (error) {
         console.error("Error updating status to INVOICED:", error);
       }
@@ -1339,8 +1350,26 @@ export default function App() {
                     invoiceNumber: invoiceOrder.poNumber || invoiceOrder.id
                   }];
                 } else {
-                  invoicesToRender = Array.from(new Set(printableItems.map(item => item.supplier || 'Belum Ditentukan'))).map(supplierName => {
+                  invoicesToRender = Array.from(new Set(printableItems.map(item => item.supplier || 'Belum Ditentukan'))).map((supplierName: any) => {
                     const sItems = printableItems.filter(item => (item.supplier || 'Belum Ditentukan') === supplierName);
+                    
+                    if (supplierName === 'Koperasi Garuda Merah Putih' || supplierName === 'KOPERASI GARUDA MERAH PUTIH') {
+                      return {
+                        title: 'KOPERASI GARUDA MERAH PUTIH',
+                        address: 'Dsn. Padangan RT 02 RW 03 Ds. Pagu',
+                        district: 'Kec. Pagu Kab. Kediri',
+                        phone: 'Phone : 0812-5278-8733',
+                        items: sItems,
+                        getPrice: (item: any) => item.unitPrice || item.supplierCost || 0,
+                        bankAccount: 'Rekening Koperasi Garuda Merah Putih\nBank Mandiri : 171-00-1986218-7',
+                        signerName: 'Hariaji',
+                        signerTitle: 'Ketua Koperasi',
+                        useSignatureImg: true,
+                        key: supplierName,
+                        invoiceNumber: invoiceOrder.poNumber || invoiceOrder.id
+                      };
+                    }
+
                     const sUser = allUsers.find(u => u.name === supplierName);
                     
                     let title = (sUser?.name || supplierName).toUpperCase();
