@@ -3029,7 +3029,7 @@ export default function App() {
                   <UserIcon className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Kelola Pengguna</span>
                 </DialogTrigger>
-                <DialogContent className="max-w-[1400px] w-[98vw] max-h-[95vh] overflow-y-auto">
+                <DialogContent className="max-w-7xl sm:max-w-7xl w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="text-2xl">Kelola Akses Pengguna</DialogTitle>
                     <DialogDescription className="text-base">
@@ -3039,7 +3039,7 @@ export default function App() {
                   
                   <div className="py-4">
                     <div className="border rounded-md overflow-x-auto">
-                      <Table className="min-w-[1200px]">
+                      <Table className="min-w-[1000px]">
                         <TableHeader className="bg-slate-50">
                           <TableRow>
                             <TableHead className="text-sm">Nama</TableHead>
@@ -3049,81 +3049,61 @@ export default function App() {
                             <TableHead className="text-sm">Kecamatan/Kabupaten</TableHead>
                             <TableHead className="text-sm">Nama Rekening</TableHead>
                             <TableHead className="text-sm">Nomor Rekening</TableHead>
-                            <TableHead className="w-[180px] text-sm">Role</TableHead>
+                            <TableHead className="w-[150px] text-sm">Role</TableHead>
                             <TableHead className="w-[120px] text-center text-sm">Aksi</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {(() => {
-                            if (allUsers.length === 0) {
-                              return (
-                                <TableRow>
-                                  <TableCell colSpan={9} className="text-center text-slate-500 py-4">Memuat data pengguna...</TableCell>
-                                </TableRow>
-                              );
-                            }
-
-                            const roles = Array.from(new Set(allUsers.map(u => u.role))).sort();
-                            return roles.map(role => {
-                              const roleUsers = allUsers.filter(u => u.role === role);
-                              return (
-                                <React.Fragment key={role}>
-                                  <TableRow className="bg-slate-100/80 hover:bg-slate-100/80">
-                                    <TableCell colSpan={9} className="font-bold text-slate-700 uppercase py-2">
-                                      Role: {role} ({roleUsers.length})
-                                    </TableCell>
-                                  </TableRow>
-                                  {roleUsers.map((u) => (
-                                    <TableRow key={u.uid}>
-                                      <TableCell className="font-medium text-sm">{u.name}</TableCell>
-                                      <TableCell className="text-sm">{u.email}</TableCell>
-                                      <TableCell className="text-sm">{u.phone || '-'}</TableCell>
-                                      <TableCell className="text-sm truncate max-w-[200px]" title={u.address || ''}>{u.address || '-'}</TableCell>
-                                      <TableCell className="text-sm">{u.district || '-'}</TableCell>
-                                      <TableCell className="text-sm">{u.bankAccountName || '-'}</TableCell>
-                                      <TableCell className="text-sm">{u.bankAccountNumber || '-'}</TableCell>
-                                      <TableCell>
-                                        <select 
-                                          className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer hover:bg-slate-50"
-                                          value={u.role}
-                                          onChange={(e) => handleUpdateUserRole(u.uid, e.target.value)}
-                                        >
-                                          <option value="admin">Admin</option>
-                                          <option value="supplier">Supplier</option>
-                                          <option value="driver">Driver</option>
-                                          <option value="client">Client</option>
-                                          <option value="kitchen">Kitchen</option>
-                                          <option value="finance">Finance</option>
-                                        </select>
-                                      </TableCell>
-                                      <TableCell className="text-center">
-                                        <div className="flex justify-center gap-1">
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
-                                            onClick={() => openEditUser(u)}
-                                            title="Edit Pengguna"
-                                          >
-                                            <Edit className="h-5 w-5" />
-                                          </Button>
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                            onClick={() => setUserToDelete(u.uid)}
-                                            title="Hapus Pengguna"
-                                          >
-                                            <Trash2 className="h-5 w-5" />
-                                          </Button>
-                                        </div>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </React.Fragment>
-                              );
-                            });
-                          })()}
+                          {allUsers.map((u) => (
+                            <TableRow key={u.uid}>
+                              <TableCell className="font-medium text-sm">{u.name}</TableCell>
+                              <TableCell className="text-sm">{u.email}</TableCell>
+                              <TableCell className="text-sm">{u.phone || '-'}</TableCell>
+                              <TableCell className="text-sm">{u.address || '-'}</TableCell>
+                              <TableCell className="text-sm">{u.district || '-'}</TableCell>
+                              <TableCell className="text-sm">{u.bankAccountName || '-'}</TableCell>
+                              <TableCell className="text-sm">{u.bankAccountNumber || '-'}</TableCell>
+                              <TableCell>
+                                <select 
+                                  className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer hover:bg-slate-50"
+                                  value={u.role}
+                                  onChange={(e) => handleUpdateUserRole(u.uid, e.target.value)}
+                                >
+                                  <option value="admin">Admin</option>
+                                  <option value="supplier">Supplier</option>
+                                  <option value="driver">Driver</option>
+                                  <option value="client">Client</option>
+                                </select>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex justify-center gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
+                                    onClick={() => openEditUser(u)}
+                                    title="Edit Pengguna"
+                                  >
+                                    <Edit className="h-5 w-5" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => setUserToDelete(u.uid)}
+                                    title="Hapus Pengguna"
+                                  >
+                                    <Trash2 className="h-5 w-5" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {allUsers.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center text-slate-500 py-4">Memuat data pengguna...</TableCell>
+                            </TableRow>
+                          )}
                         </TableBody>
                       </Table>
                     </div>
