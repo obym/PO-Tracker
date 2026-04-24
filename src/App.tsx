@@ -869,10 +869,12 @@ export default function App() {
   };
 
   const handlePrintInvoice = async () => {
-    window.print();
-    
-    // Only update if it's admin or client printing the main invoice
+    let shouldUpdate = false;
     if (invoiceOrder && invoiceOrder.status === 'COMPLETED' && (user?.role === 'admin' || user?.role === 'client')) {
+      shouldUpdate = true;
+    }
+    
+    if (shouldUpdate && invoiceOrder) {
       try {
         await updateDoc(doc(db, 'purchaseOrders', invoiceOrder.id), {
           status: 'INVOICED'
@@ -882,6 +884,10 @@ export default function App() {
         console.error("Error updating status to INVOICED:", error);
       }
     }
+
+    setTimeout(() => {
+      window.print();
+    }, 100);
   };
 
   const generateSupplierInvoiceNumber = (orderId: string, supplierName: string, orderDateStr?: string) => {
@@ -1324,7 +1330,7 @@ export default function App() {
                     district: 'Kec. Pagu Kab. Kediri',
                     phone: 'Phone : 0812-5278-8733',
                     items: printableItems,
-                    getPrice: (item: any) => item.unitPrice || 0,
+                    getPrice: (item: any) => item.unitPrice || item.supplierCost || 0,
                     bankAccount: 'Rekening Koperasi Garuda Merah Putih\nBank Mandiri : 171-00-1986218-7',
                     signerName: 'Hariaji',
                     signerTitle: 'Ketua Koperasi',
@@ -2249,8 +2255,9 @@ export default function App() {
                                       const val = e.target.value.replace(/\./g, '');
                                       if (/^\d*$/.test(val)) {
                                         const numVal = val === '' ? 0 : parseInt(val);
-                                        handleItemChange(index, 'unitPrice', numVal);
-                                        handleItemChange(index, 'supplierCost', numVal);
+                                        const updated = [...newItems];
+                                        updated[index] = { ...updated[index], unitPrice: numVal, supplierCost: numVal };
+                                        setNewItems(updated);
                                       }
                                     }}
                                   />
@@ -2784,8 +2791,9 @@ export default function App() {
                                       const val = e.target.value.replace(/\./g, '');
                                       if (/^\d*$/.test(val)) {
                                         const numVal = val === '' ? 0 : parseInt(val);
-                                        handleEditItemChange(index, 'unitPrice', numVal);
-                                        handleEditItemChange(index, 'supplierCost', numVal);
+                                        const updated = [...editItems];
+                                        updated[index] = { ...updated[index], unitPrice: numVal, supplierCost: numVal };
+                                        setEditItems(updated);
                                       }
                                     }}
                                   />
