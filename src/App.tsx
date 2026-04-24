@@ -944,7 +944,7 @@ export default function App() {
         const itemName = item.name.replace(/,/g, '');
         const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
         const unit = item.unit.replace(/,/g, '');
-        const price = item.unitPrice || 0;
+        const price = item.unitPrice || item.supplierCost || 0;
         const hpp = item.hpp || 0;
         const profit = (price - hpp) * qty;
 
@@ -995,6 +995,11 @@ export default function App() {
   const toggleItemStatus = async (orderId: string, itemId: string, field: keyof OrderItem) => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
+
+    if (user?.role === 'client' && field === 'isOrdered') {
+      const itemToUpdate = order.items.find(i => i.id === itemId);
+      if (itemToUpdate && itemToUpdate.isOrdered) return;
+    }
 
     const updatedItems = order.items.map(item => {
       if (item.id !== itemId) return item;
@@ -1339,7 +1344,7 @@ export default function App() {
                     invoiceNumber: invoiceOrder.poNumber || invoiceOrder.id
                   }];
                 } else {
-                  invoicesToRender = Array.from(new Set(printableItems.map(item => item.supplier || 'Belum Ditentukan'))).map(supplierName => {
+                  invoicesToRender = Array.from(new Set(printableItems.map(item => item.supplier || 'Belum Ditentukan'))).map((supplierName: string) => {
                     const sItems = printableItems.filter(item => (item.supplier || 'Belum Ditentukan') === supplierName);
                     const sUser = allUsers.find(u => u.name === supplierName);
                     
@@ -1608,7 +1613,7 @@ export default function App() {
             itemName: item.name,
             quantity: item.quantity,
             unit: item.unit,
-            price: item.unitPrice || 0,
+            price: item.unitPrice || item.supplierCost || 0,
             hpp: item.hpp || 0,
             supplierCost: item.supplierCost || 0
           });
@@ -1876,7 +1881,7 @@ export default function App() {
       let orderProfit = 0;
       order.items.forEach(item => {
         const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-        const price = item.unitPrice || 0;
+        const price = item.unitPrice || item.supplierCost || 0;
         const hpp = item.hpp || 0;
         orderProfit += (price - hpp) * qty;
       });
@@ -1911,7 +1916,7 @@ export default function App() {
               {invoicedOrders.map(order => {
                 const orderTotalProfit = order.items.reduce((sum, item) => {
                   const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                  const price = item.unitPrice || 0;
+                  const price = item.unitPrice || item.supplierCost || 0;
                   const hpp = item.hpp || 0;
                   return sum + ((price - hpp) * qty);
                 }, 0);
@@ -1974,7 +1979,7 @@ export default function App() {
                           <TableBody>
                             {order.items.map(item => {
                               const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-                              const price = item.unitPrice || 0;
+                              const price = item.unitPrice || item.supplierCost || 0;
                               const hpp = item.hpp || 0;
                               const profit = (price - hpp) * qty;
                               
@@ -3619,7 +3624,7 @@ export default function App() {
                               <Button
                                 variant={item.isOrdered ? "default" : "outline"}
                                 size="sm"
-                                disabled={user.role !== 'supplier' && user.role !== 'admin' && user.role !== 'client'}
+                                disabled={(user.role !== 'supplier' && user.role !== 'admin' && user.role !== 'client') || (user.role === 'client' && !!item.isOrdered)}
                                 className={`w-full ${item.isOrdered ? 'bg-indigo-600 hover:bg-indigo-700' : 'text-slate-500'}`}
                                 onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isOrdered')}
                               >
@@ -3772,7 +3777,7 @@ export default function App() {
                                 <Button
                                   variant={item.isOrdered ? "default" : "outline"}
                                   size="sm"
-                                  disabled={user.role !== 'supplier' && user.role !== 'admin' && user.role !== 'client'}
+                                  disabled={(user.role !== 'supplier' && user.role !== 'admin' && user.role !== 'client') || (user.role === 'client' && !!item.isOrdered)}
                                   className={`w-full ${item.isOrdered ? 'bg-indigo-600 hover:bg-indigo-700' : 'text-slate-500'}`}
                                   onClick={() => toggleItemStatus(selectedOrder.id, item.id, 'isOrdered')}
                                 >
