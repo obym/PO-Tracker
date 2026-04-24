@@ -884,27 +884,30 @@ export default function App() {
     }
   };
 
+  const generateSupplierInvoiceNumber = (orderId: string, supplierName: string, orderDateStr?: string) => {
+    const supplierOrders = orders
+      .filter(o => o.items.some(i => i.supplier === supplierName))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    const seqIndex = supplierOrders.findIndex(o => o.id === orderId);
+    const seqNum = seqIndex >= 0 ? seqIndex + 1 : 1;
+    const seqNumString = seqNum.toString().padStart(3, '0');
+
+    const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
+    const romanMonths = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+    const refDate = orderDateStr ? new Date(orderDateStr) : new Date();
+    const currentMonth = romanMonths[refDate.getMonth()];
+    const currentYear = refDate.getFullYear();
+    return `${seqNumString}/${getInitials(supplierName)}/${currentMonth}/${currentYear}`;
+  };
+
   const handleRekapSupplier = (supplierName: string) => {
     if (!selectedOrder) return;
     
     const supplierItems = selectedOrder.items.filter(item => item.supplier === supplierName);
     if (supplierItems.length === 0) return;
 
-    // Find chronological sequence of this order for this supplier
-    const supplierOrders = orders
-      .filter(o => o.items.some(i => i.supplier === supplierName))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    const seqIndex = supplierOrders.findIndex(o => o.id === selectedOrder.id);
-    const seqNum = seqIndex >= 0 ? seqIndex + 1 : 1;
-    const seqNumString = seqNum.toString().padStart(3, '0');
-
-    // Generate Invoice Number for Supplier
-    const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
-    const romanMonths = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
-    const currentMonth = romanMonths[new Date().getMonth()];
-    const currentYear = new Date().getFullYear();
-    const invoiceNumber = `${seqNumString}/${getInitials(supplierName)}/${currentMonth}/${currentYear}`;
+    const invoiceNumber = generateSupplierInvoiceNumber(selectedOrder.id, supplierName, selectedOrder.date);
 
     setRekapSupplierData({ order: selectedOrder, supplierName, invoiceNumber });
     setIsDetailOpen(false);
@@ -1326,7 +1329,8 @@ export default function App() {
                     signerName: 'Hariaji',
                     signerTitle: 'Ketua Koperasi',
                     useSignatureImg: true,
-                    key: 'master-invoice'
+                    key: 'master-invoice',
+                    invoiceNumber: invoiceOrder.poNumber || invoiceOrder.id
                   }];
                 } else {
                   invoicesToRender = Array.from(new Set(printableItems.map(item => item.supplier || 'Belum Ditentukan'))).map(supplierName => {
@@ -1341,6 +1345,8 @@ export default function App() {
                     let bankAccount = (sUser?.bankAccountName || sUser?.bankAccountNumber)
                       ? `Rekening ${sUser.bankAccountName || '-'}\n${sUser.bankAccountNumber || '-'}`
                       : '-';
+                      
+                    const supplierInvoiceNumber = generateSupplierInvoiceNumber(invoiceOrder.id, supplierName, invoiceOrder.date);
 
                     return {
                       title,
@@ -1353,7 +1359,8 @@ export default function App() {
                       signerName,
                       signerTitle: '',
                       useSignatureImg: false,
-                      key: supplierName
+                      key: supplierName,
+                      invoiceNumber: supplierInvoiceNumber
                     };
                   });
                 }
@@ -1379,7 +1386,7 @@ export default function App() {
                     <tr>
                       <td className="w-24">Nomor</td>
                       <td className="w-4">:</td>
-                      <td>{invoiceOrder.poNumber || invoiceOrder.id}</td>
+                      <td>{invoiceData.invoiceNumber}</td>
                     </tr>
                     <tr>
                       <td>Tanggal Nota</td>
