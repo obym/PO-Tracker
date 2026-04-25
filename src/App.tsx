@@ -260,6 +260,42 @@ export default function App() {
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [globalSuccess, setGlobalSuccess] = useState<string | null>(null);
 
+  // Back button trap to return to dashboard
+  useEffect(() => {
+    if (user) {
+      window.history.pushState(null, '', window.location.href);
+      const handlePopState = () => {
+        // Trap again
+        window.history.pushState(null, '', window.location.href);
+        
+        // Close all sub-views/modals
+        setIsDetailOpen(false);
+        setIsNewOpen(false);
+        setIsClientNewPoOpen(false);
+        setIsUserManageOpen(false);
+        setIsSupplierManageOpen(false);
+        setIsNewClientOpen(false);
+        setIsProductHistoryOpen(false);
+        setIsEditUserOpen(false);
+        setIsEditSupplierOpen(false);
+        setIsNewSupplierOpen(false);
+        setIsClientEditPoOpen(false);
+        setIsEditOpen(false);
+        setInvoiceOrder(null);
+        setRekapSupplierData(null);
+        setUserToDelete(null);
+        setPoToDelete(null);
+        setSupplierToDelete(null);
+        
+        // Reset view to dashboard
+        setCurrentView('kanban');
+      };
+      
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }
+  }, [user]);
+
   // Handle Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
