@@ -916,7 +916,7 @@ export default function App() {
       currentStatus = rekapSupplierData.order.status;
     }
 
-    if (orderToUpdate && currentStatus === 'COMPLETED' && (user?.role === 'admin' || user?.role === 'client')) {
+    if (orderToUpdate && currentStatus === 'COMPLETED' && (user?.role === 'admin' || user?.role === 'client' || user?.role === 'supplier')) {
       try {
         const now = new Date().toISOString();
         await updateDoc(doc(db, 'purchaseOrders', orderToUpdate), {
@@ -1193,6 +1193,11 @@ export default function App() {
                         <td>{new Date(order.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                       </tr>
                     )}
+                    <tr>
+                      <td>Tanggal Nota</td>
+                      <td>:</td>
+                      <td>{new Date(order.invoiceDate || order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -3614,7 +3619,20 @@ export default function App() {
                       </Button>
                     )}
                     {user.role === 'supplier' && selectedOrder.items.some(item => item.supplier === user.name) && (
-                      <Button variant="outline" size="sm" className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100" onClick={() => handleRekapSupplier(user.name)}>
+                      <Button variant="outline" size="sm" className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100" onClick={async () => {
+                        handleRekapSupplier(user.name);
+                        if (selectedOrder.status === 'COMPLETED') {
+                          try {
+                            const now = new Date().toISOString();
+                            await updateDoc(doc(db, 'purchaseOrders', selectedOrder.id), {
+                              status: 'INVOICED',
+                              invoiceDate: now
+                            });
+                          } catch (error) {
+                            console.error("Error updating status to INVOICED:", error);
+                          }
+                        }
+                      }}>
                         <Receipt className="w-4 h-4 mr-2" /> Cetak Nota
                       </Button>
                     )}
