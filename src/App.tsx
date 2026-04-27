@@ -918,14 +918,16 @@ export default function App() {
 
     if (orderToUpdate && currentStatus === 'COMPLETED' && (user?.role === 'admin' || user?.role === 'client')) {
       try {
+        const now = new Date().toISOString();
         await updateDoc(doc(db, 'purchaseOrders', orderToUpdate), {
-          status: 'INVOICED'
+          status: 'INVOICED',
+          invoiceDate: now
         });
         if (invoiceOrder && invoiceOrder.id === orderToUpdate) {
-          setInvoiceOrder({...invoiceOrder, status: 'INVOICED'} as PurchaseOrder);
+          setInvoiceOrder({...invoiceOrder, status: 'INVOICED', invoiceDate: now} as PurchaseOrder);
         }
         if (rekapSupplierData && rekapSupplierData.order.id === orderToUpdate) {
-          setRekapSupplierData({...rekapSupplierData, order: {...rekapSupplierData.order, status: 'INVOICED'}});
+          setRekapSupplierData({...rekapSupplierData, order: {...rekapSupplierData.order, status: 'INVOICED', invoiceDate: now}});
         }
       } catch (error) {
         console.error("Error updating status to INVOICED:", error);
@@ -1715,13 +1717,15 @@ export default function App() {
             <Badge className={`${config.color} shrink-0`} variant="outline">{config.label}</Badge>
           </div>
           <CardDescription className="text-xs mt-1 text-slate-500">
-            {status === 'INVOICED' && order.invoiceDate 
-              ? new Date(order.invoiceDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-              : new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-            }
+            {new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
             {order.deliveryDate && (
               <span className="block mt-0.5 text-indigo-600 font-medium">
                 Kirim: {new Date(order.deliveryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
+            )}
+            {status === 'INVOICED' && order.invoiceDate && user.role === 'supplier' && (
+              <span className="block mt-0.5 text-purple-600 font-medium">
+                Tanggal Nota: {new Date(order.invoiceDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
               </span>
             )}
           </CardDescription>
@@ -3578,8 +3582,10 @@ export default function App() {
                         handleOpenInvoice(selectedOrder);
                         if (selectedOrder.status === 'COMPLETED') {
                           try {
+                            const now = new Date().toISOString();
                             await updateDoc(doc(db, 'purchaseOrders', selectedOrder.id), {
-                              status: 'INVOICED'
+                              status: 'INVOICED',
+                              invoiceDate: now
                             });
                           } catch (error) {
                             console.error("Error updating status to INVOICED:", error);
@@ -3594,8 +3600,10 @@ export default function App() {
                         handleOpenInvoice(selectedOrder);
                         if (selectedOrder.status === 'COMPLETED') {
                           try {
+                            const now = new Date().toISOString();
                             await updateDoc(doc(db, 'purchaseOrders', selectedOrder.id), {
-                              status: 'INVOICED'
+                              status: 'INVOICED',
+                              invoiceDate: now
                             });
                           } catch (error) {
                             console.error("Error updating status to INVOICED:", error);
