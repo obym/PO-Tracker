@@ -1403,6 +1403,66 @@ export default function App() {
     document.body.removeChild(link);
   };
 
+  const handleExportSupplierToExcel = (columnOrders: PurchaseOrder[]) => {
+    if (columnOrders.length === 0) return;
+
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+
+    // Header
+    csvContent +=
+      "Nomor PO,Klien,Tanggal Nota,Barang,Qty,Satuan,Harga,Subtotal\n";
+
+    let grandTotal = 0;
+
+    columnOrders.forEach((order) => {
+      let orderTotal = 0;
+      const poNumber = order.poNumber || order.id;
+      const clientName = order.clientName.replace(/,/g, "");
+      const date = new Date(order.invoiceDate || order.date).toLocaleDateString(
+        "id-ID",
+      );
+
+      order.items
+        .filter((item) => item.supplier === user?.name)
+        .forEach((item) => {
+          const itemName = item.name.replace(/,/g, "");
+          const qty =
+            typeof item.quantity === "string"
+              ? parseFloat(item.quantity)
+              : item.quantity;
+          const unit = item.unit.replace(/,/g, "");
+          const price = item.supplierCost || item.unitPrice || 0;
+          const subtotal = price * qty;
+
+          orderTotal += subtotal;
+
+          csvContent += `"${poNumber}","${clientName}","${date}","${itemName}",${qty},"${unit}",${price},${subtotal}\n`;
+        });
+
+      if (orderTotal > 0) {
+        grandTotal += orderTotal;
+        // Add a subtotal row for the PO
+        csvContent += `,,,Total PO ${poNumber},,,,${orderTotal}\n`;
+      }
+    });
+
+    // Add Grand Total
+    if (grandTotal > 0) {
+      csvContent += `\n,,,TOTAL KESELURUHAN,,,,${grandTotal}\n`;
+    }
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `Rekap_Penjualan_Supplier_${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleDeletePO = async () => {
     if (user?.role !== "admin" || !poToDelete) {
       setGlobalError("Hanya Admin yang dapat menghapus PO.");
@@ -2590,12 +2650,28 @@ export default function App() {
             <Icon className="w-5 h-5" />
             <h3 className="font-semibold">{customTitle || config.label}</h3>
           </div>
-          <Badge
-            variant="secondary"
-            className="bg-white/60 text-slate-800 border-none"
-          >
-            {columnOrders.length}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {status === "INVOICED" &&
+              user?.role === "supplier" &&
+              columnOrders.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs bg-white text-emerald-600 hover:bg-emerald-50 border-emerald-200"
+                  onClick={() => handleExportSupplierToExcel(columnOrders)}
+                  title="Download ke Excel (CSV)"
+                >
+                  <Download className="w-3 h-3 sm:mr-1" />
+                  <span className="hidden sm:inline">CSV</span>
+                </Button>
+              )}
+            <Badge
+              variant="secondary"
+              className="bg-white/60 text-slate-800 border-none"
+            >
+              {columnOrders.length}
+            </Badge>
+          </div>
         </div>
 
         <div
