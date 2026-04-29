@@ -5358,6 +5358,8 @@ export default function App() {
                           variant="outline"
                           size="sm"
                           className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
+                          disabled={selectedOrder.items.some(i => !i.hpp || i.hpp === 0)}
+                          title={selectedOrder.items.some(i => !i.hpp || i.hpp === 0) ? "Mohon lengkapi HPP untuk semua barang sebelum cetak nota" : ""}
                           onClick={async () => {
                             handleOpenInvoice(selectedOrder);
                             if (selectedOrder.status === "COMPLETED") {
@@ -5421,6 +5423,8 @@ export default function App() {
                           variant="outline"
                           size="sm"
                           className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100"
+                          disabled={selectedOrder.items.some(i => i.supplier === user.name && (!i.hpp || i.hpp === 0))}
+                          title={selectedOrder.items.some(i => i.supplier === user.name && (!i.hpp || i.hpp === 0)) ? "Mohon lengkapi Harga Perolehan untuk semua barang sebelum cetak nota" : ""}
                           onClick={async () => {
                             handleRekapSupplier(user.name);
                             if (selectedOrder.status === "COMPLETED") {
@@ -5781,7 +5785,25 @@ export default function App() {
                                   onClick={() =>
                                     handleRekapSupplier(item.supplier)
                                   }
-                                  disabled={!item.supplier}
+                                  disabled={
+                                    !item.supplier ||
+                                    selectedOrder.items.some(
+                                      (i) =>
+                                        i.supplier === item.supplier &&
+                                        (!i.hpp || i.hpp === 0)
+                                    )
+                                  }
+                                  title={
+                                    !item.supplier
+                                      ? ""
+                                      : selectedOrder.items.some(
+                                          (i) =>
+                                            i.supplier === item.supplier &&
+                                            (!i.hpp || i.hpp === 0)
+                                        )
+                                        ? "Mohon lengkapi HPP untuk semua barang supplier ini sebelum cetak nota"
+                                        : ""
+                                  }
                                 >
                                   <MessageSquare className="w-4 h-4 mr-1" />
                                   Rekap
@@ -6092,7 +6114,25 @@ export default function App() {
                                       onClick={() =>
                                         handleRekapSupplier(item.supplier)
                                       }
-                                      disabled={!item.supplier}
+                                      disabled={
+                                        !item.supplier ||
+                                        selectedOrder.items.some(
+                                          (i) =>
+                                            i.supplier === item.supplier &&
+                                            (!i.hpp || i.hpp === 0)
+                                        )
+                                      }
+                                      title={
+                                        !item.supplier
+                                          ? ""
+                                          : selectedOrder.items.some(
+                                              (i) =>
+                                                i.supplier === item.supplier &&
+                                                (!i.hpp || i.hpp === 0)
+                                            )
+                                            ? "Mohon lengkapi HPP untuk semua barang supplier ini sebelum cetak nota"
+                                            : ""
+                                      }
                                     >
                                       <MessageSquare className="w-4 h-4 mr-1" />
                                       Rekap
