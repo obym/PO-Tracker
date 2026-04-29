@@ -1410,7 +1410,7 @@ export default function App() {
 
     // Header
     csvContent +=
-      "Nomor PO,Klien,Tanggal Nota,Barang,Qty,Satuan,Harga,Subtotal\n";
+      "Nomor Nota,Nomor PO,Klien,Tanggal Nota,Barang,Qty,Satuan,Harga,Subtotal\n";
 
     let grandTotal = 0;
 
@@ -1421,6 +1421,9 @@ export default function App() {
       const date = new Date(order.invoiceDate || order.date).toLocaleDateString(
         "id-ID",
       );
+      const invoiceNumber = user?.name
+        ? generateSupplierInvoiceNumber(order.id, user.name, order.date)
+        : poNumber;
 
       order.items
         .filter((item) => item.supplier === user?.name)
@@ -1436,19 +1439,19 @@ export default function App() {
 
           orderTotal += subtotal;
 
-          csvContent += `"${poNumber}","${clientName}","${date}","${itemName}",${qty},"${unit}",${price},${subtotal}\n`;
+          csvContent += `"${invoiceNumber}","${poNumber}","${clientName}","${date}","${itemName}",${qty},"${unit}",${price},${subtotal}\n`;
         });
 
       if (orderTotal > 0) {
         grandTotal += orderTotal;
         // Add a subtotal row for the PO
-        csvContent += `,,,Total PO ${poNumber},,,,${orderTotal}\n`;
+        csvContent += `,,,,Total PO ${poNumber},,,,${orderTotal}\n`;
       }
     });
 
     // Add Grand Total
     if (grandTotal > 0) {
-      csvContent += `\n,,,TOTAL KESELURUHAN,,,,${grandTotal}\n`;
+      csvContent += `\n,,,,TOTAL KESELURUHAN,,,,${grandTotal}\n`;
     }
 
     const encodedUri = encodeURI(csvContent);
