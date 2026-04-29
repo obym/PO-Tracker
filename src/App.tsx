@@ -2895,10 +2895,18 @@ export default function App() {
       });
       totalProfitAll += orderProfit;
 
-      if (!profitPerClient[order.clientName]) {
-        profitPerClient[order.clientName] = 0;
+      let normalizedClientName = order.clientName;
+      if (normalizedClientName === "SPPG Desa Tugurejo")
+        normalizedClientName = "SPPG Tugurejo";
+      if (normalizedClientName === "SPPG Desa Ngasem")
+        normalizedClientName = "SPPG Ngasem";
+      if (normalizedClientName === "SPPG Pagu Padangan")
+        normalizedClientName = "SPPG Pagu";
+
+      if (!profitPerClient[normalizedClientName]) {
+        profitPerClient[normalizedClientName] = 0;
       }
-      profitPerClient[order.clientName] += orderProfit;
+      profitPerClient[normalizedClientName] += orderProfit;
     });
 
     return (
@@ -5358,8 +5366,16 @@ export default function App() {
                           variant="outline"
                           size="sm"
                           className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
-                          disabled={selectedOrder.items.some(i => !i.hpp || i.hpp === 0)}
-                          title={selectedOrder.items.some(i => !i.hpp || i.hpp === 0) ? "Mohon lengkapi HPP untuk semua barang sebelum cetak nota" : ""}
+                          disabled={selectedOrder.items.some(
+                            (i) => !i.hpp || i.hpp === 0,
+                          )}
+                          title={
+                            selectedOrder.items.some(
+                              (i) => !i.hpp || i.hpp === 0,
+                            )
+                              ? "Mohon lengkapi HPP untuk semua barang sebelum cetak nota"
+                              : ""
+                          }
                           onClick={async () => {
                             handleOpenInvoice(selectedOrder);
                             if (selectedOrder.status === "COMPLETED") {
@@ -5423,8 +5439,20 @@ export default function App() {
                           variant="outline"
                           size="sm"
                           className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100"
-                          disabled={selectedOrder.items.some(i => i.supplier === user.name && (!i.hpp || i.hpp === 0))}
-                          title={selectedOrder.items.some(i => i.supplier === user.name && (!i.hpp || i.hpp === 0)) ? "Mohon lengkapi Harga Perolehan untuk semua barang sebelum cetak nota" : ""}
+                          disabled={selectedOrder.items.some(
+                            (i) =>
+                              i.supplier === user.name &&
+                              (!i.hpp || i.hpp === 0),
+                          )}
+                          title={
+                            selectedOrder.items.some(
+                              (i) =>
+                                i.supplier === user.name &&
+                                (!i.hpp || i.hpp === 0),
+                            )
+                              ? "Mohon lengkapi Harga Perolehan untuk semua barang sebelum cetak nota"
+                              : ""
+                          }
                           onClick={async () => {
                             handleRekapSupplier(user.name);
                             if (selectedOrder.status === "COMPLETED") {
@@ -5790,17 +5818,17 @@ export default function App() {
                                     selectedOrder.items.some(
                                       (i) =>
                                         i.supplier === item.supplier &&
-                                        (!i.hpp || i.hpp === 0)
+                                        (!i.hpp || i.hpp === 0),
                                     )
                                   }
                                   title={
                                     !item.supplier
                                       ? ""
                                       : selectedOrder.items.some(
-                                          (i) =>
-                                            i.supplier === item.supplier &&
-                                            (!i.hpp || i.hpp === 0)
-                                        )
+                                            (i) =>
+                                              i.supplier === item.supplier &&
+                                              (!i.hpp || i.hpp === 0),
+                                          )
                                         ? "Mohon lengkapi HPP untuk semua barang supplier ini sebelum cetak nota"
                                         : ""
                                   }
@@ -6119,17 +6147,18 @@ export default function App() {
                                         selectedOrder.items.some(
                                           (i) =>
                                             i.supplier === item.supplier &&
-                                            (!i.hpp || i.hpp === 0)
+                                            (!i.hpp || i.hpp === 0),
                                         )
                                       }
                                       title={
                                         !item.supplier
                                           ? ""
                                           : selectedOrder.items.some(
-                                              (i) =>
-                                                i.supplier === item.supplier &&
-                                                (!i.hpp || i.hpp === 0)
-                                            )
+                                                (i) =>
+                                                  i.supplier ===
+                                                    item.supplier &&
+                                                  (!i.hpp || i.hpp === 0),
+                                              )
                                             ? "Mohon lengkapi HPP untuk semua barang supplier ini sebelum cetak nota"
                                             : ""
                                       }
