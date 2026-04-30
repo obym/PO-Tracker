@@ -285,6 +285,8 @@ export default function App() {
   const [expandedFinanceCards, setExpandedFinanceCards] = useState<
     Record<string, boolean>
   >({});
+  const [financeFilterMonth, setFinanceFilterMonth] = useState<string>("ALL");
+  const [financeFilterYear, setFinanceFilterYear] = useState<string>("ALL");
 
   const toggleCardExpand = (e: React.MouseEvent, orderId: string) => {
     e.stopPropagation();
@@ -1339,7 +1341,7 @@ export default function App() {
   };
 
   const handleExportToExcel = () => {
-    const invoicedOrders = orders
+    let invoicedOrders = orders
       .filter((o) => o.status === "INVOICED")
       .sort((a, b) => {
         const poA = a.poNumber || a.id;
@@ -1349,6 +1351,18 @@ export default function App() {
           sensitivity: "base",
         });
       });
+
+    if (financeFilterMonth !== "ALL" || financeFilterYear !== "ALL") {
+      invoicedOrders = invoicedOrders.filter((o) => {
+        const d = o.invoiceDate || o.date;
+        if (!d) return true;
+        const dt = new Date(d);
+        if (financeFilterMonth !== "ALL" && dt.getMonth().toString() !== financeFilterMonth) return false;
+        if (financeFilterYear !== "ALL" && dt.getFullYear().toString() !== financeFilterYear) return false;
+        return true;
+      });
+    }
+
     if (invoicedOrders.length === 0) return;
 
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -2875,9 +2889,29 @@ export default function App() {
   };
 
   const renderFinanceDashboard = () => {
-    const invoicedOrders = filteredOrders.filter(
+    let invoicedOrders = filteredOrders.filter(
       (o) => o.status === "INVOICED",
     );
+
+    const availableYears = Array.from(
+      new Set(
+        invoicedOrders.map((o) => {
+          const d = o.invoiceDate || o.date;
+          return d ? new Date(d).getFullYear().toString() : new Date().getFullYear().toString();
+        })
+      )
+    ).sort((a, b) => parseInt(b) - parseInt(a));
+
+    if (financeFilterMonth !== "ALL" || financeFilterYear !== "ALL") {
+      invoicedOrders = invoicedOrders.filter((o) => {
+        const d = o.invoiceDate || o.date;
+        if (!d) return true;
+        const dt = new Date(d);
+        if (financeFilterMonth !== "ALL" && dt.getMonth().toString() !== financeFilterMonth) return false;
+        if (financeFilterYear !== "ALL" && dt.getFullYear().toString() !== financeFilterYear) return false;
+        return true;
+      });
+    }
 
     let totalProfitAll = 0;
     const profitPerClient: Record<string, number> = {};
@@ -2911,18 +2945,52 @@ export default function App() {
 
     return (
       <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Receipt className="w-6 h-6 text-indigo-600" /> Dashboard Keuangan
           </h2>
-          {invoicedOrders.length > 0 && (
-            <Button
-              onClick={handleExportToExcel}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          <div className="flex flex-wrap gap-2 items-center w-full lg:w-auto">
+            <select
+              className="flex-1 sm:flex-none shrink-0 h-9 rounded-md border border-slate-300 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+              value={financeFilterMonth}
+              onChange={(e) => setFinanceFilterMonth(e.target.value)}
             >
-              <Download className="w-4 h-4 mr-2" /> Download ke Excel (CSV)
-            </Button>
-          )}
+              <option value="ALL">Semua Bulan</option>
+              <option value="0">Januari</option>
+              <option value="1">Februari</option>
+              <option value="2">Maret</option>
+              <option value="3">April</option>
+              <option value="4">Mei</option>
+              <option value="5">Juni</option>
+              <option value="6">Juli</option>
+              <option value="7">Agustus</option>
+              <option value="8">September</option>
+              <option value="9">Oktober</option>
+              <option value="10">November</option>
+              <option value="11">Desember</option>
+            </select>
+            <select
+              className="flex-1 sm:flex-none shrink-0 h-9 rounded-md border border-slate-300 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+              value={financeFilterYear}
+              onChange={(e) => setFinanceFilterYear(e.target.value)}
+            >
+              <option value="ALL">Semua Tahun</option>
+              {availableYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+            {invoicedOrders.length > 0 && (
+              <Button
+                onClick={handleExportToExcel}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-none"
+              >
+                <Download className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Download ke Excel (CSV)</span>
+              </Button>
+            )}
+          </div>
         </div>
 
         {invoicedOrders.length === 0 ? (
