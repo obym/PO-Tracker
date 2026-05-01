@@ -1357,8 +1357,16 @@ export default function App() {
         const d = o.invoiceDate || o.date;
         if (!d) return true;
         const dt = new Date(d);
-        if (financeFilterMonth !== "ALL" && dt.getMonth().toString() !== financeFilterMonth) return false;
-        if (financeFilterYear !== "ALL" && dt.getFullYear().toString() !== financeFilterYear) return false;
+        if (
+          financeFilterMonth !== "ALL" &&
+          dt.getMonth().toString() !== financeFilterMonth
+        )
+          return false;
+        if (
+          financeFilterYear !== "ALL" &&
+          dt.getFullYear().toString() !== financeFilterYear
+        )
+          return false;
         return true;
       });
     }
@@ -2614,6 +2622,25 @@ export default function App() {
               </Button>
             )}
           </div>
+          {status === "INVOICED" && user.role === "supplier" && (
+            <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-800">
+              <span>Total Keseluruhan</span>
+              <span>
+                Rp{" "}
+                {order.items
+                  .filter((item) => item.supplier === user.name)
+                  .reduce((sum, item) => {
+                    const qty =
+                      typeof item.quantity === "string"
+                        ? parseFloat(item.quantity)
+                        : item.quantity;
+                    const price = item.supplierCost || item.unitPrice || 0;
+                    return sum + qty * price;
+                  }, 0)
+                  .toLocaleString("id-ID")}
+              </span>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
@@ -2889,26 +2916,34 @@ export default function App() {
   };
 
   const renderFinanceDashboard = () => {
-    let invoicedOrders = filteredOrders.filter(
-      (o) => o.status === "INVOICED",
-    );
+    let invoicedOrders = filteredOrders.filter((o) => o.status === "INVOICED");
 
     const availableYears = Array.from(
       new Set(
         invoicedOrders.map((o) => {
           const d = o.invoiceDate || o.date;
-          return d ? new Date(d).getFullYear().toString() : new Date().getFullYear().toString();
-        })
-      )
-    ).sort((a, b) => parseInt(b) - parseInt(a));
+          return d
+            ? new Date(d).getFullYear().toString()
+            : new Date().getFullYear().toString();
+        }),
+      ),
+    ).sort((a: any, b: any) => parseInt(b) - parseInt(a));
 
     if (financeFilterMonth !== "ALL" || financeFilterYear !== "ALL") {
       invoicedOrders = invoicedOrders.filter((o) => {
         const d = o.invoiceDate || o.date;
         if (!d) return true;
         const dt = new Date(d);
-        if (financeFilterMonth !== "ALL" && dt.getMonth().toString() !== financeFilterMonth) return false;
-        if (financeFilterYear !== "ALL" && dt.getFullYear().toString() !== financeFilterYear) return false;
+        if (
+          financeFilterMonth !== "ALL" &&
+          dt.getMonth().toString() !== financeFilterMonth
+        )
+          return false;
+        if (
+          financeFilterYear !== "ALL" &&
+          dt.getFullYear().toString() !== financeFilterYear
+        )
+          return false;
         return true;
       });
     }
@@ -2987,7 +3022,9 @@ export default function App() {
                 className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-none"
               >
                 <Download className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Download ke Excel (CSV)</span>
+                <span className="hidden sm:inline">
+                  Download ke Excel (CSV)
+                </span>
               </Button>
             )}
           </div>
