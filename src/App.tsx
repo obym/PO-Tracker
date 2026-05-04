@@ -1373,11 +1373,11 @@ export default function App() {
 
     if (invoicedOrders.length === 0) return;
 
-    let csvContent = "data:text/csv;charset=utf-8,";
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
 
     // Header
     csvContent +=
-      "Nomor PO,Klien,Tanggal,Barang,Qty,Satuan,Harga Jual,HPP,Keuntungan\n";
+      "Nomor PO,Klien,Tanggal,Barang,Supplier,Qty,Satuan,Harga Jual,HPP,Keuntungan\n";
 
     let grandTotalProfit = 0;
 
@@ -1391,6 +1391,7 @@ export default function App() {
 
       order.items.forEach((item) => {
         const itemName = item.name.replace(/,/g, "");
+        const supplierName = item.supplier ? item.supplier.replace(/,/g, "") : "-";
         const qty =
           typeof item.quantity === "string"
             ? parseFloat(item.quantity)
@@ -1402,16 +1403,16 @@ export default function App() {
 
         orderTotalProfit += profit;
 
-        csvContent += `"${poNumber}","${clientName}","${date}","${itemName}",${qty},"${unit}",${price},${hpp},${profit}\n`;
+        csvContent += `"${poNumber}","${clientName}","${date}","${itemName}","${supplierName}",${qty},"${unit}",${price},${hpp},${profit}\n`;
       });
 
       grandTotalProfit += orderTotalProfit;
       // Add a subtotal row for the PO
-      csvContent += `,,,Total PO ${poNumber},,,,,${orderTotalProfit}\n`;
+      csvContent += `,,,,Total PO ${poNumber},,,,,${orderTotalProfit}\n`;
     });
 
     // Add Grand Total
-    csvContent += `\n,,,TOTAL KESELURUHAN,,,,,${grandTotalProfit}\n`;
+    csvContent += `\n,,,,TOTAL KESELURUHAN,,,,,${grandTotalProfit}\n`;
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
