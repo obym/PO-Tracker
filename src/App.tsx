@@ -2917,7 +2917,15 @@ export default function App() {
   };
 
   const renderFinanceDashboard = () => {
-    let invoicedOrders = filteredOrders.filter((o) => o.status === "INVOICED");
+    let invoicedOrders = filteredOrders.filter((o) => o.status === "INVOICED")
+      .sort((a, b) => {
+        const poA = a.poNumber || a.id;
+        const poB = b.poNumber || b.id;
+        return poB.localeCompare(poA, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+      });
 
     const availableYears = Array.from(
       new Set(
