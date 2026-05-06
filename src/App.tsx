@@ -1391,7 +1391,9 @@ export default function App() {
 
       order.items.forEach((item) => {
         const itemName = item.name.replace(/,/g, "");
-        const supplierName = item.supplier ? item.supplier.replace(/,/g, "") : "-";
+        const supplierName = item.supplier
+          ? item.supplier.replace(/,/g, "")
+          : "-";
         const qty =
           typeof item.quantity === "string"
             ? parseFloat(item.quantity)
@@ -2917,15 +2919,7 @@ export default function App() {
   };
 
   const renderFinanceDashboard = () => {
-    let invoicedOrders = filteredOrders.filter((o) => o.status === "INVOICED")
-      .sort((a, b) => {
-        const poA = a.poNumber || a.id;
-        const poB = b.poNumber || b.id;
-        return poB.localeCompare(poA, undefined, {
-          numeric: true,
-          sensitivity: "base",
-        });
-      });
+    let invoicedOrders = filteredOrders.filter((o) => o.status === "INVOICED");
 
     const availableYears = Array.from(
       new Set(
@@ -2956,6 +2950,12 @@ export default function App() {
         return true;
       });
     }
+
+    invoicedOrders.sort((a, b) => {
+      const dateA = new Date(a.invoiceDate || a.date || 0).getTime();
+      const dateB = new Date(b.invoiceDate || b.date || 0).getTime();
+      return dateB - dateA;
+    });
 
     let totalProfitAll = 0;
     const profitPerClient: Record<string, number> = {};
