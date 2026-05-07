@@ -1,11 +1,10 @@
-export function terbilang(angkaInput: number): string {
-  const angka = Math.round(angkaInput);
+function terbilang(angka) {
   const huruf = [
     "", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"
   ];
   let hasil = "";
   if (angka < 12) {
-    hasil = huruf[angka] || "";
+    hasil = huruf[angka];
   } else if (angka < 20) {
     hasil = terbilang(angka - 10) + " Belas";
   } else if (angka < 100) {
@@ -27,3 +26,4 @@ export function terbilang(angkaInput: number): string {
   }
   return hasil.trim();
 }
+console.log(terbilang(46000 * 74.9));
