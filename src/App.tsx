@@ -2670,6 +2670,14 @@ export default function App() {
       );
     }
 
+    if (status === "INVOICED") {
+      columnOrders.sort((a, b) => {
+        const dateA = new Date(a.invoiceDate || a.date || 0).getTime();
+        const dateB = new Date(b.invoiceDate || b.date || 0).getTime();
+        return dateB - dateA;
+      });
+    }
+
     const config = statusConfig[status];
     const Icon = config.icon;
 
