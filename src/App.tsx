@@ -2444,6 +2444,7 @@ export default function App() {
       orderId: string;
       date: string;
       deliveryDate?: string;
+      invoiceDate?: string;
       poNumber: string;
       clientName: string;
       itemName: string;
@@ -2463,6 +2464,7 @@ export default function App() {
             orderId: order.id,
             date: order.date,
             deliveryDate: order.deliveryDate,
+            invoiceDate: order.invoiceDate,
             poNumber: order.poNumber || order.id,
             clientName: order.clientName,
             itemName: item.name,
@@ -5340,7 +5342,7 @@ export default function App() {
                 <Table className="min-w-[800px]">
                   <TableHeader className="bg-slate-50">
                     <TableRow>
-                      <TableHead>Tanggal Kirim</TableHead>
+                      <TableHead>Tanggal Nota</TableHead>
                       <TableHead>PO / Klien</TableHead>
                       <TableHead>Barang</TableHead>
                       <TableHead className="text-center">Qty</TableHead>
@@ -5370,8 +5372,8 @@ export default function App() {
                     {getProductHistory().map((history, index) => (
                       <TableRow key={index}>
                         <TableCell>
-                          {history.deliveryDate
-                            ? new Date(history.deliveryDate).toLocaleDateString(
+                          {history.invoiceDate
+                            ? new Date(history.invoiceDate).toLocaleDateString(
                                 "id-ID",
                                 {
                                   day: "numeric",
