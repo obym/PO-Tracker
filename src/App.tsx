@@ -1428,6 +1428,68 @@ export default function App() {
     document.body.removeChild(link);
   };
 
+  const handleExportAdminClientToExcel = (
+    columnOrders: PurchaseOrder[],
+    title: string,
+  ) => {
+    if (columnOrders.length === 0) return;
+
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+
+    // Header
+    csvContent +=
+      "Nomor PO,Klien,Tanggal,Barang,Supplier,Qty,Satuan,Harga Jual,HPP,Keuntungan\n";
+
+    let grandTotalProfit = 0;
+
+    columnOrders.forEach((order) => {
+      let orderTotalProfit = 0;
+      const poNumber = order.poNumber || order.id;
+      const clientName = order.clientName.replace(/,/g, ""); // Remove commas to avoid CSV issues
+      const date = new Date(order.invoiceDate || order.date).toLocaleDateString(
+        "id-ID",
+      );
+
+      order.items.forEach((item) => {
+        const itemName = item.name.replace(/,/g, "");
+        const supplierName = item.supplier
+          ? item.supplier.replace(/,/g, "")
+          : "-";
+        const qty =
+          typeof item.quantity === "string"
+            ? parseFloat(item.quantity)
+            : item.quantity;
+        const unit = item.unit.replace(/,/g, "");
+        const price = item.unitPrice || 0;
+        const hpp = item.hpp || 0;
+        const profit = (price - hpp) * qty;
+
+        orderTotalProfit += profit;
+
+        csvContent += `"${poNumber}","${clientName}","${date}","${itemName}","${supplierName}",${qty},"${unit}",${price},${hpp},${profit}\n`;
+      });
+
+      grandTotalProfit += orderTotalProfit;
+      // Add a subtotal row for the PO
+      csvContent += `,,,,Total PO ${poNumber},,,,,${orderTotalProfit}\n`;
+    });
+
+    // Add Grand Total
+    csvContent += `\n,,,,TOTAL KESELURUHAN,,,,,${grandTotalProfit}\n`;
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    const cleanTitle = title.replace(/[^a-zA-Z0-9_\-]/g, "_");
+    link.setAttribute(
+      "download",
+      `Laporan_${cleanTitle}_${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleExportSupplierToExcel = (columnOrders: PurchaseOrder[]) => {
     if (columnOrders.length === 0) return;
 
@@ -2708,6 +2770,23 @@ export default function App() {
             <h3 className="font-semibold">{customTitle || config.label}</h3>
           </div>
           <div className="flex items-center gap-2">
+            {status === "INVOICED" &&
+              user?.role === "admin" &&
+              columnOrders.length > 0 &&
+              customTitle && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs bg-white text-emerald-600 hover:bg-emerald-50 border-emerald-200"
+                  onClick={() =>
+                    handleExportAdminClientToExcel(columnOrders, customTitle)
+                  }
+                  title="Download ke Excel (CSV)"
+                >
+                  <Download className="w-3 h-3 sm:mr-1" />
+                  <span className="hidden sm:inline">CSV</span>
+                </Button>
+              )}
             {status === "INVOICED" &&
               user?.role === "supplier" &&
               columnOrders.length > 0 && (
