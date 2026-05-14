@@ -2019,6 +2019,11 @@ export default function App() {
                       <span className="text-slate-500 font-medium text-xs mt-1 block">
                         Qty: {item.quantity} {item.unit}
                       </span>
+                      {user?.role === "admin" && item.supplier && (
+                        <span className="text-slate-500 text-[11px] mt-0.5 block">
+                          {item.supplier}
+                        </span>
+                      )}
                     </div>
                   </label>
                 ))}
