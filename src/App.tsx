@@ -3053,6 +3053,7 @@ export default function App() {
 
     let totalProfitAll = 0;
     const profitPerClient: Record<string, number> = {};
+    const profitPerSupplier: Record<string, number> = {};
 
     invoicedOrders.forEach((order) => {
       let orderProfit = 0;
@@ -3063,7 +3064,15 @@ export default function App() {
             : item.quantity;
         const price = item.unitPrice || 0;
         const hpp = item.hpp || 0;
-        orderProfit += (price - hpp) * qty;
+        const profit = (price - hpp) * qty;
+        
+        orderProfit += profit;
+
+        const supplierName = item.supplier || "Tanpa Supplier";
+        if (!profitPerSupplier[supplierName]) {
+          profitPerSupplier[supplierName] = 0;
+        }
+        profitPerSupplier[supplierName] += profit;
       });
       totalProfitAll += orderProfit;
 
@@ -3380,6 +3389,32 @@ export default function App() {
                           {client}
                         </span>
                         <span className="text-lg font-bold text-emerald-600">
+                          Rp {profit.toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-slate-50 border-b border-slate-100 p-4">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-slate-500" />
+                    Rekap per Supplier
+                  </h3>
+                </div>
+                <div className="p-4 space-y-3">
+                  {Object.entries(profitPerSupplier)
+                    .sort(([, profitA], [, profitB]) => profitB - profitA)
+                    .map(([supplier, profit]) => (
+                      <div
+                        key={supplier}
+                        className="flex flex-col p-3 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors"
+                      >
+                        <span className="text-sm font-medium text-slate-600 mb-1">
+                          {supplier}
+                        </span>
+                        <span className="text-lg font-bold text-indigo-600">
                           Rp {profit.toLocaleString("id-ID")}
                         </span>
                       </div>
