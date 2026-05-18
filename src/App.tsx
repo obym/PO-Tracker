@@ -3065,7 +3065,7 @@ export default function App() {
         const price = item.unitPrice || 0;
         const hpp = item.hpp || 0;
         const profit = (price - hpp) * qty;
-        
+
         orderProfit += profit;
 
         const supplierName = item.supplier || "Tanpa Supplier";
@@ -3504,7 +3504,7 @@ export default function App() {
                     <Plus className="w-4 h-4 sm:mr-2" />
                     <span className="hidden sm:inline">PO Baru</span>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="max-w-6xl sm:max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Buat Purchase Order Baru</DialogTitle>
                       <DialogDescription>
@@ -3850,7 +3850,7 @@ export default function App() {
                   <Plus className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">+ PO Baru</span>
                 </DialogTrigger>
-                <DialogContent className="max-w-3xl sm:max-w-3xl w-[95vw] max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-6xl sm:max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Buat Purchase Order Baru</DialogTitle>
                   </DialogHeader>
@@ -4083,7 +4083,7 @@ export default function App() {
                 open={isClientEditPoOpen}
                 onOpenChange={setIsClientEditPoOpen}
               >
-                <DialogContent className="max-w-3xl sm:max-w-3xl w-[95vw] max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-6xl sm:max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Edit Purchase Order</DialogTitle>
                     <DialogDescription>
@@ -4327,7 +4327,7 @@ export default function App() {
             )}
 
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-              <DialogContent className="max-w-4xl sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-6xl sm:max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Edit Purchase Order</DialogTitle>
                   <DialogDescription>
@@ -5439,7 +5439,7 @@ export default function App() {
         open={isProductHistoryOpen}
         onOpenChange={setIsProductHistoryOpen}
       >
-        <DialogContent className="max-w-4xl sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl sm:max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl">
               Riwayat Barang:{" "}
@@ -5587,7 +5587,7 @@ export default function App() {
 
       {/* Detail Modal */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-4xl sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl sm:max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
           {selectedOrder && (
             <>
               <DialogHeader>
