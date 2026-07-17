@@ -121,6 +121,11 @@ interface Supplier {
   bankAccount?: string;
 }
 
+const isSupplierMatch = (supplierName?: string, userName?: string) => {
+  if (!supplierName || !userName) return false;
+  return supplierName.trim().toLowerCase() === userName.trim().toLowerCase();
+};
+
 interface UserProfile {
   uid: string;
   email: string;
@@ -1513,7 +1518,7 @@ export default function App() {
         : poNumber;
 
       order.items
-        .filter((item) => item.supplier === user?.name)
+        .filter((item) => isSupplierMatch(item.supplier, user?.name))
         .forEach((item) => {
           const itemName = item.name.replace(/,/g, "");
           const qty =
@@ -2526,7 +2531,10 @@ export default function App() {
 
     orders.forEach((order) => {
       order.items.forEach((item) => {
-        if (item.name.toLowerCase().includes(lowerSearch)) {
+        if (
+          item.name.toLowerCase().includes(lowerSearch) &&
+          (user?.role !== "supplier" || isSupplierMatch(item.supplier, user?.name))
+        ) {
           history.push({
             orderId: order.id,
             date: order.date,
@@ -2564,7 +2572,7 @@ export default function App() {
         !(user.role === "driver" && o.deliveredBy === "Dikirim Supplier") &&
         !(
           (user.role === "supplier" || user.role === "kitchen") &&
-          !o.items.some((item) => item.supplier === user.name)
+          !o.items.some((item) => isSupplierMatch(item.supplier, user.name))
         ),
     )
     .sort((a, b) => {
@@ -2639,7 +2647,7 @@ export default function App() {
                 {order.items
                   .filter(
                     (item) =>
-                      user.role !== "supplier" || item.supplier === user.name,
+                      user.role !== "supplier" || isSupplierMatch(item.supplier, user.name),
                   )
                   .map((item, idx) => (
                     <div
@@ -2663,7 +2671,7 @@ export default function App() {
                   {
                     order.items.filter(
                       (item) =>
-                        user.role !== "supplier" || item.supplier === user.name,
+                        user.role !== "supplier" || isSupplierMatch(item.supplier, user.name),
                     ).length
                   }{" "}
                   items
@@ -2676,7 +2684,7 @@ export default function App() {
                     order.items.filter(
                       (i) =>
                         i.isReceived &&
-                        (user.role !== "supplier" || i.supplier === user.name),
+                        (user.role !== "supplier" || isSupplierMatch(i.supplier, user.name)),
                     ).length
                   }{" "}
                   diterima
@@ -2700,7 +2708,7 @@ export default function App() {
               <span>
                 Rp{" "}
                 {order.items
-                  .filter((item) => item.supplier === user.name)
+                  .filter((item) => isSupplierMatch(item.supplier, user.name))
                   .reduce((sum, item) => {
                     const qty =
                       typeof item.quantity === "string"
@@ -5514,23 +5522,31 @@ export default function App() {
                             className="font-medium text-indigo-600 hover:underline cursor-pointer"
                             onClick={() => {
                               setIsProductHistoryOpen(false);
-                              setCurrentView("finance");
-                              setExpandedFinanceCards((prev) => ({
-                                ...prev,
-                                [history.orderId]: true,
-                              }));
-                              // Add a small delay to allow the DOM to render the finance view before scrolling
-                              setTimeout(() => {
-                                const element = document.getElementById(
-                                  `finance-card-${history.orderId}`,
-                                );
-                                if (element) {
-                                  element.scrollIntoView({
-                                    behavior: "smooth",
-                                    block: "start",
-                                  });
+                              if (user?.role === "supplier" || user?.role !== "admin") {
+                                const orderObj = orders.find((o) => o.id === history.orderId);
+                                if (orderObj) {
+                                  setSelectedOrder(orderObj);
+                                  setIsDetailOpen(true);
                                 }
-                              }, 100);
+                              } else {
+                                setCurrentView("finance");
+                                setExpandedFinanceCards((prev) => ({
+                                  ...prev,
+                                  [history.orderId]: true,
+                                }));
+                                // Add a small delay to allow the DOM to render the finance view before scrolling
+                                setTimeout(() => {
+                                  const element = document.getElementById(
+                                    `finance-card-${history.orderId}`,
+                                  );
+                                  if (element) {
+                                    element.scrollIntoView({
+                                      behavior: "smooth",
+                                      block: "start",
+                                    });
+                                  }
+                                }, 100);
+                              }
                             }}
                           >
                             {history.poNumber}
@@ -5674,9 +5690,9 @@ export default function App() {
                           <Receipt className="w-4 h-4 mr-2" /> Cetak Nota
                         </Button>
                       )}
-                    {user.role === "supplier" &&
+                     {user.role === "supplier" &&
                       selectedOrder.items.some(
-                        (item) => item.supplier === user.name,
+                        (item) => isSupplierMatch(item.supplier, user.name),
                       ) && (
                         <Button
                           variant="outline"
@@ -5684,13 +5700,13 @@ export default function App() {
                           className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100"
                           disabled={selectedOrder.items.some(
                             (i) =>
-                              i.supplier === user.name &&
+                              isSupplierMatch(i.supplier, user.name) &&
                               (!i.hpp || i.hpp === 0),
                           )}
                           title={
                             selectedOrder.items.some(
                               (i) =>
-                                i.supplier === user.name &&
+                                isSupplierMatch(i.supplier, user.name) &&
                                 (!i.hpp || i.hpp === 0),
                             )
                               ? "Mohon lengkapi Harga Perolehan untuk semua barang sebelum cetak nota"
@@ -5793,7 +5809,7 @@ export default function App() {
                     {user?.role === "supplier"
                       ? (() => {
                           const items = selectedOrder.items.filter(
-                            (item) => item.supplier === user.name,
+                            (item) => isSupplierMatch(item.supplier, user.name),
                           );
                           const totalTransfer = items.reduce(
                             (sum, item) =>
@@ -5821,7 +5837,7 @@ export default function App() {
                   {selectedOrder.items
                     .filter(
                       (item) =>
-                        user.role !== "supplier" || item.supplier === user.name,
+                        user.role !== "supplier" || isSupplierMatch(item.supplier, user.name),
                     )
                     .map((item) => (
                       <div
@@ -6152,7 +6168,7 @@ export default function App() {
                         .filter(
                           (item) =>
                             user.role !== "supplier" ||
-                            item.supplier === user.name,
+                            isSupplierMatch(item.supplier, user.name),
                         )
                         .map((item) => (
                           <TableRow
