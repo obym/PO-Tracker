@@ -1294,7 +1294,7 @@ export default function App() {
     orderDateStr?: string,
   ) => {
     const supplierOrders = orders
-      .filter((o) => o.items.some((i) => i.supplier === supplierName))
+      .filter((o) => o.items.some((i) => isSupplierMatch(i.supplier, supplierName)))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const seqIndex = supplierOrders.findIndex((o) => o.id === orderId);
@@ -1331,7 +1331,7 @@ export default function App() {
     if (!selectedOrder) return;
 
     const supplierItems = selectedOrder.items.filter(
-      (item) => item.supplier === supplierName,
+      (item) => isSupplierMatch(item.supplier, supplierName),
     );
     if (supplierItems.length === 0) return;
 
@@ -1690,7 +1690,7 @@ export default function App() {
   if (rekapSupplierData) {
     const { order, supplierName, invoiceNumber } = rekapSupplierData;
     const supplierItems = order.items.filter(
-      (item) => item.supplier === supplierName,
+      (item) => isSupplierMatch(item.supplier, supplierName),
     );
 
     return (
@@ -6076,7 +6076,7 @@ export default function App() {
                                     !item.supplier ||
                                     selectedOrder.items.some(
                                       (i) =>
-                                        i.supplier === item.supplier &&
+                                        isSupplierMatch(i.supplier, item.supplier) &&
                                         (!i.hpp || i.hpp === 0),
                                     )
                                   }
@@ -6085,7 +6085,7 @@ export default function App() {
                                       ? ""
                                       : selectedOrder.items.some(
                                             (i) =>
-                                              i.supplier === item.supplier &&
+                                              isSupplierMatch(i.supplier, item.supplier) &&
                                               (!i.hpp || i.hpp === 0),
                                           )
                                         ? "Mohon lengkapi HPP untuk semua barang supplier ini sebelum cetak nota"
@@ -6405,7 +6405,7 @@ export default function App() {
                                         !item.supplier ||
                                         selectedOrder.items.some(
                                           (i) =>
-                                            i.supplier === item.supplier &&
+                                            isSupplierMatch(i.supplier, item.supplier) &&
                                             (!i.hpp || i.hpp === 0),
                                         )
                                       }
@@ -6414,8 +6414,7 @@ export default function App() {
                                           ? ""
                                           : selectedOrder.items.some(
                                                 (i) =>
-                                                  i.supplier ===
-                                                    item.supplier &&
+                                                  isSupplierMatch(i.supplier, item.supplier) &&
                                                   (!i.hpp || i.hpp === 0),
                                               )
                                             ? "Mohon lengkapi HPP untuk semua barang supplier ini sebelum cetak nota"
