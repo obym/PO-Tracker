@@ -1237,12 +1237,17 @@ export default function App() {
     let orderToUpdate: string | null = null;
     let currentStatus: string | null = null;
 
-    if (invoiceOrder && invoiceOrder.status === "COMPLETED") {
+    if (
+      invoiceOrder &&
+      (invoiceOrder.status === "COMPLETED" ||
+        invoiceOrder.status === "AT_KITCHEN")
+    ) {
       orderToUpdate = invoiceOrder.id;
       currentStatus = invoiceOrder.status;
     } else if (
       rekapSupplierData &&
-      rekapSupplierData.order.status === "COMPLETED"
+      (rekapSupplierData.order.status === "COMPLETED" ||
+        rekapSupplierData.order.status === "AT_KITCHEN")
     ) {
       orderToUpdate = rekapSupplierData.order.id;
       currentStatus = rekapSupplierData.order.status;
@@ -1250,7 +1255,7 @@ export default function App() {
 
     if (
       orderToUpdate &&
-      currentStatus === "COMPLETED" &&
+      (currentStatus === "COMPLETED" || currentStatus === "AT_KITCHEN") &&
       (user?.role === "admin" ||
         user?.role === "client" ||
         user?.role === "supplier")
@@ -5618,7 +5623,8 @@ export default function App() {
                     </Badge>
                   </DialogTitle>
                   <div className="flex gap-2">
-                    {(selectedOrder.status === "COMPLETED" ||
+                    {(selectedOrder.status === "AT_KITCHEN" ||
+                      selectedOrder.status === "COMPLETED" ||
                       selectedOrder.status === "INVOICED") &&
                       user.role === "admin" && (
                         <Button
@@ -5637,7 +5643,7 @@ export default function App() {
                           }
                           onClick={async () => {
                             handleOpenInvoice(selectedOrder);
-                            if (selectedOrder.status === "COMPLETED") {
+                            if (selectedOrder.status === "COMPLETED" || selectedOrder.status === "AT_KITCHEN") {
                               try {
                                 const now = new Date().toISOString();
                                 await updateDoc(
@@ -5659,7 +5665,8 @@ export default function App() {
                           <Receipt className="w-4 h-4 mr-2" /> Cetak Nota
                         </Button>
                       )}
-                    {(selectedOrder.status === "COMPLETED" ||
+                    {(selectedOrder.status === "AT_KITCHEN" ||
+                      selectedOrder.status === "COMPLETED" ||
                       selectedOrder.status === "INVOICED") &&
                       user.role === "client" && (
                         <Button
@@ -5668,7 +5675,7 @@ export default function App() {
                           className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
                           onClick={async () => {
                             handleOpenInvoice(selectedOrder);
-                            if (selectedOrder.status === "COMPLETED") {
+                            if (selectedOrder.status === "COMPLETED" || selectedOrder.status === "AT_KITCHEN") {
                               try {
                                 const now = new Date().toISOString();
                                 await updateDoc(
@@ -5714,7 +5721,7 @@ export default function App() {
                           }
                           onClick={async () => {
                             handleRekapSupplier(user.name);
-                            if (selectedOrder.status === "COMPLETED") {
+                            if (selectedOrder.status === "COMPLETED" || selectedOrder.status === "AT_KITCHEN") {
                               try {
                                 const now = new Date().toISOString();
                                 await updateDoc(
