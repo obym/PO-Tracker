@@ -2052,7 +2052,7 @@ export default function App() {
                       title: "KOPERASI GARUDA MERAH PUTIH",
                       address: "Dsn. Padangan RT 02 RW 03 Ds. Pagu",
                       district: "Kec. Pagu Kab. Kediri",
-                      phone: "Phone : 0812-5278-8733",
+                      phone: "Phone : 0354-4545845",
                       items: printableItems,
                       getPrice: (item: any) =>
                         item.unitPrice || item.supplierCost || 0,
@@ -2086,7 +2086,7 @@ export default function App() {
                         title: "KOPERASI GARUDA MERAH PUTIH",
                         address: "Dsn. Padangan RT 02 RW 03 Ds. Pagu",
                         district: "Kec. Pagu Kab. Kediri",
-                        phone: "Phone : 0812-5278-8733",
+                        phone: "Phone : 0354-4545845",
                         items: sItems,
                         getPrice: (item: any) =>
                           item.unitPrice || item.supplierCost || 0,
