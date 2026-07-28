@@ -1740,9 +1740,11 @@ export default function App() {
                     ""}
                 </p>
                 <p>
-                  {allUsers.find((u) => u.name === supplierName)?.phone
-                    ? `Phone : ${allUsers.find((u) => u.name === supplierName)?.phone}`
-                    : ""}
+                  {supplierName === "UD Srikaya Berkah Rejeki" || supplierName === "UD SRIKAYA BERKAH REJEKI"
+                    ? "Phone : 0354-4545845"
+                    : allUsers.find((u) => u.name === supplierName)?.phone
+                      ? `Phone : ${allUsers.find((u) => u.name === supplierName)?.phone}`
+                      : ""}
                 </p>
               </div>
 
