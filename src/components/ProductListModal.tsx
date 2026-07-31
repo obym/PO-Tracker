@@ -106,7 +106,7 @@ export function ProductListModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] w-[95vw] max-h-[90vh] flex flex-col overflow-hidden p-6">
+      <DialogContent className="max-w-6xl sm:max-w-6xl w-[95vw] max-h-[90vh] flex flex-col overflow-hidden p-6">
         <DialogHeader className="shrink-0 mb-4">
           <DialogTitle className="text-2xl">List Produk</DialogTitle>
           <DialogDescription className="text-base">
