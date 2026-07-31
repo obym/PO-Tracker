@@ -71,6 +71,8 @@ import {
 
 import { terbilang } from "./lib/terbilang";
 
+import { ProductListModal } from "./components/ProductListModal";
+
 // --- Types ---
 type OrderStatus =
   | "PO_RECEIVED"
@@ -119,6 +121,13 @@ interface Supplier {
   address?: string;
   district?: string;
   bankAccount?: string;
+}
+
+interface ProductMetadata {
+  id: string;
+  name: string;
+  code: string;
+  category: string;
 }
 
 const isSupplierMatch = (supplierName?: string, userName?: string) => {
@@ -283,6 +292,8 @@ export default function App() {
   const [isSupplierManageOpen, setIsSupplierManageOpen] = useState(false);
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
   const [isProductHistoryOpen, setIsProductHistoryOpen] = useState(false);
+  const [isProductListOpen, setIsProductListOpen] = useState(false);
+  const [productsMetadata, setProductsMetadata] = useState<ProductMetadata[]>([]);
   const [productHistorySearchTerm, setProductHistorySearchTerm] = useState("");
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
     {},
@@ -462,6 +473,7 @@ export default function App() {
         setIsSupplierManageOpen(false);
         setIsNewClientOpen(false);
         setIsProductHistoryOpen(false);
+        setIsProductListOpen(false);
         setIsEditUserOpen(false);
         setIsEditSupplierOpen(false);
         setIsNewSupplierOpen(false);
@@ -560,6 +572,7 @@ export default function App() {
 
     let unsubscribeClients = () => {};
     let unsubscribeSuppliers = () => {};
+    let unsubscribeProducts = () => {};
     if (user.role === "admin") {
       const clientsQuery = query(
         collection(db, "users"),
@@ -573,6 +586,13 @@ export default function App() {
       unsubscribeSuppliers = onSnapshot(suppliersQuery, (snapshot) => {
         setSuppliers(snapshot.docs.map((doc) => doc.data() as Supplier));
       });
+
+      const productsQuery = query(collection(db, "products"));
+      unsubscribeProducts = onSnapshot(productsQuery, (snapshot) => {
+        setProductsMetadata(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as ProductMetadata)
+        );
+      });
     }
 
     return () => {
@@ -580,6 +600,7 @@ export default function App() {
       unsubscribeClients();
       unsubscribeAllUsers();
       unsubscribeSuppliers();
+      unsubscribeProducts();
     };
   }, [isAuthReady, user]);
 
@@ -4748,6 +4769,21 @@ export default function App() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+
+                <Button
+                  variant="outline"
+                  className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm px-3 shrink-0"
+                  onClick={() => setIsProductListOpen(true)}
+                >
+                  <Package className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">List Produk</span>
+                </Button>
+                <ProductListModal
+                  isOpen={isProductListOpen}
+                  onOpenChange={setIsProductListOpen}
+                  orders={orders}
+                  productsMetadata={productsMetadata}
+                />
 
                 <Dialog
                   open={isSupplierManageOpen}

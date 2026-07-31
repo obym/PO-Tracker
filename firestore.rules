@@ -18,5 +18,8 @@ service cloud.firestore {
     match /purchaseOrders/{orderId} {
       allow read, write: if isAuthenticated();
     }
+    match /products/{productId} {
+      allow read, write: if isAuthenticated();
+    }
   }
 }
