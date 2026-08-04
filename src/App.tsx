@@ -404,24 +404,6 @@ export default function App() {
     },
   ]);
 
-  // Client Edit PO Form State
-  const [isClientEditPoOpen, setIsClientEditPoOpen] = useState(false);
-  const [clientEditPoNumber, setClientEditPoNumber] = useState("");
-  const [clientEditPoDate, setClientEditPoDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
-  const [clientEditDeliveryDate, setClientEditDeliveryDate] = useState("");
-  const [clientEditItems, setClientEditItems] = useState<
-    {
-      id?: string;
-      name: string;
-      quantity: number | string;
-      unit: string;
-      category: "Bahan Baku" | "Bahan Operasional";
-      supplier: string;
-    }[]
-  >([]);
-
   // Edit PO Form State
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingPO, setEditingPO] = useState<PurchaseOrder | null>(null);
@@ -477,7 +459,6 @@ export default function App() {
         setIsEditUserOpen(false);
         setIsEditSupplierOpen(false);
         setIsNewSupplierOpen(false);
-        setIsClientEditPoOpen(false);
         setIsEditOpen(false);
         setInvoiceOrder(null);
         setRekapSupplierData(null);
@@ -992,36 +973,6 @@ export default function App() {
   };
 
   const openEditPO = (po: PurchaseOrder) => {
-    if (user?.role === "client") {
-      if (po.status !== "PO_RECEIVED" && po.status !== "ORDERING") {
-        setGlobalError("PO ini sudah diproses dan tidak dapat diedit lagi.");
-        return;
-      }
-      setEditingPO(po);
-      setClientEditPoNumber(po.poNumber || "");
-      setClientEditPoDate(new Date(po.date).toISOString().split("T")[0]);
-      setClientEditDeliveryDate(
-        po.deliveryDate
-          ? new Date(po.deliveryDate).toISOString().split("T")[0]
-          : "",
-      );
-      setClientEditItems(
-        po.items.map((item) => ({
-          id: item.id,
-          name: item.name,
-          quantity: item.quantity,
-          unit: item.unit,
-          category:
-            (item.category as "Bahan Baku" | "Bahan Operasional") ||
-            "Bahan Baku",
-          supplier: item.supplier !== "Belum Ditentukan" ? item.supplier : "",
-        })),
-      );
-      setEditError(null);
-      setIsClientEditPoOpen(true);
-      return;
-    }
-
     if (user?.role !== "admin") return;
     setEditingPO(po);
     setEditClientId(po.clientId);
@@ -1128,69 +1079,6 @@ export default function App() {
     }
   };
 
-  const handleClientUpdatePO = async () => {
-    setEditError(null);
-    if (!editingPO) return;
-
-    if (clientEditItems.length === 0 || clientEditItems.some((i) => !i.name)) {
-      setEditError("Mohon lengkapi daftar barang (Nama Barang wajib diisi).");
-      return;
-    }
-
-    if (editingPO.status !== "PO_RECEIVED" && editingPO.status !== "ORDERING") {
-      setEditError("PO ini sudah diproses dan tidak dapat diedit lagi.");
-      return;
-    }
-
-    try {
-      const existingItemsIdMap = new Map<string, OrderItem>(
-        editingPO.items.map((item) => [item.id, item]),
-      );
-
-      const updatedItems = clientEditItems.map((item, i) => {
-        const id = item.id || `i-${Date.now()}-${i}`;
-        const existingItem = existingItemsIdMap.get(id);
-
-        return {
-          id: id,
-          name: item.name,
-          quantity:
-            typeof item.quantity === "string"
-              ? parseFloat(item.quantity) || 0
-              : item.quantity,
-          unit: item.unit,
-          category: item.category,
-          // Update supplier from client if provided, otherwise preserve existing or default
-          supplier:
-            item.supplier || existingItem?.supplier || "Belum Ditentukan",
-          // Preserve server-side flags and other fields not editable by client
-          unitPrice: existingItem?.unitPrice || 0,
-          isOrdered: existingItem?.isOrdered || false,
-          isAtKitchen: existingItem?.isAtKitchen || false,
-          isDelivered: existingItem?.isDelivered || false,
-          isReceived: existingItem?.isReceived || false,
-          isTransferred: existingItem?.isTransferred || false,
-        };
-      });
-
-      const updatedData: any = {
-        poNumber: clientEditPoNumber,
-        date: new Date(clientEditPoDate).toISOString(),
-        invoiceDate: new Date(clientEditPoDate).toISOString(),
-        deliveryDate: clientEditDeliveryDate
-          ? new Date(clientEditDeliveryDate).toISOString()
-          : null,
-        items: updatedItems,
-      };
-
-      await updateDoc(doc(db, "purchaseOrders", editingPO.id), updatedData);
-      setIsClientEditPoOpen(false);
-      setEditingPO(null);
-    } catch (error) {
-      console.error("Error updating PO from client:", error);
-      setEditError("Gagal memperbarui PO. Periksa koneksi Anda.");
-    }
-  };
 
   const handleUpdatePO = async () => {
     setEditError(null);
@@ -4120,253 +4008,6 @@ export default function App() {
               </Dialog>
             )}
 
-            {user.role === "client" && (
-              <Dialog
-                open={isClientEditPoOpen}
-                onOpenChange={setIsClientEditPoOpen}
-              >
-                <DialogContent className="max-w-6xl sm:max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Edit Purchase Order</DialogTitle>
-                    <DialogDescription>
-                      Perbarui detail PO Anda. PO yang sudah diproses tidak
-                      dapat diedit.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  {editError && (
-                    <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
-                      {editError}
-                    </div>
-                  )}
-
-                  <div className="grid gap-6 py-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="clientEditPoDate">
-                          Tanggal PO <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="clientEditPoDate"
-                          type="date"
-                          value={clientEditPoDate}
-                          onChange={(e) => setClientEditPoDate(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="clientEditDeliveryDate">
-                          Tanggal Kirim
-                        </Label>
-                        <Input
-                          id="clientEditDeliveryDate"
-                          type="date"
-                          value={clientEditDeliveryDate}
-                          onChange={(e) =>
-                            setClientEditDeliveryDate(e.target.value)
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="clientEditPoNumber">Nomor PO</Label>
-                        <Input
-                          id="clientEditPoNumber"
-                          placeholder="Nomor PO"
-                          value={clientEditPoNumber}
-                          onChange={(e) =>
-                            setClientEditPoNumber(e.target.value)
-                          }
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center mb-2">
-                        <Label>
-                          Daftar Barang <span className="text-red-500">*</span>
-                        </Label>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setClientEditItems([
-                              ...clientEditItems,
-                              {
-                                name: "",
-                                quantity: 1,
-                                unit: "pcs",
-                                category: "Bahan Baku",
-                                supplier: "",
-                              },
-                            ])
-                          }
-                        >
-                          <Plus className="w-4 h-4 mr-2" /> Tambah Barang
-                        </Button>
-                      </div>
-                      <div className="border rounded-md overflow-x-auto">
-                        <Table className="min-w-[800px]">
-                          <TableHeader className="bg-slate-50">
-                            <TableRow>
-                              <TableHead>
-                                Nama Barang{" "}
-                                <span className="text-red-500">*</span>
-                              </TableHead>
-                              <TableHead className="w-[100px]">
-                                Qty <span className="text-red-500">*</span>
-                              </TableHead>
-                              <TableHead className="w-[100px]">
-                                Satuan
-                              </TableHead>
-                              <TableHead className="w-[150px]">
-                                Kategori
-                              </TableHead>
-                              <TableHead className="w-[150px]">
-                                Supplier
-                              </TableHead>
-                              <TableHead className="w-[60px] text-center">
-                                Aksi
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {clientEditItems.map((item, index) => (
-                              <TableRow key={index}>
-                                <TableCell className="p-2">
-                                  <Input
-                                    placeholder="Nama barang..."
-                                    value={item.name}
-                                    onChange={(e) => {
-                                      const newIt = [...clientEditItems];
-                                      newIt[index].name = e.target.value;
-                                      setClientEditItems(newIt);
-                                    }}
-                                  />
-                                </TableCell>
-                                <TableCell className="p-2">
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0.1"
-                                    value={item.quantity}
-                                    onChange={(e) => {
-                                      const newIt = [...clientEditItems];
-                                      newIt[index].quantity = e.target.value;
-                                      setClientEditItems(newIt);
-                                    }}
-                                  />
-                                </TableCell>
-                                <TableCell className="p-2">
-                                  <Input
-                                    placeholder="kg, pcs..."
-                                    value={item.unit}
-                                    onChange={(e) => {
-                                      const newIt = [...clientEditItems];
-                                      newIt[index].unit = e.target.value;
-                                      setClientEditItems(newIt);
-                                    }}
-                                  />
-                                </TableCell>
-                                <TableCell className="p-2">
-                                  <select
-                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                    value={item.category || "Bahan Baku"}
-                                    onChange={(e) => {
-                                      const newIt = [...clientEditItems];
-                                      newIt[index].category = e.target.value as
-                                        | "Bahan Baku"
-                                        | "Bahan Operasional";
-                                      setClientEditItems(newIt);
-                                    }}
-                                  >
-                                    <option value="Bahan Baku">
-                                      Bahan Baku
-                                    </option>
-                                    <option value="Bahan Operasional">
-                                      Bahan Operasional
-                                    </option>
-                                  </select>
-                                </TableCell>
-                                <TableCell className="p-2">
-                                  <select
-                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                    value={item.supplier || ""}
-                                    onChange={(e) => {
-                                      const newIt = [...clientEditItems];
-                                      newIt[index].supplier = e.target.value;
-                                      setClientEditItems(newIt);
-                                    }}
-                                  >
-                                    <option value="" disabled>
-                                      Pilih Supplier
-                                    </option>
-                                    <option value="Koperasi Garuda Merah Putih">
-                                      Koperasi Garuda Merah Putih
-                                    </option>
-                                    <option value="Puji Sayur dan Buah">
-                                      Puji Sayur dan Buah
-                                    </option>
-                                    <option value="UD Srikaya Berkah Rejeki">
-                                      UD Srikaya Berkah Rejeki
-                                    </option>
-                                    <option value="UD Airlangga Putra Mas">
-                                      UD Airlangga Putra Mas
-                                    </option>
-                                    <option value="UD Wahyu Lumbung Rejeki">
-                                      UD Wahyu Lumbung Rejeki
-                                    </option>
-                                    <option value="Hiqba Madani">
-                                      Hiqba Madani
-                                    </option>
-                                    <option value="Cipta Tirta Mandiri">
-                                      Cipta Tirta Mandiri
-                                    </option>
-                                    <option value="Aris Zainal Sayur">
-                                      Aris Zainal Sayur
-                                    </option>
-                                  </select>
-                                </TableCell>
-                                <TableCell className="p-2 text-center">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() =>
-                                      setClientEditItems(
-                                        clientEditItems.filter(
-                                          (_, i) => i !== index,
-                                        ),
-                                      )
-                                    }
-                                    disabled={clientEditItems.length === 1}
-                                  >
-                                    &times;
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsClientEditPoOpen(false)}
-                    >
-                      Batal
-                    </Button>
-                    <Button
-                      onClick={handleClientUpdatePO}
-                      className="bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      Perbarui PO
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
 
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
               <DialogContent className="max-w-6xl sm:max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
@@ -5805,17 +5446,7 @@ export default function App() {
                         </Button>
                       </>
                     )}
-                    {user.role === "client" &&
-                      (selectedOrder.status === "PO_RECEIVED" ||
-                        selectedOrder.status === "ORDERING") && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditPO(selectedOrder)}
-                        >
-                          <Edit className="w-4 h-4 mr-2" /> Edit PO
-                        </Button>
-                      )}
+
                   </div>
                 </div>
                 <DialogDescription className="text-slate-500 mt-1">
