@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus,
   Search,
@@ -62,6 +62,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   where,
@@ -383,6 +384,7 @@ export default function App() {
   ]);
 
   // Client New PO Form State
+  const [globalProductPrices, setGlobalProductPrices] = useState<Record<string, number>>({});
   const [clientPoNumber, setClientPoNumber] = useState("");
   const [clientPoDate, setClientPoDate] = useState(
     new Date().toISOString().split("T")[0],
@@ -392,6 +394,7 @@ export default function App() {
     name: string;
     quantity: number | string;
     unit: string;
+    price: number | string;
     category: "Bahan Baku" | "Bahan Operasional";
     supplier: string;
   }>([
@@ -399,6 +402,7 @@ export default function App() {
       name: "",
       quantity: 1,
       unit: "pcs",
+      price: "",
       category: "Bahan Baku",
       supplier: "",
     },
@@ -553,7 +557,6 @@ export default function App() {
 
     let unsubscribeClients = () => {};
     let unsubscribeSuppliers = () => {};
-    let unsubscribeProducts = () => {};
     if (user.role === "admin") {
       const clientsQuery = query(
         collection(db, "users"),
@@ -567,14 +570,37 @@ export default function App() {
       unsubscribeSuppliers = onSnapshot(suppliersQuery, (snapshot) => {
         setSuppliers(snapshot.docs.map((doc) => doc.data() as Supplier));
       });
-
-      const productsQuery = query(collection(db, "products"));
-      unsubscribeProducts = onSnapshot(productsQuery, (snapshot) => {
-        setProductsMetadata(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as ProductMetadata)
-        );
-      });
     }
+
+    if (user.role === "client") {
+      getDocs(query(collection(db, "purchaseOrders")))
+        .then((snapshot) => {
+          const map: Record<string, number> = {};
+          snapshot.docs.forEach((docSnap) => {
+            const data = docSnap.data();
+            data.items?.forEach((item: any) => {
+              if (item.name) {
+                const key = item.name.trim().toLowerCase();
+                const hpp = item.hpp || item.unitPrice || item.supplierCost || 0;
+                if (hpp > 0) {
+                  map[key] = hpp;
+                }
+              }
+            });
+          });
+          setGlobalProductPrices(map);
+        })
+        .catch((err) => {
+          console.error("Error fetching global item prices for client:", err);
+        });
+    }
+
+    const productsQuery = query(collection(db, "products"));
+    const unsubscribeProducts = onSnapshot(productsQuery, (snapshot) => {
+      setProductsMetadata(
+        snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as ProductMetadata)
+      );
+    });
 
     return () => {
       unsubscribeOrders();
@@ -900,6 +926,81 @@ export default function App() {
     }
   };
 
+  const allProductSuggestions = useMemo(() => {
+    const map: Record<
+      string,
+      {
+        name: string;
+        hpp?: number;
+        unit?: string;
+        category?: "Bahan Baku" | "Bahan Operasional";
+        supplier?: string;
+      }
+    > = {};
+    // From globalProductPrices
+    Object.entries(globalProductPrices).forEach(([key, hpp]) => {
+      map[key] = { name: key.toUpperCase(), hpp: Number(hpp) };
+    });
+    // From productsMetadata
+    productsMetadata.forEach((p) => {
+      if (!p.name) return;
+      const key = p.name.trim().toLowerCase();
+      if (!map[key]) {
+        map[key] = {
+          name: p.name,
+          category: p.category as any,
+        };
+      }
+    });
+    // From orders
+    orders.forEach((o) => {
+      o.items?.forEach((i) => {
+        if (!i.name) return;
+        const key = i.name.trim().toLowerCase();
+        const hpp = i.hpp || i.unitPrice || 0;
+        if (!map[key] || (!map[key].hpp && hpp > 0)) {
+          map[key] = {
+            name: i.name,
+            hpp: hpp > 0 ? hpp : undefined,
+            unit: i.unit,
+            category: i.category,
+            supplier: i.supplier,
+          };
+        }
+      });
+    });
+    return Object.values(map);
+  }, [globalProductPrices, productsMetadata, orders]);
+
+  const handleClientItemNameChange = (index: number, name: string) => {
+    const newIt = [...clientItems];
+    newIt[index].name = name;
+    const clean = name.trim().toLowerCase();
+    const match = allProductSuggestions.find(
+      (p) => p.name.trim().toLowerCase() === clean,
+    );
+    if (match) {
+      if (
+        match.hpp &&
+        (newIt[index].price === "" ||
+          newIt[index].price === 0 ||
+          newIt[index].price === undefined)
+      ) {
+        newIt[index].price = match.hpp;
+      }
+      if (match.unit && (!newIt[index].unit || newIt[index].unit === "pcs")) {
+        newIt[index].unit = match.unit;
+      }
+      if (match.category) {
+        newIt[index].category = match.category;
+      }
+      if (match.supplier && !newIt[index].supplier) {
+        newIt[index].supplier = match.supplier;
+      }
+    }
+    setClientItems(newIt);
+  };
+
   const handleClientCreatePO = async () => {
     setNewPoError(null);
     if (clientItems.length === 0 || clientItems.some((i) => !i.name)) {
@@ -930,23 +1031,32 @@ export default function App() {
       date: new Date(clientPoDate).toISOString(),
       status: "PO_RECEIVED",
       notes: "",
-      items: clientItems.map((item, i) => ({
-        id: `i-${Date.now()}-${i}`,
-        name: item.name,
-        quantity:
+      items: clientItems.map((item, i) => {
+        const itemQty =
           typeof item.quantity === "string"
             ? parseFloat(item.quantity) || 0
-            : item.quantity,
-        unit: item.unit,
-        supplier: item.supplier || "Belum Ditentukan",
-        category: item.category,
-        unitPrice: 0,
-        isOrdered: false,
-        isAtKitchen: false,
-        isDelivered: false,
-        isReceived: false,
-        isTransferred: false,
-      })),
+            : item.quantity;
+        const itemPrice =
+          typeof item.price === "string"
+            ? parseFloat(String(item.price).replace(/\./g, "").replace(/,/g, ".")) || 0
+            : item.price || 0;
+        return {
+          id: `i-${Date.now()}-${i}`,
+          name: item.name,
+          quantity: itemQty,
+          unit: item.unit,
+          supplier: item.supplier || "Belum Ditentukan",
+          category: item.category,
+          unitPrice: itemPrice,
+          hpp: itemPrice,
+          supplierCost: itemPrice,
+          isOrdered: false,
+          isAtKitchen: false,
+          isDelivered: false,
+          isReceived: false,
+          isTransferred: false,
+        };
+      }),
     };
 
     try {
@@ -960,6 +1070,7 @@ export default function App() {
           name: "",
           quantity: 1,
           unit: "pcs",
+          price: "",
           category: "Bahan Baku",
           supplier: "",
         },
@@ -1303,7 +1414,7 @@ export default function App() {
     invoicedOrders.forEach((order) => {
       let orderTotalProfit = 0;
       const poNumber = order.poNumber || order.id;
-      const clientName = order.clientName.replace(/,/g, ""); // Remove commas to avoid CSV issues
+      const clientName = (order.clientName || "").replace(/,/g, ""); // Remove commas to avoid CSV issues
       const date = new Date(order.invoiceDate || order.date).toLocaleDateString(
         "id-ID",
       );
@@ -1364,7 +1475,7 @@ export default function App() {
     columnOrders.forEach((order) => {
       let orderTotalProfit = 0;
       const poNumber = order.poNumber || order.id;
-      const clientName = order.clientName.replace(/,/g, ""); // Remove commas to avoid CSV issues
+      const clientName = (order.clientName || "").replace(/,/g, ""); // Remove commas to avoid CSV issues
       const date = new Date(order.invoiceDate || order.date).toLocaleDateString(
         "id-ID",
       );
@@ -1423,7 +1534,7 @@ export default function App() {
     columnOrders.forEach((order) => {
       let orderTotal = 0;
       const poNumber = order.poNumber || order.id;
-      const clientName = order.clientName.replace(/,/g, "");
+      const clientName = (order.clientName || "").replace(/,/g, "");
       const date = new Date(order.invoiceDate || order.date).toLocaleDateString(
         "id-ID",
       );
@@ -2484,17 +2595,16 @@ export default function App() {
   const filteredOrders = orders
     .filter(
       (o) =>
-        (o.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ((o.clientName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
           o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (o.poNumber &&
-            o.poNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
-          o.items.some((item) =>
-            item.name.toLowerCase().includes(searchQuery.toLowerCase()),
+          ((o.poNumber || "").toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (o.items || []).some((item) =>
+            (item.name || "").toLowerCase().includes(searchQuery.toLowerCase()),
           )) &&
         !(user.role === "driver" && o.deliveredBy === "Dikirim Supplier") &&
         !(
           (user.role === "supplier" || user.role === "kitchen") &&
-          !o.items.some((item) => isSupplierMatch(item.supplier, user.name))
+          !(o.items || []).some((item) => isSupplierMatch(item.supplier, user.name))
         ),
     )
     .sort((a, b) => {
@@ -2571,17 +2681,32 @@ export default function App() {
                     (item) =>
                       user.role !== "supplier" || isSupplierMatch(item.supplier, user.name),
                   )
-                  .map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="text-xs text-slate-600 flex justify-between border-b border-slate-100 pb-1"
-                    >
-                      <span className="truncate pr-2">{item.name}</span>
-                      <span className="shrink-0 font-medium">
-                        {item.quantity} {item.unit}
-                      </span>
-                    </div>
-                  ))}
+                  .map((item, idx) => {
+                    const qty =
+                      typeof item.quantity === "string"
+                        ? parseFloat(item.quantity) || 0
+                        : item.quantity || 0;
+                    const price = item.hpp || item.unitPrice || item.supplierCost || 0;
+                    const subtotal = qty * price;
+                    return (
+                      <div
+                        key={idx}
+                        className="text-xs text-slate-600 flex justify-between border-b border-slate-100 pb-1"
+                      >
+                        <span className="truncate pr-2">{item.name}</span>
+                        <div className="shrink-0 text-right">
+                          <span className="font-medium">
+                            {item.quantity} {item.unit}
+                          </span>
+                          {user.role === "client" && price > 0 && (
+                            <span className="text-slate-500 ml-1.5 font-normal">
+                              (Rp {subtotal.toLocaleString("id-ID")})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             )}
 
@@ -2637,6 +2762,24 @@ export default function App() {
                         ? parseFloat(item.quantity)
                         : item.quantity;
                     const price = item.supplierCost || item.unitPrice || 0;
+                    return sum + qty * price;
+                  }, 0)
+                  .toLocaleString("id-ID")}
+              </span>
+            </div>
+          )}
+          {user.role === "client" && (
+            <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-800">
+              <span className="text-slate-600">Total Nilai PO</span>
+              <span className="text-indigo-600 font-bold">
+                Rp{" "}
+                {order.items
+                  .reduce((sum, item) => {
+                    const qty =
+                      typeof item.quantity === "string"
+                        ? parseFloat(item.quantity) || 0
+                        : item.quantity || 0;
+                    const price = item.hpp || item.unitPrice || item.supplierCost || 0;
                     return sum + qty * price;
                   }, 0)
                   .toLocaleString("id-ID")}
@@ -2779,17 +2922,19 @@ export default function App() {
 
     completedOrInvoicedOrders.forEach((order) => {
       // Find matching key (case-insensitive include check)
-      if (order.clientName.toLowerCase().includes("ngasem")) {
+      const cName = (order.clientName || "").toLowerCase();
+      if (cName.includes("ngasem")) {
         ordersByClient["SPPG Ngasem"].push(order);
-      } else if (order.clientName.toLowerCase().includes("tugurejo")) {
+      } else if (cName.includes("tugurejo")) {
         ordersByClient["SPPG Tugurejo"].push(order);
-      } else if (order.clientName.toLowerCase().includes("pagu")) {
+      } else if (cName.includes("pagu")) {
         ordersByClient["Pagu"].push(order);
       } else {
-        if (!otherClients[order.clientName]) {
-          otherClients[order.clientName] = [];
+        const fallbackName = order.clientName || "Unknown Client";
+        if (!otherClients[fallbackName]) {
+          otherClients[fallbackName] = [];
         }
-        otherClients[order.clientName].push(order);
+        otherClients[fallbackName].push(order);
       }
     });
 
@@ -3834,6 +3979,7 @@ export default function App() {
                                 name: "",
                                 quantity: 1,
                                 unit: "pcs",
+                                price: "",
                                 category: "Bahan Baku",
                                 supplier: "",
                               },
@@ -3844,7 +3990,7 @@ export default function App() {
                         </Button>
                       </div>
                       <div className="border rounded-md overflow-x-auto">
-                        <Table className="min-w-[800px]">
+                        <Table className="min-w-[900px]">
                           <TableHeader className="bg-slate-50">
                             <TableRow>
                               <TableHead>
@@ -3857,13 +4003,19 @@ export default function App() {
                               <TableHead className="w-[100px]">
                                 Satuan
                               </TableHead>
+                              <TableHead className="w-[140px] text-right">
+                                Harga (HPP)
+                              </TableHead>
+                              <TableHead className="w-[140px] text-right">
+                                Total
+                              </TableHead>
                               <TableHead className="w-[150px]">
                                 Kategori
                               </TableHead>
-                              <TableHead className="w-[150px]">
+                              <TableHead className="w-[160px]">
                                 Supplier
                               </TableHead>
-                              <TableHead className="w-[60px] text-center">
+                              <TableHead className="w-[50px] text-center">
                                 Aksi
                               </TableHead>
                             </TableRow>
@@ -3873,25 +4025,31 @@ export default function App() {
                               <TableRow key={index}>
                                 <TableCell className="p-2">
                                   <Input
+                                    list="client-product-suggestions"
                                     placeholder="Nama barang..."
                                     value={item.name}
-                                    onChange={(e) => {
-                                      const newIt = [...clientItems];
-                                      newIt[index].name = e.target.value;
-                                      setClientItems(newIt);
-                                    }}
+                                    onChange={(e) =>
+                                      handleClientItemNameChange(
+                                        index,
+                                        e.target.value,
+                                      )
+                                    }
                                   />
                                 </TableCell>
                                 <TableCell className="p-2">
                                   <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0.1"
+                                    type="text"
                                     value={item.quantity}
                                     onChange={(e) => {
-                                      const newIt = [...clientItems];
-                                      newIt[index].quantity = e.target.value;
-                                      setClientItems(newIt);
+                                      const val = e.target.value.replace(
+                                        /,/g,
+                                        ".",
+                                      );
+                                      if (/^\d*\.?\d*$/.test(val)) {
+                                        const newIt = [...clientItems];
+                                        newIt[index].quantity = val;
+                                        setClientItems(newIt);
+                                      }
                                     }}
                                   />
                                 </TableCell>
@@ -3905,6 +4063,55 @@ export default function App() {
                                       setClientItems(newIt);
                                     }}
                                   />
+                                </TableCell>
+                                <TableCell className="p-2">
+                                  <Input
+                                    type="text"
+                                    placeholder="0"
+                                    className="text-right"
+                                    value={
+                                      item.price !== undefined &&
+                                      item.price !== ""
+                                        ? new Intl.NumberFormat(
+                                            "id-ID",
+                                          ).format(
+                                            Number(
+                                              String(item.price)
+                                                .replace(/\./g, "")
+                                                .replace(/,/g, "."),
+                                            ) || 0,
+                                          )
+                                        : ""
+                                    }
+                                    onChange={(e) => {
+                                      const val = e.target.value
+                                        .replace(/\./g, "")
+                                        .replace(/\D/g, "");
+                                      const newIt = [...clientItems];
+                                      newIt[index].price =
+                                        val === "" ? "" : parseInt(val, 10);
+                                      setClientItems(newIt);
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell className="p-2 text-right font-medium text-slate-800 whitespace-nowrap">
+                                  Rp{" "}
+                                  {(() => {
+                                    const qty =
+                                      typeof item.quantity === "string"
+                                        ? parseFloat(item.quantity) || 0
+                                        : item.quantity || 0;
+                                    const prc =
+                                      typeof item.price === "string"
+                                        ? parseFloat(
+                                            String(item.price).replace(
+                                              /\./g,
+                                              "",
+                                            ),
+                                          ) || 0
+                                        : item.price || 0;
+                                    return (qty * prc).toLocaleString("id-ID");
+                                  })()}
                                 </TableCell>
                                 <TableCell className="p-2">
                                   <select
@@ -3987,6 +4194,54 @@ export default function App() {
                             ))}
                           </TableBody>
                         </Table>
+                      </div>
+
+                      <datalist id="client-product-suggestions">
+                        {allProductSuggestions.map((p, idx) => (
+                          <option key={idx} value={p.name}>
+                            {p.hpp ? `Rp ${p.hpp.toLocaleString("id-ID")}` : ""}
+                          </option>
+                        ))}
+                      </datalist>
+
+                      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200/80 rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm mt-3">
+                        <div>
+                          <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 block">
+                            Total Nilai PO
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {clientItems.length} jenis barang (
+                            {clientItems.reduce(
+                              (acc, i) =>
+                                acc +
+                                (typeof i.quantity === "string"
+                                  ? parseFloat(i.quantity) || 0
+                                  : i.quantity || 0),
+                              0,
+                            )}{" "}
+                            unit)
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xl sm:text-2xl font-bold text-indigo-900">
+                            Rp{" "}
+                            {clientItems
+                              .reduce((sum, item) => {
+                                const qty =
+                                  typeof item.quantity === "string"
+                                    ? parseFloat(item.quantity) || 0
+                                    : item.quantity || 0;
+                                const prc =
+                                  typeof item.price === "string"
+                                    ? parseFloat(
+                                        String(item.price).replace(/\./g, ""),
+                                      ) || 0
+                                    : item.price || 0;
+                                return sum + qty * prc;
+                              }, 0)
+                              .toLocaleString("id-ID")}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -5485,9 +5740,11 @@ export default function App() {
                   <p className="text-sm text-slate-500 mb-1">
                     {user?.role === "supplier"
                       ? "Total Jumlah Transfer"
-                      : "Catatan"}
+                      : user?.role === "client"
+                        ? "Total Nilai PO"
+                        : "Catatan"}
                   </p>
-                  <p className="font-medium text-slate-700">
+                  <p className="font-semibold text-slate-800 text-lg">
                     {user?.role === "supplier"
                       ? (() => {
                           const items = selectedOrder.items.filter(
@@ -5504,7 +5761,26 @@ export default function App() {
                           );
                           return `Rp ${totalTransfer.toLocaleString("id-ID")}`;
                         })()
-                      : selectedOrder.notes || "-"}
+                      : user?.role === "client"
+                        ? (() => {
+                            const total = selectedOrder.items.reduce(
+                              (sum, item) => {
+                                const qty =
+                                  typeof item.quantity === "string"
+                                    ? parseFloat(item.quantity) || 0
+                                    : item.quantity || 0;
+                                const price =
+                                  item.hpp ||
+                                  item.unitPrice ||
+                                  item.supplierCost ||
+                                  0;
+                                return sum + qty * price;
+                              },
+                              0,
+                            );
+                            return `Rp ${total.toLocaleString("id-ID")}`;
+                          })()
+                        : selectedOrder.notes || "-"}
                   </p>
                 </div>
               </div>
@@ -5660,6 +5936,29 @@ export default function App() {
                           </Button>
                         </div>
 
+                        {user.role === "client" && (
+                          <div className="bg-slate-50/80 p-3 rounded-lg border border-slate-200 flex justify-between items-center mt-2 shadow-sm">
+                            <div>
+                              <span className="text-xs text-slate-500 block">Harga Satuan</span>
+                              <span className="text-sm font-semibold text-slate-800">
+                                Rp {(item.hpp || item.unitPrice || item.supplierCost || 0).toLocaleString("id-ID")}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs text-slate-500 block">Total</span>
+                              <span className="text-sm font-bold text-indigo-700">
+                                Rp{" "}
+                                {(
+                                  (typeof item.quantity === "string"
+                                    ? parseFloat(item.quantity) || 0
+                                    : item.quantity || 0) *
+                                  (item.hpp || item.unitPrice || item.supplierCost || 0)
+                                ).toLocaleString("id-ID")}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
                         {(user.role === "admin" ||
                           user.role === "supplier" ||
                           user.role === "kitchen") && (
@@ -5814,6 +6113,16 @@ export default function App() {
                         <TableHead className="text-center w-[120px]">
                           Diterima Klien?
                         </TableHead>
+                        {user.role === "client" && (
+                          <>
+                            <TableHead className="text-right w-[140px]">
+                              Harga Satuan
+                            </TableHead>
+                            <TableHead className="text-right w-[140px]">
+                              Total
+                            </TableHead>
+                          </>
+                        )}
                         {(user.role === "admin" ||
                           user.role === "supplier" ||
                           user.role === "kitchen") && (
@@ -6004,6 +6313,31 @@ export default function App() {
                                 {item.isReceived ? "Ya" : "Belum"}
                               </Button>
                             </TableCell>
+                            {user.role === "client" && (
+                              <>
+                                <TableCell className="text-right font-medium text-slate-700">
+                                  Rp{" "}
+                                  {(
+                                    item.hpp ||
+                                    item.unitPrice ||
+                                    item.supplierCost ||
+                                    0
+                                  ).toLocaleString("id-ID")}
+                                </TableCell>
+                                <TableCell className="text-right font-bold text-slate-900">
+                                  Rp{" "}
+                                  {(
+                                    (typeof item.quantity === "string"
+                                      ? parseFloat(item.quantity) || 0
+                                      : item.quantity || 0) *
+                                    (item.hpp ||
+                                      item.unitPrice ||
+                                      item.supplierCost ||
+                                      0)
+                                  ).toLocaleString("id-ID")}
+                                </TableCell>
+                              </>
+                            )}
                             {(user.role === "admin" ||
                               user.role === "supplier" ||
                               user.role === "kitchen") && (
@@ -6115,6 +6449,36 @@ export default function App() {
                     </TableBody>
                   </Table>
                 </div>
+
+                {user.role === "client" && (
+                  <div className="mt-4 p-4 bg-indigo-50/80 border border-indigo-200 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div>
+                      <span className="font-bold text-slate-800 block">
+                        Total Nilai PO
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        Total keseluruhan nilai pembelian pada PO ini
+                      </span>
+                    </div>
+                    <span className="text-xl sm:text-2xl font-bold text-indigo-900">
+                      Rp{" "}
+                      {selectedOrder.items
+                        .reduce((sum, item) => {
+                          const qty =
+                            typeof item.quantity === "string"
+                              ? parseFloat(item.quantity) || 0
+                              : item.quantity || 0;
+                          const price =
+                            item.hpp ||
+                            item.unitPrice ||
+                            item.supplierCost ||
+                            0;
+                          return sum + qty * price;
+                        }, 0)
+                        .toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                )}
               </div>
             </>
           )}
