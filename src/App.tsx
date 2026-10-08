@@ -271,6 +271,57 @@ const SupplierCostInput = ({
   );
 };
 
+const UnitPriceInput = ({
+  item,
+  orderId,
+  handleUpdateUnitPrice,
+}: {
+  item: any;
+  orderId: string;
+  handleUpdateUnitPrice: (
+    orderId: string,
+    itemId: string,
+    unitPrice: number,
+  ) => void;
+}) => {
+  const [value, setValue] = useState(
+    item.unitPrice ? item.unitPrice.toLocaleString("id-ID") : "",
+  );
+
+  useEffect(() => {
+    setValue(item.unitPrice ? item.unitPrice.toLocaleString("id-ID") : "");
+  }, [item.unitPrice]);
+
+  return (
+    <Input
+      type="text"
+      className="w-28 text-right ml-auto h-8 bg-white border-slate-300 focus:border-indigo-500 font-medium"
+      placeholder="0"
+      value={value}
+      onChange={(e) => {
+        const rawValue = e.target.value.replace(/\D/g, "");
+        if (rawValue) {
+          setValue(parseInt(rawValue, 10).toLocaleString("id-ID"));
+        } else {
+          setValue("");
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.currentTarget.blur();
+        }
+      }}
+      onBlur={() => {
+        const rawValue = value.replace(/\D/g, "");
+        const val = rawValue ? parseInt(rawValue, 10) : 0;
+        if (val !== (item.unitPrice || 0)) {
+          handleUpdateUnitPrice(orderId, item.id, val);
+        }
+      }}
+    />
+  );
+};
+
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -1187,6 +1238,36 @@ export default function App() {
     } catch (error) {
       console.error("Error updating Supplier Cost:", error);
       setGlobalError("Gagal menyimpan harga perolehan.");
+    }
+  };
+
+  const handleUpdateUnitPrice = async (
+    orderId: string,
+    itemId: string,
+    unitPriceValue: number,
+  ) => {
+    try {
+      const order = orders.find((o) => o.id === orderId);
+      if (!order) return;
+
+      const updatedItems = order.items.map((item) =>
+        item.id === itemId ? { ...item, unitPrice: unitPriceValue } : item,
+      );
+
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId ? { ...o, items: updatedItems } : o,
+        ),
+      );
+
+      await updateDoc(doc(db, "purchaseOrders", orderId), {
+        items: updatedItems,
+      });
+      setGlobalSuccess("Harga Jual berhasil disimpan.");
+      setTimeout(() => setGlobalSuccess(null), 3000);
+    } catch (error) {
+      console.error("Error updating unitPrice:", error);
+      setGlobalError("Gagal menyimpan harga jual.");
     }
   };
 
@@ -3331,10 +3412,10 @@ export default function App() {
                                 <TableHead className="text-center">
                                   Qty
                                 </TableHead>
-                                <TableHead className="text-right">
+                                <TableHead className="text-right w-[140px]">
                                   Harga Jual
                                 </TableHead>
-                                <TableHead className="text-right">
+                                <TableHead className="text-right w-[140px]">
                                   HPP
                                 </TableHead>
                                 <TableHead className="text-right">
@@ -3370,7 +3451,13 @@ export default function App() {
                                       {qty} {item.unit}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      Rp {price.toLocaleString("id-ID")}
+                                      <UnitPriceInput
+                                        item={item}
+                                        orderId={order.id}
+                                        handleUpdateUnitPrice={
+                                          handleUpdateUnitPrice
+                                        }
+                                      />
                                     </TableCell>
                                     <TableCell className="text-right">
                                       <HppInput
