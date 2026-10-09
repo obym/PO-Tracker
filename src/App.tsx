@@ -476,6 +476,7 @@ export default function App() {
 
   // Invoice State
   const [invoiceOrder, setInvoiceOrder] = useState<PurchaseOrder | null>(null);
+  const [printDocType, setPrintDocType] = useState<"PO" | "NOTA">("PO");
   const [selectedInvoiceItems, setSelectedInvoiceItems] = useState<string[]>(
     [],
   );
@@ -543,7 +544,7 @@ export default function App() {
             profile = userSnap.data() as UserProfile;
             if (
               profile.email === "obym.ppngroup@gmail.com" &&
-              profile.role !== "admin"
+              !profile.role
             ) {
               profile.role = "admin";
               await updateDoc(userRef, { role: "admin" });
@@ -1328,7 +1329,15 @@ export default function App() {
     }
   };
 
+  const handleOpenPO = (order: PurchaseOrder) => {
+    setPrintDocType("PO");
+    setInvoiceOrder(order);
+    setSelectedInvoiceItems(order.items.map((item) => item.id));
+    setIsDetailOpen(false); // Close detail modal
+  };
+
   const handleOpenInvoice = async (order: PurchaseOrder) => {
+    setPrintDocType("NOTA");
     setInvoiceOrder(order);
     setSelectedInvoiceItems(order.items.map((item) => item.id));
     setIsDetailOpen(false); // Close detail modal
@@ -1355,6 +1364,7 @@ export default function App() {
     }
 
     if (
+      printDocType !== "PO" &&
       orderToUpdate &&
       (currentStatus === "COMPLETED" || currentStatus === "AT_KITCHEN") &&
       (user?.role === "admin" ||
@@ -2052,26 +2062,43 @@ export default function App() {
     return (
       <div className="h-screen bg-slate-100 flex flex-col overflow-hidden">
         {/* Print controls (hidden in print) */}
-        <div className="print:hidden p-4 border-b border-slate-200 flex justify-between items-center bg-white shadow-sm z-20 shrink-0">
-          <Button variant="outline" onClick={() => setInvoiceOrder(null)}>
-            <ChevronLeft className="w-4 h-4 mr-2" /> Kembali
+        <div className="print:hidden p-4 border-b border-slate-200 flex flex-wrap gap-2 justify-between items-center bg-white shadow-sm z-20 shrink-0">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setInvoiceOrder(null)}>
+              <ChevronLeft className="w-4 h-4 mr-2" /> Kembali
+            </Button>
+            <div className="inline-flex rounded-md shadow-xs border border-slate-200 p-0.5 bg-slate-100">
+              <button
+                type="button"
+                className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+                  printDocType === "PO"
+                    ? "bg-white text-indigo-700 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+                onClick={() => setPrintDocType("PO")}
+              >
+                Format PO
+              </button>
+              <button
+                type="button"
+                className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+                  printDocType === "NOTA"
+                    ? "bg-white text-indigo-700 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+                onClick={() => setPrintDocType("NOTA")}
+              >
+                Format Nota
+              </button>
+            </div>
+          </div>
+          <Button
+            onClick={handlePrintInvoice}
+            className="bg-indigo-600 hover:bg-indigo-700"
+          >
+            <Printer className="w-4 h-4 mr-2" />{" "}
+            {printDocType === "PO" ? "Cetak PO" : "Cetak Nota"}
           </Button>
-          {user?.role === "admin" && (
-            <Button
-              onClick={handlePrintInvoice}
-              className="bg-indigo-600 hover:bg-indigo-700"
-            >
-              <Printer className="w-4 h-4 mr-2" /> Cetak Nota
-            </Button>
-          )}
-          {user?.role === "client" && (
-            <Button
-              onClick={handlePrintInvoice}
-              className="bg-indigo-600 hover:bg-indigo-700"
-            >
-              <Printer className="w-4 h-4 mr-2" /> Cetak Nota
-            </Button>
-          )}
         </div>
 
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden print:block print:overflow-visible">
@@ -2149,7 +2176,7 @@ export default function App() {
             <div id="print-area" className="w-full max-w-4xl mx-auto h-fit">
               {(() => {
                 let invoicesToRender: any[] = [];
-                if (user?.role === "admin" || user?.role === "finance") {
+                if (user?.role === "admin" || user?.role === "finance" || user?.role === "client") {
                   invoicesToRender = [
                     {
                       title: "KOPERASI GARUDA MERAH PUTIH",
@@ -2158,7 +2185,7 @@ export default function App() {
                       phone: "Phone : 0812-5278-8733",
                       items: printableItems,
                       getPrice: (item: any) =>
-                        item.unitPrice || item.supplierCost || 0,
+                        item.hpp || item.unitPrice || item.supplierCost || 0,
                       bankAccount:
                         "Rekening Koperasi Garuda Merah Putih\nBank Mandiri : 171-00-1986218-7",
                       signerName: "Hariaji",
@@ -2253,8 +2280,8 @@ export default function App() {
                       <div className="min-w-[600px]">
                         {/* Header */}
                         <div className="text-center mb-6">
-                          <h1 className="text-2xl font-bold border-2 border-black inline-block px-16 py-1 mb-2 tracking-widest">
-                            NOTA
+                          <h1 className="text-2xl font-bold border-2 border-black inline-block px-12 sm:px-16 py-1 mb-2 tracking-widest uppercase">
+                            {printDocType === "PO" ? "PURCHASE ORDER" : "NOTA"}
                           </h1>
                           <h2 className="text-xl font-bold uppercase">
                             {invoiceData.title}
@@ -2272,17 +2299,22 @@ export default function App() {
                             <table className="w-full">
                               <tbody>
                                 <tr>
-                                  <td className="w-24">Nomor</td>
+                                  <td className="w-28 font-medium">
+                                    {printDocType === "PO" ? "Nomor PO" : "Nomor Nota"}
+                                  </td>
                                   <td className="w-4">:</td>
-                                  <td>{invoiceData.invoiceNumber}</td>
+                                  <td className="font-semibold">{invoiceData.invoiceNumber}</td>
                                 </tr>
                                 <tr>
-                                  <td>Tanggal Nota</td>
-                                  <td>:</td>
+                                  <td className="font-medium">
+                                    {printDocType === "PO" ? "Tanggal PO" : "Tanggal Nota"}
+                                  </td>
+                                  <td className="w-4">:</td>
                                   <td>
                                     {new Date(
-                                      invoiceOrder.invoiceDate ||
-                                        invoiceOrder.date,
+                                      printDocType === "PO"
+                                        ? invoiceOrder.date
+                                        : (invoiceOrder.invoiceDate || invoiceOrder.date),
                                     ).toLocaleDateString("id-ID", {
                                       day: "numeric",
                                       month: "long",
@@ -2819,16 +2851,32 @@ export default function App() {
                 </span>
               </div>
             </div>
-            {["INVOICED", "DELIVERING", "PO_RECEIVED"].includes(status) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={(e) => toggleCardExpand(e, order.id)}
-              >
-                {expandedCards[order.id] ? "Tutup" : "Detail"}
-              </Button>
-            )}
+            <div className="flex items-center gap-1.5">
+              {user.role === "client" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 flex items-center gap-1 shadow-2xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenPO(order);
+                  }}
+                  title="Cetak Purchase Order"
+                >
+                  <Printer className="w-3 h-3" /> Cetak PO
+                </Button>
+              )}
+              {["INVOICED", "DELIVERING", "PO_RECEIVED"].includes(status) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={(e) => toggleCardExpand(e, order.id)}
+                >
+                  {expandedCards[order.id] ? "Tutup" : "Detail"}
+                </Button>
+              )}
+            </div>
           </div>
           {status === "INVOICED" && user.role === "supplier" && (
             <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-800">
@@ -3612,6 +3660,24 @@ export default function App() {
               >
                 {user.role}
               </Badge>
+              {(user.email === "obym.ppngroup@gmail.com" || user.role === "admin") && (
+                <div className="flex items-center gap-1">
+                  <select
+                    className="text-[11px] h-6 px-1.5 py-0 bg-slate-50 border border-slate-300 rounded text-slate-700 font-medium cursor-pointer hover:bg-slate-100"
+                    value={user.role}
+                    onChange={(e) => {
+                      const newRole = e.target.value as any;
+                      setUser({ ...user, role: newRole });
+                    }}
+                    title="Simulasi / ganti role aktif"
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="client">Client</option>
+                    <option value="supplier">Supplier</option>
+                    <option value="driver">Driver</option>
+                  </select>
+                </div>
+              )}
             </div>
             {/* Mobile logout button */}
             <Button
@@ -5692,6 +5758,16 @@ export default function App() {
                           <Receipt className="w-4 h-4 mr-2" /> Cetak Nota
                         </Button>
                       )}
+                    {user.role === "client" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 font-medium"
+                        onClick={() => handleOpenPO(selectedOrder)}
+                      >
+                        <Printer className="w-4 h-4 mr-2" /> Cetak PO
+                      </Button>
+                    )}
                     {(selectedOrder.status === "AT_KITCHEN" ||
                       selectedOrder.status === "COMPLETED" ||
                       selectedOrder.status === "INVOICED") &&
@@ -5699,27 +5775,8 @@ export default function App() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
-                          onClick={async () => {
-                            handleOpenInvoice(selectedOrder);
-                            if (selectedOrder.status === "COMPLETED" || selectedOrder.status === "AT_KITCHEN") {
-                              try {
-                                const now = new Date().toISOString();
-                                await updateDoc(
-                                  doc(db, "purchaseOrders", selectedOrder.id),
-                                  {
-                                    status: "INVOICED",
-                                    invoiceDate: now,
-                                  },
-                                );
-                              } catch (error) {
-                                console.error(
-                                  "Error updating status to INVOICED:",
-                                  error,
-                                );
-                              }
-                            }
-                          }}
+                          className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 font-medium"
+                          onClick={() => handleOpenInvoice(selectedOrder)}
                         >
                           <Receipt className="w-4 h-4 mr-2" /> Cetak Nota
                         </Button>
