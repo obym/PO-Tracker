@@ -1583,7 +1583,7 @@ export default function App() {
 
     // Header
     csvContent +=
-      "Nomor PO,Klien,Tanggal,Barang,Supplier,Qty,Satuan,Harga Jual,HPP,Keuntungan\n";
+      "Nomor PO,Klien,Tanggal,Barang,Supplier,Qty,Satuan,Harga dari Klien,Harga Jual,HPP,Keuntungan\n";
 
     let grandTotalProfit = 0;
 
@@ -1605,13 +1605,17 @@ export default function App() {
             ? parseFloat(item.quantity)
             : item.quantity;
         const unit = item.unit.replace(/,/g, "");
+        const clientPrice =
+          item.clientHpp !== undefined && item.clientHpp !== null
+            ? item.clientHpp
+            : (item.hpp || item.unitPrice || 0);
         const price = item.unitPrice || 0;
         const hpp = item.hpp || 0;
         const profit = (price - hpp) * qty;
 
         orderTotalProfit += profit;
 
-        csvContent += `"${poNumber}","${clientName}","${date}","${itemName}","${supplierName}",${qty},"${unit}",${price},${hpp},${profit}\n`;
+        csvContent += `"${poNumber}","${clientName}","${date}","${itemName}","${supplierName}",${qty},"${unit}",${clientPrice},${price},${hpp},${profit}\n`;
       });
 
       grandTotalProfit += orderTotalProfit;
@@ -2847,7 +2851,7 @@ export default function App() {
         <CardContent className="p-4 pt-0">
           <p className="font-medium text-slate-700 mb-2">{order.clientName}</p>
 
-          {["INVOICED", "DELIVERING", "PO_RECEIVED"].includes(status) &&
+          {["INVOICED", "DELIVERING", "PO_RECEIVED", "COMPLETED"].includes(status) &&
             expandedCards[order.id] && (
               <div className="mb-3 space-y-1">
                 {order.items
@@ -2862,6 +2866,10 @@ export default function App() {
                         : item.quantity || 0;
                     const price = item.hpp || item.unitPrice || item.supplierCost || 0;
                     const subtotal = qty * price;
+                    const clientPrice =
+                      item.clientHpp !== undefined && item.clientHpp !== null
+                        ? item.clientHpp
+                        : (item.hpp || item.unitPrice || 0);
                     return (
                       <div
                         key={idx}
@@ -2875,6 +2883,11 @@ export default function App() {
                           {user.role === "client" && price > 0 && (
                             <span className="text-slate-500 ml-1.5 font-normal">
                               (Rp {subtotal.toLocaleString("id-ID")})
+                            </span>
+                          )}
+                          {user.role === "admin" && (
+                            <span className="text-emerald-700 ml-1.5 font-normal">
+                              (Harga Klien: Rp {clientPrice.toLocaleString("id-ID")})
                             </span>
                           )}
                         </div>
@@ -2927,7 +2940,7 @@ export default function App() {
                   <Printer className="w-3 h-3" /> Cetak PO
                 </Button>
               )}
-              {["INVOICED", "DELIVERING", "PO_RECEIVED"].includes(status) && (
+              {["INVOICED", "DELIVERING", "PO_RECEIVED", "COMPLETED"].includes(status) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -2939,6 +2952,27 @@ export default function App() {
               )}
             </div>
           </div>
+          {user.role === "admin" && status === "COMPLETED" && (
+            <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-800">
+              <span className="text-slate-600">Total Harga dari Klien</span>
+              <span className="text-emerald-700 font-bold">
+                Rp{" "}
+                {order.items
+                  .reduce((sum, item) => {
+                    const qty =
+                      typeof item.quantity === "string"
+                        ? parseFloat(item.quantity) || 0
+                        : item.quantity || 0;
+                    const clientPrice =
+                      item.clientHpp !== undefined && item.clientHpp !== null
+                        ? item.clientHpp
+                        : (item.hpp || item.unitPrice || 0);
+                    return sum + qty * clientPrice;
+                  }, 0)
+                  .toLocaleString("id-ID")}
+              </span>
+            </div>
+          )}
           {status === "INVOICED" && user.role === "supplier" && (
             <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-800">
               <span>Total Keseluruhan</span>
@@ -3038,6 +3072,25 @@ export default function App() {
             <h3 className="font-semibold">{customTitle || config.label}</h3>
           </div>
           <div className="flex items-center gap-2">
+            {status === "COMPLETED" &&
+              user?.role === "admin" &&
+              columnOrders.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs bg-white text-emerald-600 hover:bg-emerald-50 border-emerald-200"
+                  onClick={() =>
+                    handleExportAdminClientToExcel(
+                      columnOrders,
+                      customTitle || "Selesai Diterima Klien",
+                    )
+                  }
+                  title="Download ke Excel (CSV)"
+                >
+                  <Download className="w-3 h-3 sm:mr-1" />
+                  <span className="hidden sm:inline">CSV</span>
+                </Button>
+              )}
             {status === "INVOICED" &&
               user?.role === "admin" &&
               columnOrders.length > 0 &&
@@ -6178,6 +6231,22 @@ export default function App() {
                           user.role === "supplier" ||
                           user.role === "kitchen") && (
                           <div className="bg-slate-50/80 p-3 rounded-lg border border-slate-200 space-y-3 mt-1 shadow-inner">
+                            {user.role === "admin" && (
+                              <div>
+                                <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-1.5">
+                                  Harga dari Klien
+                                </Label>
+                                <div className="text-sm font-semibold text-slate-800 bg-white p-2 rounded border border-slate-200">
+                                  Rp{" "}
+                                  {(
+                                    item.clientHpp !== undefined &&
+                                    item.clientHpp !== null
+                                      ? item.clientHpp
+                                      : (item.hpp || item.unitPrice || 0)
+                                  ).toLocaleString("id-ID")}
+                                </div>
+                              </div>
+                            )}
                             {user.role === "supplier" && (
                               <div>
                                 <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-1.5">
@@ -6345,6 +6414,11 @@ export default function App() {
                             {user.role === "supplier" && (
                               <TableHead className="text-right w-[140px]">
                                 Harga Perolehan
+                              </TableHead>
+                            )}
+                            {user.role === "admin" && (
+                              <TableHead className="text-right w-[140px]">
+                                Harga dari Klien
                               </TableHead>
                             )}
                             <TableHead className="text-right w-[120px]">
@@ -6564,6 +6638,17 @@ export default function App() {
                                       orderId={selectedOrder.id}
                                       handleUpdateHpp={handleUpdateHpp}
                                     />
+                                  </TableCell>
+                                )}
+                                {user.role === "admin" && (
+                                  <TableCell className="text-right font-medium text-slate-700">
+                                    Rp{" "}
+                                    {(
+                                      item.clientHpp !== undefined &&
+                                      item.clientHpp !== null
+                                        ? item.clientHpp
+                                        : (item.hpp || item.unitPrice || 0)
+                                    ).toLocaleString("id-ID")}
                                   </TableCell>
                                 )}
                                 <TableCell className="text-right">
