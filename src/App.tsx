@@ -93,6 +93,7 @@ interface OrderItem {
   unitPrice?: number;
   hpp?: number;
   supplierCost?: number;
+  clientHpp?: number;
   isOrdered: boolean;
   isAtKitchen: boolean;
   isDelivered: boolean;
@@ -1102,6 +1103,7 @@ export default function App() {
           unitPrice: itemPrice,
           hpp: itemPrice,
           supplierCost: itemPrice,
+          clientHpp: itemPrice,
           isOrdered: false,
           isAtKitchen: false,
           isDelivered: false,
@@ -1202,7 +1204,16 @@ export default function App() {
       if (!order) return;
 
       const updatedItems = order.items.map((item) =>
-        item.id === itemId ? { ...item, hpp: hppValue } : item,
+        item.id === itemId
+          ? {
+              ...item,
+              hpp: hppValue,
+              clientHpp:
+                item.clientHpp !== undefined
+                  ? item.clientHpp
+                  : item.hpp || item.unitPrice || 0,
+            }
+          : item,
       );
 
       await updateDoc(doc(db, "purchaseOrders", orderId), {
@@ -1252,7 +1263,16 @@ export default function App() {
       if (!order) return;
 
       const updatedItems = order.items.map((item) =>
-        item.id === itemId ? { ...item, unitPrice: unitPriceValue } : item,
+        item.id === itemId
+          ? {
+              ...item,
+              unitPrice: unitPriceValue,
+              clientHpp:
+                item.clientHpp !== undefined
+                  ? item.clientHpp
+                  : item.hpp || item.unitPrice || 0,
+            }
+          : item,
       );
 
       setOrders((prev) =>
@@ -1498,7 +1518,7 @@ export default function App() {
 
     // Header
     csvContent +=
-      "Nomor PO,Klien,Tanggal,Barang,Supplier,Qty,Satuan,Harga Jual,HPP,Keuntungan\n";
+      "Nomor PO,Klien,Tanggal,Barang,Supplier,Qty,Satuan,Harga dari Klien,Harga Jual,HPP,Keuntungan\n";
 
     let grandTotalProfit = 0;
 
@@ -1520,22 +1540,26 @@ export default function App() {
             ? parseFloat(item.quantity)
             : item.quantity;
         const unit = item.unit.replace(/,/g, "");
+        const clientPrice =
+          item.clientHpp !== undefined && item.clientHpp !== null
+            ? item.clientHpp
+            : (item.hpp || item.unitPrice || 0);
         const price = item.unitPrice || 0;
         const hpp = item.hpp || 0;
         const profit = (price - hpp) * qty;
 
         orderTotalProfit += profit;
 
-        csvContent += `"${poNumber}","${clientName}","${date}","${itemName}","${supplierName}",${qty},"${unit}",${price},${hpp},${profit}\n`;
+        csvContent += `"${poNumber}","${clientName}","${date}","${itemName}","${supplierName}",${qty},"${unit}",${clientPrice},${price},${hpp},${profit}\n`;
       });
 
       grandTotalProfit += orderTotalProfit;
       // Add a subtotal row for the PO
-      csvContent += `,,,,Total PO ${poNumber},,,,,${orderTotalProfit}\n`;
+      csvContent += `,,,,,Total PO ${poNumber},,,,,${orderTotalProfit}\n`;
     });
 
     // Add Grand Total
-    csvContent += `\n,,,,TOTAL KESELURUHAN,,,,,${grandTotalProfit}\n`;
+    csvContent += `\n,,,,,TOTAL KESELURUHAN,,,,,${grandTotalProfit}\n`;
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -2177,21 +2201,71 @@ export default function App() {
               {(() => {
                 let invoicesToRender: any[] = [];
                 if (user?.role === "admin" || user?.role === "finance" || user?.role === "client") {
+                  const clientUser =
+                    allUsers.find(
+                      (c) =>
+                        c.uid === invoiceOrder.clientId ||
+                        (c.name &&
+                          invoiceOrder.clientName &&
+                          c.name.trim().toLowerCase() ===
+                            invoiceOrder.clientName.trim().toLowerCase()),
+                    ) ||
+                    clients.find(
+                      (c) =>
+                        c.uid === invoiceOrder.clientId ||
+                        (c.name &&
+                          invoiceOrder.clientName &&
+                          c.name.trim().toLowerCase() ===
+                            invoiceOrder.clientName.trim().toLowerCase()),
+                    );
+
+                  const isPo = printDocType === "PO";
+
                   invoicesToRender = [
                     {
-                      title: "KOPERASI GARUDA MERAH PUTIH",
-                      address: "Dsn. Padangan RT 02 RW 03 Ds. Pagu",
-                      district: "Kec. Pagu Kab. Kediri",
-                      phone: "Phone : 0812-5278-8733",
+                      title: isPo
+                        ? (clientUser?.name || invoiceOrder.clientName).toUpperCase()
+                        : "KOPERASI GARUDA MERAH PUTIH",
+                      address: isPo
+                        ? clientUser?.address || ""
+                        : "Dsn. Padangan RT 02 RW 03 Ds. Pagu",
+                      district: isPo
+                        ? clientUser?.district || ""
+                        : "Kec. Pagu Kab. Kediri",
+                      phone: isPo
+                        ? clientUser?.phone
+                          ? clientUser.phone.startsWith("Phone")
+                            ? clientUser.phone
+                            : `Phone : ${clientUser.phone}`
+                          : ""
+                        : "Phone : 0812-5278-8733",
+                      recipientTitle: isPo
+                        ? "KOPERASI GARUDA MERAH PUTIH"
+                        : invoiceOrder.clientName,
+                      recipientAddress: isPo
+                        ? "Dsn. Padangan RT 02 RW 03 Ds. Pagu"
+                        : clientUser?.address || "",
+                      recipientDistrict: isPo
+                        ? "Kec. Pagu Kab. Kediri"
+                        : clientUser?.district || "",
+                      recipientPhone: isPo
+                        ? "Phone : 0812-5278-8733"
+                        : clientUser?.phone
+                          ? clientUser.phone.startsWith("Phone")
+                            ? clientUser.phone
+                            : `Phone : ${clientUser.phone}`
+                          : "",
                       items: printableItems,
                       getPrice: (item: any) =>
                         item.hpp || item.unitPrice || item.supplierCost || 0,
                       bankAccount:
                         "Rekening Koperasi Garuda Merah Putih\nBank Mandiri : 171-00-1986218-7",
-                      signerName: "Hariaji",
-                      signerTitle: "Ketua Koperasi",
-                      useSignatureImg: true,
-                      key: "master-invoice",
+                      signerName: isPo
+                        ? clientUser?.name || invoiceOrder.clientName
+                        : "Hariaji",
+                      signerTitle: isPo ? "" : "Ketua Koperasi",
+                      useSignatureImg: !isPo,
+                      key: isPo ? "po-document" : "master-invoice",
                       invoiceNumber: invoiceOrder.poNumber || invoiceOrder.id,
                     },
                   ];
@@ -2343,30 +2417,17 @@ export default function App() {
                           <div>
                             <p className="font-bold">Kepada :</p>
                             <p className="font-bold">
-                              {invoiceOrder.clientName}
+                              {invoiceData.recipientTitle || invoiceOrder.clientName}
                             </p>
-                            {allUsers.find(
-                              (c) => c.uid === invoiceOrder.clientId,
-                            )?.address && (
-                              <p>
-                                {
-                                  allUsers.find(
-                                    (c) => c.uid === invoiceOrder.clientId,
-                                  )?.address
-                                }
-                              </p>
-                            )}
-                            {allUsers.find(
-                              (c) => c.uid === invoiceOrder.clientId,
-                            )?.district && (
-                              <p>
-                                {
-                                  allUsers.find(
-                                    (c) => c.uid === invoiceOrder.clientId,
-                                  )?.district
-                                }
-                              </p>
-                            )}
+                            {invoiceData.recipientAddress ? (
+                              <p>{invoiceData.recipientAddress}</p>
+                            ) : null}
+                            {invoiceData.recipientDistrict ? (
+                              <p>{invoiceData.recipientDistrict}</p>
+                            ) : null}
+                            {invoiceData.recipientPhone ? (
+                              <p>{invoiceData.recipientPhone}</p>
+                            ) : null}
                           </div>
                         </div>
 
@@ -3461,6 +3522,9 @@ export default function App() {
                                   Qty
                                 </TableHead>
                                 <TableHead className="text-right w-[140px]">
+                                  Harga dari Klien
+                                </TableHead>
+                                <TableHead className="text-right w-[140px]">
                                   Harga Jual
                                 </TableHead>
                                 <TableHead className="text-right w-[140px]">
@@ -3481,6 +3545,10 @@ export default function App() {
                                   typeof item.quantity === "string"
                                     ? parseFloat(item.quantity)
                                     : item.quantity;
+                                const clientPrice =
+                                  item.clientHpp !== undefined && item.clientHpp !== null
+                                    ? item.clientHpp
+                                    : (item.hpp || item.unitPrice || 0);
                                 const price = item.unitPrice || 0;
                                 const hpp = item.hpp || 0;
                                 const profit = (price - hpp) * qty;
@@ -3497,6 +3565,9 @@ export default function App() {
                                     </TableCell>
                                     <TableCell className="text-center">
                                       {qty} {item.unit}
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium text-slate-700 whitespace-nowrap">
+                                      Rp {clientPrice.toLocaleString("id-ID")}
                                     </TableCell>
                                     <TableCell className="text-right">
                                       <UnitPriceInput
@@ -3548,7 +3619,7 @@ export default function App() {
                               })}
                               <TableRow className="bg-slate-50 font-bold">
                                 <TableCell
-                                  colSpan={4}
+                                  colSpan={5}
                                   className="text-right text-slate-800"
                                 >
                                   Total Keuntungan PO ini:
