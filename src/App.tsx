@@ -202,8 +202,9 @@ const HppInput = ({
   return (
     <Input
       type="text"
-      className="w-28 text-right ml-auto h-8"
+      className="w-28 text-right ml-auto h-8 bg-white border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 hover:border-slate-400 font-medium"
       placeholder="0"
+      title="Ubah HPP (Tekan Enter atau klik di luar untuk simpan)"
       value={value}
       onChange={(e) => {
         const rawValue = e.target.value.replace(/\D/g, "");
@@ -211,6 +212,11 @@ const HppInput = ({
           setValue(parseInt(rawValue, 10).toLocaleString("id-ID"));
         } else {
           setValue("");
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.currentTarget.blur();
         }
       }}
       onBlur={() => {
@@ -356,6 +362,7 @@ export default function App() {
   >({});
   const [financeFilterMonth, setFinanceFilterMonth] = useState<string>("ALL");
   const [financeFilterYear, setFinanceFilterYear] = useState<string>("ALL");
+  const [financeFilterStatus, setFinanceFilterStatus] = useState<string>("ALL");
 
   const toggleCardExpand = (e: React.MouseEvent, orderId: string) => {
     e.stopPropagation();
@@ -1101,8 +1108,8 @@ export default function App() {
           supplier: item.supplier || "Belum Ditentukan",
           category: item.category,
           unitPrice: itemPrice,
-          hpp: itemPrice,
-          supplierCost: itemPrice,
+          hpp: 0,
+          supplierCost: 0,
           clientHpp: itemPrice,
           isOrdered: false,
           isAtKitchen: false,
@@ -1228,14 +1235,21 @@ export default function App() {
           : item,
       );
 
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, items: updatedItems } : o)),
+      );
+      setSelectedOrder((prev) =>
+        prev && prev.id === orderId ? { ...prev, items: updatedItems } : prev,
+      );
+
       await updateDoc(doc(db, "purchaseOrders", orderId), {
         items: updatedItems,
       });
-      setGlobalSuccess("Harga Berhasil Disimpan.");
+      setGlobalSuccess("Harga HPP Berhasil Disimpan.");
       setTimeout(() => setGlobalSuccess(null), 3000);
     } catch (error) {
       console.error("Error updating HPP:", error);
-      setGlobalError("Gagal menyimpan harga.");
+      setGlobalError("Gagal menyimpan harga HPP.");
     }
   };
 
@@ -1506,8 +1520,12 @@ export default function App() {
   };
 
   const handleExportToExcel = () => {
-    let invoicedOrders = orders
-      .filter((o) => o.status === "INVOICED")
+    let financeOrders = orders
+      .filter((o) =>
+        financeFilterStatus === "ALL"
+          ? o.status === "INVOICED" || o.status === "COMPLETED"
+          : o.status === financeFilterStatus,
+      )
       .sort((a, b) => {
         const poA = a.poNumber || a.id;
         const poB = b.poNumber || b.id;
@@ -1518,8 +1536,8 @@ export default function App() {
       });
 
     if (financeFilterMonth !== "ALL" || financeFilterYear !== "ALL") {
-      invoicedOrders = invoicedOrders.filter((o) => {
-        const d = o.invoiceDate || o.date;
+      financeOrders = financeOrders.filter((o) => {
+        const d = o.invoiceDate || o.deliveryDate || o.date;
         if (!d) return true;
         const dt = new Date(d);
         if (
@@ -1536,21 +1554,23 @@ export default function App() {
       });
     }
 
-    if (invoicedOrders.length === 0) return;
+    if (financeOrders.length === 0) return;
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
 
     // Header
     csvContent +=
-      "Nomor PO,Klien,Tanggal,Barang,Supplier,Qty,Satuan,Harga dari Klien,Harga Jual,HPP,Keuntungan\n";
+      "Nomor PO,Status,Klien,Tanggal,Barang,Supplier,Qty,Satuan,Harga dari Klien,Harga Jual,HPP,Keuntungan\n";
 
     let grandTotalProfit = 0;
 
-    invoicedOrders.forEach((order) => {
+    financeOrders.forEach((order) => {
       let orderTotalProfit = 0;
       const poNumber = order.poNumber || order.id;
+      const statusLabel =
+        order.status === "COMPLETED" ? "Selesai (Diterima Klien)" : "Nota Dibuat";
       const clientName = (order.clientName || "").replace(/,/g, ""); // Remove commas to avoid CSV issues
-      const date = new Date(order.invoiceDate || order.date).toLocaleDateString(
+      const date = new Date(order.invoiceDate || order.deliveryDate || order.date).toLocaleDateString(
         "id-ID",
       );
 
@@ -1574,16 +1594,16 @@ export default function App() {
 
         orderTotalProfit += profit;
 
-        csvContent += `"${poNumber}","${clientName}","${date}","${itemName}","${supplierName}",${qty},"${unit}",${clientPrice},${price},${hpp},${profit}\n`;
+        csvContent += `"${poNumber}","${statusLabel}","${clientName}","${date}","${itemName}","${supplierName}",${qty},"${unit}",${clientPrice},${price},${hpp},${profit}\n`;
       });
 
       grandTotalProfit += orderTotalProfit;
       // Add a subtotal row for the PO
-      csvContent += `,,,,,Total PO ${poNumber},,,,,${orderTotalProfit}\n`;
+      csvContent += `,,,,,,Total PO ${poNumber},,,,,${orderTotalProfit}\n`;
     });
 
     // Add Grand Total
-    csvContent += `\n,,,,,TOTAL KESELURUHAN,,,,,${grandTotalProfit}\n`;
+    csvContent += `\n,,,,,,TOTAL KESELURUHAN,,,,,${grandTotalProfit}\n`;
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -3356,12 +3376,17 @@ export default function App() {
   };
 
   const renderFinanceDashboard = () => {
-    let invoicedOrders = filteredOrders.filter((o) => o.status === "INVOICED");
+    let financeOrders = filteredOrders.filter((o) => {
+      if (financeFilterStatus === "ALL") {
+        return o.status === "INVOICED" || o.status === "COMPLETED";
+      }
+      return o.status === financeFilterStatus;
+    });
 
     const availableYears = Array.from(
       new Set(
-        invoicedOrders.map((o) => {
-          const d = o.invoiceDate || o.date;
+        financeOrders.map((o) => {
+          const d = o.invoiceDate || o.deliveryDate || o.date;
           return d
             ? new Date(d).getFullYear().toString()
             : new Date().getFullYear().toString();
@@ -3370,8 +3395,8 @@ export default function App() {
     ).sort((a: any, b: any) => parseInt(b) - parseInt(a));
 
     if (financeFilterMonth !== "ALL" || financeFilterYear !== "ALL") {
-      invoicedOrders = invoicedOrders.filter((o) => {
-        const d = o.invoiceDate || o.date;
+      financeOrders = financeOrders.filter((o) => {
+        const d = o.invoiceDate || o.deliveryDate || o.date;
         if (!d) return true;
         const dt = new Date(d);
         if (
@@ -3388,9 +3413,9 @@ export default function App() {
       });
     }
 
-    invoicedOrders.sort((a, b) => {
-      const dateA = new Date(a.invoiceDate || a.date || 0).getTime();
-      const dateB = new Date(b.invoiceDate || b.date || 0).getTime();
+    financeOrders.sort((a, b) => {
+      const dateA = new Date(a.invoiceDate || a.deliveryDate || a.date || 0).getTime();
+      const dateB = new Date(b.invoiceDate || b.deliveryDate || b.date || 0).getTime();
       return dateB - dateA;
     });
 
@@ -3398,7 +3423,7 @@ export default function App() {
     const profitPerClient: Record<string, number> = {};
     const profitPerSupplier: Record<string, number> = {};
 
-    invoicedOrders.forEach((order) => {
+    financeOrders.forEach((order) => {
       let orderProfit = 0;
       order.items.forEach((item) => {
         const qty =
@@ -3442,6 +3467,15 @@ export default function App() {
           <div className="flex flex-wrap gap-2 items-center w-full lg:w-auto">
             <select
               className="flex-1 sm:flex-none shrink-0 h-9 rounded-md border border-slate-300 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+              value={financeFilterStatus}
+              onChange={(e) => setFinanceFilterStatus(e.target.value)}
+            >
+              <option value="ALL">Semua Status (Selesai & Nota)</option>
+              <option value="COMPLETED">Selesai (Diterima Klien)</option>
+              <option value="INVOICED">Nota Dibuat</option>
+            </select>
+            <select
+              className="flex-1 sm:flex-none shrink-0 h-9 rounded-md border border-slate-300 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
               value={financeFilterMonth}
               onChange={(e) => setFinanceFilterMonth(e.target.value)}
             >
@@ -3471,7 +3505,7 @@ export default function App() {
                 </option>
               ))}
             </select>
-            {invoicedOrders.length > 0 && (
+            {financeOrders.length > 0 && (
               <Button
                 onClick={handleExportToExcel}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-none"
@@ -3485,16 +3519,16 @@ export default function App() {
           </div>
         </div>
 
-        {invoicedOrders.length === 0 ? (
+        {financeOrders.length === 0 ? (
           <div className="bg-white p-8 rounded-xl border border-slate-200 text-center shadow-sm">
             <p className="text-slate-500">
-              Belum ada PO yang selesai dan dibuatkan nota.
+              Belum ada PO yang selesai (diterima klien) atau dibuatkan nota.
             </p>
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-6 items-start">
             <div className="flex-1 space-y-6 w-full">
-              {invoicedOrders.map((order) => {
+              {financeOrders.map((order) => {
                 const orderTotalProfit = order.items.reduce((sum, item) => {
                   const qty =
                     typeof item.quantity === "string"
@@ -3534,10 +3568,10 @@ export default function App() {
                             </div>
                             <div className="flex gap-4 text-xs">
                               <span>
-                                Nota:{" "}
+                                {order.status === "COMPLETED" ? "Tanggal PO: " : "Nota: "}
                                 <span className="font-medium">
                                   {new Date(
-                                    order.invoiceDate || order.date,
+                                    order.invoiceDate || order.deliveryDate || order.date,
                                   ).toLocaleDateString("id-ID", {
                                     day: "numeric",
                                     month: "short",
@@ -3563,7 +3597,7 @@ export default function App() {
                           </CardDescription>
                         </div>
                         <div className="text-right flex flex-col items-end gap-2">
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 items-center">
                             {order.items.length > 0 &&
                               order.items.every(
                                 (item) => item.isTransferred,
@@ -3575,12 +3609,21 @@ export default function App() {
                                   DONE
                                 </Badge>
                               )}
-                            <Badge
-                              variant="outline"
-                              className="bg-emerald-50 text-emerald-700 border-emerald-200"
-                            >
-                              INVOICED
-                            </Badge>
+                            {order.status === "COMPLETED" ? (
+                              <Badge
+                                variant="outline"
+                                className="bg-sky-50 text-sky-700 border-sky-200 font-semibold"
+                              >
+                                SELESAI (DITERIMA KLIEN)
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold"
+                              >
+                                INVOICED
+                              </Badge>
+                            )}
                           </div>
                           <div className="text-sm font-bold text-emerald-700">
                             Rp {orderTotalProfit.toLocaleString("id-ID")}
@@ -3606,7 +3649,7 @@ export default function App() {
                                   Harga Jual
                                 </TableHead>
                                 <TableHead className="text-right w-[140px]">
-                                  HPP
+                                  HPP (Edit)
                                 </TableHead>
                                 <TableHead className="text-right">
                                   Keuntungan
