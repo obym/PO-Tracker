@@ -1155,7 +1155,19 @@ export default function App() {
     );
     setEditDeliveredBy(po.deliveredBy || "Dikirim Koperasi");
     setEditNotes(po.notes);
-    setEditItems(po.items);
+    setEditItems(
+      po.items.map((item) => {
+        const clientPrice =
+          item.clientHpp !== undefined && item.clientHpp !== null
+            ? item.clientHpp
+            : (item.hpp || item.unitPrice || 0);
+        return {
+          ...item,
+          clientHpp: clientPrice,
+          unitPrice: clientPrice,
+        };
+      }),
+    );
     setEditError(null);
     setIsEditOpen(true);
   };
@@ -1327,13 +1339,25 @@ export default function App() {
           : null,
         deliveredBy: editDeliveredBy,
         notes: editNotes,
-        items: editItems.map((item) => ({
-          ...item,
-          quantity:
-            typeof item.quantity === "string"
-              ? parseFloat(item.quantity) || 0
-              : item.quantity,
-        })),
+        items: editItems.map((item) => {
+          const clientPrice =
+            item.clientHpp !== undefined && item.clientHpp !== null
+              ? Number(item.clientHpp) || 0
+              : (item.hpp || item.unitPrice || 0);
+          return {
+            ...item,
+            quantity:
+              typeof item.quantity === "string"
+                ? parseFloat(item.quantity) || 0
+                : item.quantity,
+            clientHpp: clientPrice,
+            unitPrice: clientPrice,
+            hpp:
+              item.hpp !== undefined && item.hpp !== null && item.hpp > 0
+                ? item.hpp
+                : clientPrice,
+          };
+        }),
       };
       await updateDoc(doc(db, "purchaseOrders", editingPO.id), updatedData);
 
@@ -2952,8 +2976,9 @@ export default function App() {
               )}
             </div>
           </div>
-          {user.role === "admin" && status === "COMPLETED" && (
-            <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-800">
+          {user.role === "admin" &&
+            (status === "COMPLETED" || status === "INVOICED") && (
+              <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-800">
               <span className="text-slate-600">Total Harga dari Klien</span>
               <span className="text-emerald-700 font-bold">
                 Rp{" "}
@@ -4670,10 +4695,7 @@ export default function App() {
                             <TableHead className="w-[100px]">Qty</TableHead>
                             <TableHead className="w-[120px]">Satuan</TableHead>
                             <TableHead className="w-[150px]">
-                              Harga Jual Ke Dapur
-                            </TableHead>
-                            <TableHead className="w-[150px]">
-                              Harga Perolehan
+                              Harga dari Klien
                             </TableHead>
                             <TableHead className="w-[150px]">
                               Kategori
@@ -4736,17 +4758,21 @@ export default function App() {
                                   type="text"
                                   placeholder="0"
                                   value={
-                                    item.supplierCost !== undefined
-                                      ? item.supplierCost
-                                        ? new Intl.NumberFormat("id-ID").format(
-                                            Number(item.supplierCost),
-                                          )
-                                        : ""
-                                      : item.unitPrice
-                                        ? new Intl.NumberFormat("id-ID").format(
-                                            Number(item.unitPrice),
-                                          )
-                                        : ""
+                                    (item.clientHpp !== undefined &&
+                                    item.clientHpp !== null
+                                      ? item.clientHpp
+                                      : (item.hpp || item.unitPrice || 0))
+                                      ? new Intl.NumberFormat("id-ID").format(
+                                          Number(
+                                            item.clientHpp !== undefined &&
+                                              item.clientHpp !== null
+                                              ? item.clientHpp
+                                              : (item.hpp ||
+                                                  item.unitPrice ||
+                                                  0),
+                                          ),
+                                        )
+                                      : ""
                                   }
                                   onChange={(e) => {
                                     const val = e.target.value.replace(
@@ -4759,38 +4785,15 @@ export default function App() {
                                       const updated = [...editItems];
                                       updated[index] = {
                                         ...updated[index],
+                                        clientHpp: numVal,
                                         unitPrice: numVal,
-                                        supplierCost: numVal,
+                                        hpp:
+                                          updated[index].hpp &&
+                                          updated[index].hpp > 0
+                                            ? updated[index].hpp
+                                            : numVal,
                                       };
                                       setEditItems(updated);
-                                    }
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell className="p-2">
-                                <Input
-                                  type="text"
-                                  placeholder="0"
-                                  value={
-                                    item.hpp
-                                      ? new Intl.NumberFormat("id-ID").format(
-                                          Number(item.hpp),
-                                        )
-                                      : ""
-                                  }
-                                  onChange={(e) => {
-                                    const val = e.target.value.replace(
-                                      /\./g,
-                                      "",
-                                    );
-                                    if (/^\d*$/.test(val)) {
-                                      const numVal =
-                                        val === "" ? 0 : parseInt(val);
-                                      handleEditItemChange(
-                                        index,
-                                        "hpp",
-                                        numVal,
-                                      );
                                     }
                                   }}
                                 />
@@ -5849,13 +5852,19 @@ export default function App() {
                           size="sm"
                           className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
                           disabled={selectedOrder.items.some(
-                            (i) => !i.hpp || i.hpp === 0,
+                            (i) =>
+                              (!i.hpp || i.hpp === 0) &&
+                              (!i.clientHpp || i.clientHpp === 0) &&
+                              (!i.unitPrice || i.unitPrice === 0),
                           )}
                           title={
                             selectedOrder.items.some(
-                              (i) => !i.hpp || i.hpp === 0,
+                              (i) =>
+                                (!i.hpp || i.hpp === 0) &&
+                                (!i.clientHpp || i.clientHpp === 0) &&
+                                (!i.unitPrice || i.unitPrice === 0),
                             )
-                              ? "Mohon lengkapi HPP untuk semua barang sebelum cetak nota"
+                              ? "Mohon lengkapi harga untuk semua barang sebelum cetak nota"
                               : ""
                           }
                           onClick={async () => {
@@ -6259,28 +6268,34 @@ export default function App() {
                                 />
                               </div>
                             )}
-                            <div>
-                              <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-1.5">
-                                {user.role === "supplier"
-                                  ? "Harga Jual Ke Dapur"
-                                  : "HPP"}
-                              </Label>
-                              {user.role === "supplier" ? (
-                                <SupplierCostInput
-                                  item={item}
-                                  orderId={selectedOrder.id}
-                                  handleUpdateSupplierCost={
-                                    handleUpdateSupplierCost
-                                  }
-                                />
-                              ) : (
-                                <HppInput
-                                  item={item}
-                                  orderId={selectedOrder.id}
-                                  handleUpdateHpp={handleUpdateHpp}
-                                />
-                              )}
-                            </div>
+                            {!(
+                              (selectedOrder.status === "COMPLETED" ||
+                                selectedOrder.status === "INVOICED") &&
+                              user.role !== "supplier"
+                            ) && (
+                              <div>
+                                <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-1.5">
+                                  {user.role === "supplier"
+                                    ? "Harga Jual Ke Dapur"
+                                    : "HPP"}
+                                </Label>
+                                {user.role === "supplier" ? (
+                                  <SupplierCostInput
+                                    item={item}
+                                    orderId={selectedOrder.id}
+                                    handleUpdateSupplierCost={
+                                      handleUpdateSupplierCost
+                                    }
+                                  />
+                                ) : (
+                                  <HppInput
+                                    item={item}
+                                    orderId={selectedOrder.id}
+                                    handleUpdateHpp={handleUpdateHpp}
+                                  />
+                                )}
+                              </div>
+                            )}
 
                             {user.role === "supplier" && (
                               <div className="pt-3 border-t border-slate-300 flex justify-between items-center">
@@ -6342,7 +6357,9 @@ export default function App() {
                                     selectedOrder.items.some(
                                       (i) =>
                                         isSupplierMatch(i.supplier, item.supplier) &&
-                                        (!i.hpp || i.hpp === 0),
+                                        (!i.hpp || i.hpp === 0) &&
+                                        (!i.clientHpp || i.clientHpp === 0) &&
+                                        (!i.unitPrice || i.unitPrice === 0),
                                     )
                                   }
                                   title={
@@ -6351,9 +6368,11 @@ export default function App() {
                                       : selectedOrder.items.some(
                                             (i) =>
                                               isSupplierMatch(i.supplier, item.supplier) &&
-                                              (!i.hpp || i.hpp === 0),
+                                              (!i.hpp || i.hpp === 0) &&
+                                              (!i.clientHpp || i.clientHpp === 0) &&
+                                              (!i.unitPrice || i.unitPrice === 0),
                                           )
-                                        ? "Mohon lengkapi HPP untuk semua barang supplier ini sebelum cetak nota"
+                                        ? "Mohon lengkapi harga untuk semua barang supplier ini sebelum cetak nota"
                                         : ""
                                   }
                                 >
@@ -6421,11 +6440,17 @@ export default function App() {
                                 Harga dari Klien
                               </TableHead>
                             )}
-                            <TableHead className="text-right w-[120px]">
-                              {user.role === "supplier"
-                                ? "Harga Jual Ke Dapur"
-                                : "HPP"}
-                            </TableHead>
+                            {!(
+                              (selectedOrder.status === "COMPLETED" ||
+                                selectedOrder.status === "INVOICED") &&
+                              user.role !== "supplier"
+                            ) && (
+                              <TableHead className="text-right w-[120px]">
+                                {user.role === "supplier"
+                                  ? "Harga Jual Ke Dapur"
+                                  : "HPP"}
+                              </TableHead>
+                            )}
                             {user.role === "supplier" && (
                               <TableHead className="text-right w-[130px]">
                                 Jumlah Transfer
@@ -6651,23 +6676,29 @@ export default function App() {
                                     ).toLocaleString("id-ID")}
                                   </TableCell>
                                 )}
-                                <TableCell className="text-right">
-                                  {user.role === "supplier" ? (
-                                    <SupplierCostInput
-                                      item={item}
-                                      orderId={selectedOrder.id}
-                                      handleUpdateSupplierCost={
-                                        handleUpdateSupplierCost
-                                      }
-                                    />
-                                  ) : (
-                                    <HppInput
-                                      item={item}
-                                      orderId={selectedOrder.id}
-                                      handleUpdateHpp={handleUpdateHpp}
-                                    />
-                                  )}
-                                </TableCell>
+                                {!(
+                                  (selectedOrder.status === "COMPLETED" ||
+                                    selectedOrder.status === "INVOICED") &&
+                                  user.role !== "supplier"
+                                ) && (
+                                  <TableCell className="text-right">
+                                    {user.role === "supplier" ? (
+                                      <SupplierCostInput
+                                        item={item}
+                                        orderId={selectedOrder.id}
+                                        handleUpdateSupplierCost={
+                                          handleUpdateSupplierCost
+                                        }
+                                      />
+                                    ) : (
+                                      <HppInput
+                                        item={item}
+                                        orderId={selectedOrder.id}
+                                        handleUpdateHpp={handleUpdateHpp}
+                                      />
+                                    )}
+                                  </TableCell>
+                                )}
                                 {user.role === "supplier" && (
                                   <TableCell className="text-right font-medium text-indigo-600 whitespace-nowrap">
                                     Rp{" "}
@@ -6722,7 +6753,9 @@ export default function App() {
                                         selectedOrder.items.some(
                                           (i) =>
                                             isSupplierMatch(i.supplier, item.supplier) &&
-                                            (!i.hpp || i.hpp === 0),
+                                            (!i.hpp || i.hpp === 0) &&
+                                            (!i.clientHpp || i.clientHpp === 0) &&
+                                            (!i.unitPrice || i.unitPrice === 0),
                                         )
                                       }
                                       title={
@@ -6731,9 +6764,11 @@ export default function App() {
                                           : selectedOrder.items.some(
                                                 (i) =>
                                                   isSupplierMatch(i.supplier, item.supplier) &&
-                                                  (!i.hpp || i.hpp === 0),
+                                                  (!i.hpp || i.hpp === 0) &&
+                                             (!i.clientHpp || i.clientHpp === 0) &&
+                                             (!i.unitPrice || i.unitPrice === 0),
                                               )
-                                            ? "Mohon lengkapi HPP untuk semua barang supplier ini sebelum cetak nota"
+                                            ? "Mohon lengkapi harga untuk semua barang supplier ini sebelum cetak nota"
                                             : ""
                                       }
                                     >
