@@ -2036,7 +2036,7 @@ export default function App() {
                       typeof item.quantity === "string"
                         ? parseFloat(item.quantity)
                         : item.quantity;
-                    const price = item.supplierCost || 0;
+                    const price = item.hpp || item.supplierCost || 0;
                     const subtotal = qty * price;
                     return (
                       <tr key={item.id}>
@@ -2073,7 +2073,7 @@ export default function App() {
                             typeof item.quantity === "string"
                               ? parseFloat(item.quantity)
                               : item.quantity;
-                          const price = item.supplierCost || 0;
+                          const price = item.hpp || item.supplierCost || 0;
                           return sum + qty * price;
                         }, 0)
                         .toLocaleString("id-ID")}
@@ -2092,7 +2092,7 @@ export default function App() {
                         typeof item.quantity === "string"
                           ? parseFloat(item.quantity)
                           : item.quantity;
-                      const price = item.supplierCost || 0;
+                      const price = item.hpp || item.supplierCost || 0;
                       return sum + qty * price;
                     }, 0),
                   )}{" "}
@@ -2389,7 +2389,7 @@ export default function App() {
                       district,
                       phone,
                       items: sItems,
-                      getPrice: (item: any) => item.supplierCost || 0,
+                      getPrice: (item: any) => item.hpp || item.supplierCost || 0,
                       bankAccount: bankAccount,
                       signerName,
                       signerTitle: "",
@@ -3037,7 +3037,7 @@ export default function App() {
                       typeof item.quantity === "string"
                         ? parseFloat(item.quantity)
                         : item.quantity;
-                    const price = item.supplierCost || item.unitPrice || 0;
+                    const price = item.hpp || item.supplierCost || item.unitPrice || 0;
                     return sum + qty * price;
                   }, 0)
                   .toLocaleString("id-ID")}
@@ -4064,10 +4064,10 @@ export default function App() {
                                   Satuan
                                 </TableHead>
                                 <TableHead className="w-[150px]">
-                                  Harga Jual Ke Dapur
+                                  Harga dari Klien
                                 </TableHead>
                                 <TableHead className="w-[150px]">
-                                  Harga Perolehan
+                                  HPP
                                 </TableHead>
                                 <TableHead className="w-[150px]">
                                   Kategori
@@ -5749,14 +5749,9 @@ export default function App() {
                       <TableHead>Barang</TableHead>
                       <TableHead className="text-center">Qty</TableHead>
                       {user.role === "supplier" ? (
-                        <>
-                          <TableHead className="text-right">
-                            Harga Perolehan
-                          </TableHead>
-                          <TableHead className="text-right">
-                            Harga Jual Ke Dapur
-                          </TableHead>
-                        </>
+                        <TableHead className="text-right">
+                          Harga Perolehan
+                        </TableHead>
                       ) : (
                         <>
                           <TableHead className="text-right">
@@ -5837,17 +5832,14 @@ export default function App() {
                           {history.quantity} {history.unit}
                         </TableCell>
                         {user.role === "supplier" ? (
-                          <>
-                            <TableCell className="text-right text-slate-700">
-                              Rp {(history.hpp || 0).toLocaleString("id-ID")}
-                            </TableCell>
-                            <TableCell className="text-right text-emerald-600">
-                              Rp{" "}
-                              {(history.supplierCost || 0).toLocaleString(
-                                "id-ID",
-                              )}
-                            </TableCell>
-                          </>
+                          <TableCell className="text-right text-slate-700">
+                            Rp{" "}
+                            {(
+                              history.hpp ||
+                              history.supplierCost ||
+                              0
+                            ).toLocaleString("id-ID")}
+                          </TableCell>
                         ) : (
                           <>
                             <TableCell className="text-right">
@@ -6318,34 +6310,22 @@ export default function App() {
                                 />
                               </div>
                             )}
-                            {!(
-                              (selectedOrder.status === "COMPLETED" ||
-                                selectedOrder.status === "INVOICED") &&
-                              user.role !== "supplier"
-                            ) && (
-                              <div>
-                                <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-1.5">
-                                  {user.role === "supplier"
-                                    ? "Harga Jual Ke Dapur"
-                                    : "HPP"}
-                                </Label>
-                                {user.role === "supplier" ? (
-                                  <SupplierCostInput
-                                    item={item}
-                                    orderId={selectedOrder.id}
-                                    handleUpdateSupplierCost={
-                                      handleUpdateSupplierCost
-                                    }
-                                  />
-                                ) : (
+                            {user.role !== "supplier" &&
+                              !(
+                                selectedOrder.status === "COMPLETED" ||
+                                selectedOrder.status === "INVOICED"
+                              ) && (
+                                <div>
+                                  <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-1.5">
+                                    HPP
+                                  </Label>
                                   <HppInput
                                     item={item}
                                     orderId={selectedOrder.id}
                                     handleUpdateHpp={handleUpdateHpp}
                                   />
-                                )}
-                              </div>
-                            )}
+                                </div>
+                              )}
 
                             {user.role === "supplier" && (
                               <div className="pt-3 border-t border-slate-300 flex justify-between items-center">
@@ -6355,11 +6335,10 @@ export default function App() {
                                 <span className="font-bold text-indigo-700 text-lg">
                                   Rp{" "}
                                   {(
-                                    ((item.supplierCost || 0) -
-                                      (item.hpp || 0)) *
+                                    (item.hpp || item.supplierCost || 0) *
                                     (typeof item.quantity === "string"
-                                      ? parseFloat(item.quantity)
-                                      : item.quantity)
+                                      ? parseFloat(item.quantity) || 0
+                                      : item.quantity || 0)
                                   ).toLocaleString("id-ID")}
                                 </span>
                               </div>
@@ -6490,17 +6469,15 @@ export default function App() {
                                 Harga dari Klien
                               </TableHead>
                             )}
-                            {!(
-                              (selectedOrder.status === "COMPLETED" ||
-                                selectedOrder.status === "INVOICED") &&
-                              user.role !== "supplier"
-                            ) && (
-                              <TableHead className="text-right w-[120px]">
-                                {user.role === "supplier"
-                                  ? "Harga Jual Ke Dapur"
-                                  : "HPP"}
-                              </TableHead>
-                            )}
+                            {user.role !== "supplier" &&
+                              !(
+                                selectedOrder.status === "COMPLETED" ||
+                                selectedOrder.status === "INVOICED"
+                              ) && (
+                                <TableHead className="text-right w-[120px]">
+                                  HPP
+                                </TableHead>
+                              )}
                             {user.role === "supplier" && (
                               <TableHead className="text-right w-[130px]">
                                 Jumlah Transfer
@@ -6728,38 +6705,27 @@ export default function App() {
                                     ).toLocaleString("id-ID")}
                                   </TableCell>
                                 )}
-                                {!(
-                                  (selectedOrder.status === "COMPLETED" ||
-                                    selectedOrder.status === "INVOICED") &&
-                                  user.role !== "supplier"
-                                ) && (
-                                  <TableCell className="text-right">
-                                    {user.role === "supplier" ? (
-                                      <SupplierCostInput
-                                        item={item}
-                                        orderId={selectedOrder.id}
-                                        handleUpdateSupplierCost={
-                                          handleUpdateSupplierCost
-                                        }
-                                      />
-                                    ) : (
+                                {user.role !== "supplier" &&
+                                  !(
+                                    selectedOrder.status === "COMPLETED" ||
+                                    selectedOrder.status === "INVOICED"
+                                  ) && (
+                                    <TableCell className="text-right">
                                       <HppInput
                                         item={item}
                                         orderId={selectedOrder.id}
                                         handleUpdateHpp={handleUpdateHpp}
                                       />
-                                    )}
-                                  </TableCell>
-                                )}
+                                    </TableCell>
+                                  )}
                                 {user.role === "supplier" && (
                                   <TableCell className="text-right font-medium text-indigo-600 whitespace-nowrap">
                                     Rp{" "}
                                     {(
-                                      ((item.supplierCost || 0) -
-                                        (item.hpp || 0)) *
+                                      (item.hpp || item.supplierCost || 0) *
                                       (typeof item.quantity === "string"
-                                        ? parseFloat(item.quantity)
-                                        : item.quantity)
+                                        ? parseFloat(item.quantity) || 0
+                                        : item.quantity || 0)
                                     ).toLocaleString("id-ID")}
                                   </TableCell>
                                 )}
