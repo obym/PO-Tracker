@@ -191,20 +191,28 @@ const HppInput = ({
   orderId: string;
   handleUpdateHpp: (orderId: string, itemId: string, hpp: number) => void;
 }) => {
+  const currentVal =
+    item.hpp !== undefined && item.hpp !== null && item.hpp > 0
+      ? item.hpp
+      : item.supplierCost || 0;
   const [value, setValue] = useState(
-    item.hpp ? item.hpp.toLocaleString("id-ID") : "",
+    currentVal ? currentVal.toLocaleString("id-ID") : "",
   );
 
   useEffect(() => {
-    setValue(item.hpp ? item.hpp.toLocaleString("id-ID") : "");
-  }, [item.hpp]);
+    const val =
+      item.hpp !== undefined && item.hpp !== null && item.hpp > 0
+        ? item.hpp
+        : item.supplierCost || 0;
+    setValue(val ? val.toLocaleString("id-ID") : "");
+  }, [item.hpp, item.supplierCost]);
 
   return (
     <Input
       type="text"
       className="w-28 text-right ml-auto h-8 bg-white border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 hover:border-slate-400 font-medium"
       placeholder="0"
-      title="Ubah HPP (Tekan Enter atau klik di luar untuk simpan)"
+      title="Ubah HPP / Harga Perolehan (Tekan Enter atau klik di luar untuk simpan)"
       value={value}
       onChange={(e) => {
         const rawValue = e.target.value.replace(/\D/g, "");
@@ -222,7 +230,11 @@ const HppInput = ({
       onBlur={() => {
         const rawValue = value.replace(/\D/g, "");
         const val = rawValue ? parseInt(rawValue, 10) : 0;
-        if (val !== (item.hpp || 0)) {
+        const currentNum =
+          item.hpp !== undefined && item.hpp !== null && item.hpp > 0
+            ? item.hpp
+            : item.supplierCost || 0;
+        if (val !== currentNum) {
           handleUpdateHpp(orderId, item.id, val);
         }
       }}
@@ -1168,10 +1180,16 @@ export default function App() {
           item.clientHpp !== undefined && item.clientHpp !== null
             ? item.clientHpp
             : (item.unitPrice || item.hpp || 0);
+        const hppVal =
+          item.hpp !== undefined && item.hpp !== null && Number(item.hpp) > 0
+            ? Number(item.hpp)
+            : Number(item.supplierCost) || 0;
         return {
           ...item,
           clientHpp: clientPrice,
           unitPrice: clientPrice,
+          hpp: hppVal,
+          supplierCost: hppVal,
         };
       }),
     );
@@ -1200,6 +1218,9 @@ export default function App() {
         supplier: "",
         category: "Bahan Baku",
         unitPrice: 0,
+        hpp: 0,
+        supplierCost: 0,
+        clientHpp: 0,
         isOrdered: false,
         isAtKitchen: false,
         isDelivered: false,
@@ -1227,6 +1248,7 @@ export default function App() {
           ? {
               ...item,
               hpp: hppValue,
+              supplierCost: hppValue,
               clientHpp:
                 item.clientHpp !== undefined
                   ? item.clientHpp
@@ -1245,7 +1267,7 @@ export default function App() {
       await updateDoc(doc(db, "purchaseOrders", orderId), {
         items: updatedItems,
       });
-      setGlobalSuccess("Harga HPP Berhasil Disimpan.");
+      setGlobalSuccess("Harga HPP / Perolehan Berhasil Disimpan.");
       setTimeout(() => setGlobalSuccess(null), 3000);
     } catch (error) {
       console.error("Error updating HPP:", error);
@@ -1361,6 +1383,10 @@ export default function App() {
             item.clientHpp !== undefined && item.clientHpp !== null
               ? Number(item.clientHpp) || 0
               : (item.unitPrice || item.hpp || 0);
+          const hppVal =
+            item.hpp !== undefined && item.hpp !== null && Number(item.hpp) > 0
+              ? Number(item.hpp)
+              : Number(item.supplierCost) || 0;
           return {
             ...item,
             quantity:
@@ -1369,10 +1395,8 @@ export default function App() {
                 : item.quantity,
             clientHpp: clientPrice,
             unitPrice: clientPrice,
-            hpp:
-              item.hpp !== undefined && item.hpp !== null && Number(item.hpp) > 0
-                ? Number(item.hpp)
-                : 0,
+            hpp: hppVal,
+            supplierCost: hppVal,
           };
         }),
       };
@@ -4747,6 +4771,9 @@ export default function App() {
                             <TableHead className="w-[150px]">
                               Harga dari Klien
                             </TableHead>
+                            <TableHead className="w-[140px]">
+                              HPP
+                            </TableHead>
                             <TableHead className="w-[150px]">
                               Kategori
                             </TableHead>
@@ -4811,14 +4838,14 @@ export default function App() {
                                     (item.clientHpp !== undefined &&
                                     item.clientHpp !== null
                                       ? item.clientHpp
-                                      : (item.hpp || item.unitPrice || 0))
+                                      : (item.unitPrice || item.hpp || 0))
                                       ? new Intl.NumberFormat("id-ID").format(
                                           Number(
                                             item.clientHpp !== undefined &&
                                               item.clientHpp !== null
                                               ? item.clientHpp
-                                              : (item.hpp ||
-                                                  item.unitPrice ||
+                                              : (item.unitPrice ||
+                                                  item.hpp ||
                                                   0),
                                           ),
                                         )
@@ -4837,11 +4864,42 @@ export default function App() {
                                         ...updated[index],
                                         clientHpp: numVal,
                                         unitPrice: numVal,
-                                        hpp:
-                                          updated[index].hpp &&
-                                          updated[index].hpp > 0
-                                            ? updated[index].hpp
-                                            : numVal,
+                                      };
+                                      setEditItems(updated);
+                                    }
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Input
+                                  type="text"
+                                  placeholder="0"
+                                  value={
+                                    (item.hpp !== undefined && item.hpp !== null && item.hpp > 0
+                                      ? item.hpp
+                                      : (item.supplierCost || 0))
+                                      ? new Intl.NumberFormat("id-ID").format(
+                                          Number(
+                                            item.hpp !== undefined && item.hpp !== null && item.hpp > 0
+                                              ? item.hpp
+                                              : (item.supplierCost || 0),
+                                          ),
+                                        )
+                                      : ""
+                                  }
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(
+                                      /\./g,
+                                      "",
+                                    );
+                                    if (/^\d*$/.test(val)) {
+                                      const numVal =
+                                        val === "" ? 0 : parseInt(val);
+                                      const updated = [...editItems];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        hpp: numVal,
+                                        supplierCost: numVal,
                                       };
                                       setEditItems(updated);
                                     }
@@ -6310,22 +6368,18 @@ export default function App() {
                                 />
                               </div>
                             )}
-                            {user.role !== "supplier" &&
-                              !(
-                                selectedOrder.status === "COMPLETED" ||
-                                selectedOrder.status === "INVOICED"
-                              ) && (
-                                <div>
-                                  <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-1.5">
-                                    HPP
-                                  </Label>
-                                  <HppInput
-                                    item={item}
-                                    orderId={selectedOrder.id}
-                                    handleUpdateHpp={handleUpdateHpp}
-                                  />
-                                </div>
-                              )}
+                            {user.role !== "supplier" && (
+                              <div>
+                                <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-1.5">
+                                  HPP
+                                </Label>
+                                <HppInput
+                                  item={item}
+                                  orderId={selectedOrder.id}
+                                  handleUpdateHpp={handleUpdateHpp}
+                                />
+                              </div>
+                            )}
 
                             {user.role === "supplier" && (
                               <div className="pt-3 border-t border-slate-300 flex justify-between items-center">
@@ -6469,15 +6523,11 @@ export default function App() {
                                 Harga dari Klien
                               </TableHead>
                             )}
-                            {user.role !== "supplier" &&
-                              !(
-                                selectedOrder.status === "COMPLETED" ||
-                                selectedOrder.status === "INVOICED"
-                              ) && (
-                                <TableHead className="text-right w-[120px]">
-                                  HPP
-                                </TableHead>
-                              )}
+                            {user.role !== "supplier" && (
+                              <TableHead className="text-right w-[120px]">
+                                HPP
+                              </TableHead>
+                            )}
                             {user.role === "supplier" && (
                               <TableHead className="text-right w-[130px]">
                                 Jumlah Transfer
@@ -6705,19 +6755,15 @@ export default function App() {
                                     ).toLocaleString("id-ID")}
                                   </TableCell>
                                 )}
-                                {user.role !== "supplier" &&
-                                  !(
-                                    selectedOrder.status === "COMPLETED" ||
-                                    selectedOrder.status === "INVOICED"
-                                  ) && (
-                                    <TableCell className="text-right">
-                                      <HppInput
-                                        item={item}
-                                        orderId={selectedOrder.id}
-                                        handleUpdateHpp={handleUpdateHpp}
-                                      />
-                                    </TableCell>
-                                  )}
+                                {user.role !== "supplier" && (
+                                  <TableCell className="text-right">
+                                    <HppInput
+                                      item={item}
+                                      orderId={selectedOrder.id}
+                                      handleUpdateHpp={handleUpdateHpp}
+                                    />
+                                  </TableCell>
+                                )}
                                 {user.role === "supplier" && (
                                   <TableCell className="text-right font-medium text-indigo-600 whitespace-nowrap">
                                     Rp{" "}
