@@ -641,7 +641,7 @@ export default function App() {
             data.items?.forEach((item: any) => {
               if (item.name) {
                 const key = item.name.trim().toLowerCase();
-                const hpp = item.hpp || item.unitPrice || item.supplierCost || 0;
+                const hpp = item.clientHpp || item.unitPrice || item.hpp || item.supplierCost || 0;
                 if (hpp > 0) {
                   map[key] = hpp;
                 }
@@ -1017,11 +1017,11 @@ export default function App() {
       o.items?.forEach((i) => {
         if (!i.name) return;
         const key = i.name.trim().toLowerCase();
-        const hpp = i.hpp || i.unitPrice || 0;
-        if (!map[key] || (!map[key].hpp && hpp > 0)) {
+        const price = i.clientHpp || i.unitPrice || i.hpp || 0;
+        if (!map[key] || (!map[key].hpp && price > 0)) {
           map[key] = {
             name: i.name,
-            hpp: hpp > 0 ? hpp : undefined,
+            hpp: price > 0 ? price : undefined,
             unit: i.unit,
             category: i.category,
             supplier: i.supplier,
@@ -1167,7 +1167,7 @@ export default function App() {
         const clientPrice =
           item.clientHpp !== undefined && item.clientHpp !== null
             ? item.clientHpp
-            : (item.hpp || item.unitPrice || 0);
+            : (item.unitPrice || item.hpp || 0);
         return {
           ...item,
           clientHpp: clientPrice,
@@ -1230,7 +1230,7 @@ export default function App() {
               clientHpp:
                 item.clientHpp !== undefined
                   ? item.clientHpp
-                  : item.hpp || item.unitPrice || 0,
+                  : item.unitPrice || item.hpp || 0,
             }
           : item,
       );
@@ -1296,7 +1296,7 @@ export default function App() {
               clientHpp:
                 item.clientHpp !== undefined
                   ? item.clientHpp
-                  : item.hpp || item.unitPrice || 0,
+                  : item.unitPrice || item.hpp || 0,
             }
           : item,
       );
@@ -1305,6 +1305,9 @@ export default function App() {
         prev.map((o) =>
           o.id === orderId ? { ...o, items: updatedItems } : o,
         ),
+      );
+      setSelectedOrder((prev) =>
+        prev && prev.id === orderId ? { ...prev, items: updatedItems } : prev,
       );
 
       await updateDoc(doc(db, "purchaseOrders", orderId), {
@@ -1357,7 +1360,7 @@ export default function App() {
           const clientPrice =
             item.clientHpp !== undefined && item.clientHpp !== null
               ? Number(item.clientHpp) || 0
-              : (item.hpp || item.unitPrice || 0);
+              : (item.unitPrice || item.hpp || 0);
           return {
             ...item,
             quantity:
@@ -1367,9 +1370,9 @@ export default function App() {
             clientHpp: clientPrice,
             unitPrice: clientPrice,
             hpp:
-              item.hpp !== undefined && item.hpp !== null && item.hpp > 0
-                ? item.hpp
-                : clientPrice,
+              item.hpp !== undefined && item.hpp !== null && Number(item.hpp) > 0
+                ? Number(item.hpp)
+                : 0,
           };
         }),
       };
@@ -2305,7 +2308,11 @@ export default function App() {
                           : "",
                       items: printableItems,
                       getPrice: (item: any) =>
-                        item.hpp || item.unitPrice || item.supplierCost || 0,
+                        item.unitPrice ||
+                        item.clientHpp ||
+                        item.supplierCost ||
+                        item.hpp ||
+                        0,
                       bankAccount:
                         "Rekening Koperasi Garuda Merah Putih\nBank Mandiri : 171-00-1986218-7",
                       signerName: isPo
@@ -2908,12 +2915,12 @@ export default function App() {
                       typeof item.quantity === "string"
                         ? parseFloat(item.quantity) || 0
                         : item.quantity || 0;
-                    const price = item.hpp || item.unitPrice || item.supplierCost || 0;
+                    const price = item.unitPrice || item.clientHpp || item.supplierCost || item.hpp || 0;
                     const subtotal = qty * price;
                     const clientPrice =
                       item.clientHpp !== undefined && item.clientHpp !== null
                         ? item.clientHpp
-                        : (item.hpp || item.unitPrice || 0);
+                        : (item.unitPrice || item.hpp || 0);
                     return (
                       <div
                         key={idx}
@@ -3048,7 +3055,7 @@ export default function App() {
                       typeof item.quantity === "string"
                         ? parseFloat(item.quantity) || 0
                         : item.quantity || 0;
-                    const price = item.hpp || item.unitPrice || item.supplierCost || 0;
+                    const price = item.unitPrice || item.clientHpp || item.supplierCost || item.hpp || 0;
                     return sum + qty * price;
                   }, 0)
                   .toLocaleString("id-ID")}
@@ -6261,7 +6268,7 @@ export default function App() {
                             <div>
                               <span className="text-xs text-slate-500 block">Harga Satuan</span>
                               <span className="text-sm font-semibold text-slate-800">
-                                Rp {(item.hpp || item.unitPrice || item.supplierCost || 0).toLocaleString("id-ID")}
+                                Rp {(item.unitPrice || item.clientHpp || item.supplierCost || item.hpp || 0).toLocaleString("id-ID")}
                               </span>
                             </div>
                             <div className="text-right">
@@ -6272,7 +6279,7 @@ export default function App() {
                                   (typeof item.quantity === "string"
                                     ? parseFloat(item.quantity) || 0
                                     : item.quantity || 0) *
-                                  (item.hpp || item.unitPrice || item.supplierCost || 0)
+                                  (item.unitPrice || item.clientHpp || item.supplierCost || item.hpp || 0)
                                 ).toLocaleString("id-ID")}
                               </span>
                             </div>
@@ -6675,9 +6682,10 @@ export default function App() {
                                 <TableCell className="text-right font-medium text-slate-700">
                                   Rp{" "}
                                   {(
-                                    item.hpp ||
                                     item.unitPrice ||
+                                    item.clientHpp ||
                                     item.supplierCost ||
+                                    item.hpp ||
                                     0
                                   ).toLocaleString("id-ID")}
                                 </TableCell>
@@ -6687,9 +6695,10 @@ export default function App() {
                                     (typeof item.quantity === "string"
                                       ? parseFloat(item.quantity) || 0
                                       : item.quantity || 0) *
-                                    (item.hpp ||
-                                      item.unitPrice ||
+                                    (item.unitPrice ||
+                                      item.clientHpp ||
                                       item.supplierCost ||
+                                      item.hpp ||
                                       0)
                                   ).toLocaleString("id-ID")}
                                 </TableCell>
@@ -6847,9 +6856,10 @@ export default function App() {
                               ? parseFloat(item.quantity) || 0
                               : item.quantity || 0;
                           const price =
-                            item.hpp ||
                             item.unitPrice ||
+                            item.clientHpp ||
                             item.supplierCost ||
+                            item.hpp ||
                             0;
                           return sum + qty * price;
                         }, 0)
