@@ -616,6 +616,11 @@ export default function App() {
           (doc) => doc.data() as PurchaseOrder,
         );
         setOrders(fetchedOrders);
+        setSelectedOrder((prev) => {
+          if (!prev) return null;
+          const updated = fetchedOrders.find((o) => o.id === prev.id);
+          return updated || prev;
+        });
       },
       (error) => {
         console.error("Error fetching orders:", error);
@@ -2060,7 +2065,7 @@ export default function App() {
                       typeof item.quantity === "string"
                         ? parseFloat(item.quantity)
                         : item.quantity;
-                    const price = item.hpp || item.supplierCost || 0;
+                    const price = item.unitPrice || item.supplierCost || 0;
                     const subtotal = qty * price;
                     return (
                       <tr key={item.id}>
@@ -2097,7 +2102,7 @@ export default function App() {
                             typeof item.quantity === "string"
                               ? parseFloat(item.quantity)
                               : item.quantity;
-                          const price = item.hpp || item.supplierCost || 0;
+                          const price = item.unitPrice || item.supplierCost || 0;
                           return sum + qty * price;
                         }, 0)
                         .toLocaleString("id-ID")}
@@ -2116,7 +2121,7 @@ export default function App() {
                         typeof item.quantity === "string"
                           ? parseFloat(item.quantity)
                           : item.quantity;
-                      const price = item.hpp || item.supplierCost || 0;
+                      const price = item.unitPrice || item.supplierCost || 0;
                       return sum + qty * price;
                     }, 0),
                   )}{" "}
@@ -2413,7 +2418,8 @@ export default function App() {
                       district,
                       phone,
                       items: sItems,
-                      getPrice: (item: any) => item.hpp || item.supplierCost || 0,
+                      getPrice: (item: any) =>
+                        item.unitPrice || item.supplierCost || 0,
                       bankAccount: bankAccount,
                       signerName,
                       signerTitle: "",
@@ -2960,8 +2966,8 @@ export default function App() {
                               (Rp {subtotal.toLocaleString("id-ID")})
                             </span>
                           )}
-                          {user.role === "admin" && (
-                            <span className="text-emerald-700 ml-1.5 font-normal">
+                          {(user.role === "admin" || user.role === "supplier") && (
+                            <span className="text-slate-500 ml-1.5 font-normal">
                               (Harga Klien: Rp {clientPrice.toLocaleString("id-ID")})
                             </span>
                           )}
@@ -3061,7 +3067,7 @@ export default function App() {
                       typeof item.quantity === "string"
                         ? parseFloat(item.quantity)
                         : item.quantity;
-                    const price = item.hpp || item.supplierCost || item.unitPrice || 0;
+                    const price = item.unitPrice || item.supplierCost || 0;
                     return sum + qty * price;
                   }, 0)
                   .toLocaleString("id-ID")}
@@ -3676,8 +3682,8 @@ export default function App() {
                                 <TableHead className="text-right w-[140px]">
                                   Harga dari Klien
                                 </TableHead>
-                                <TableHead className="text-right w-[140px]">
-                                  Harga Jual
+                                <TableHead className="text-right w-[160px]">
+                                  Harga Jual ke Dapur
                                 </TableHead>
                                 <TableHead className="text-right w-[140px]">
                                   HPP (Edit)
@@ -6025,15 +6031,15 @@ export default function App() {
                           disabled={selectedOrder.items.some(
                             (i) =>
                               isSupplierMatch(i.supplier, user.name) &&
-                              (!i.hpp || i.hpp === 0),
+                              (!i.unitPrice || i.unitPrice === 0),
                           )}
                           title={
                             selectedOrder.items.some(
                               (i) =>
                                 isSupplierMatch(i.supplier, user.name) &&
-                                (!i.hpp || i.hpp === 0),
+                                (!i.unitPrice || i.unitPrice === 0),
                             )
-                              ? "Mohon lengkapi Harga Perolehan untuk semua barang sebelum cetak nota"
+                              ? "Harga Jual ke Dapur belum diisi oleh Admin untuk nota ini"
                               : ""
                           }
                           onClick={async () => {
@@ -6116,7 +6122,7 @@ export default function App() {
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
                   <p className="text-sm text-slate-500 mb-1">
                     {user?.role === "supplier"
-                      ? "Total Jumlah Transfer"
+                      ? "Total Nilai Nota"
                       : user?.role === "client"
                         ? "Total Nilai PO"
                         : "Catatan"}
@@ -6127,16 +6133,19 @@ export default function App() {
                           const items = selectedOrder.items.filter(
                             (item) => isSupplierMatch(item.supplier, user.name),
                           );
-                          const totalTransfer = items.reduce(
-                            (sum, item) =>
-                              sum +
-                              ((item.supplierCost || 0) - (item.hpp || 0)) *
-                                (typeof item.quantity === "string"
-                                  ? parseFloat(item.quantity)
-                                  : item.quantity),
+                          const totalNota = items.reduce(
+                            (sum, item) => {
+                              const qty =
+                                typeof item.quantity === "string"
+                                  ? parseFloat(item.quantity) || 0
+                                  : item.quantity || 0;
+                              const price =
+                                item.unitPrice || item.supplierCost || 0;
+                              return sum + qty * price;
+                            },
                             0,
                           );
-                          return `Rp ${totalTransfer.toLocaleString("id-ID")}`;
+                          return `Rp ${totalNota.toLocaleString("id-ID")}`;
                         })()
                       : user?.role === "client"
                         ? (() => {
@@ -6340,10 +6349,16 @@ export default function App() {
                           user.role === "supplier" ||
                           user.role === "kitchen") && (
                           <div className="bg-slate-50/80 p-3 rounded-lg border border-slate-200 space-y-3 mt-1 shadow-inner">
-                            {user.role === "admin" && (
+                            {(user.role === "admin" ||
+                              user.role === "supplier") && (
                               <div>
                                 <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-1.5">
-                                  Harga dari Klien
+                                  Harga dari Klien{" "}
+                                  {user.role === "supplier" && (
+                                    <span className="text-[10px] text-slate-400 font-normal lowercase">
+                                      (informasi harga)
+                                    </span>
+                                  )}
                                 </Label>
                                 <div className="text-sm font-semibold text-slate-800 bg-white p-2 rounded border border-slate-200">
                                   Rp{" "}
@@ -6351,9 +6366,21 @@ export default function App() {
                                     item.clientHpp !== undefined &&
                                     item.clientHpp !== null
                                       ? item.clientHpp
-                                      : (item.hpp || item.unitPrice || 0)
+                                      : (item.unitPrice || item.hpp || 0)
                                   ).toLocaleString("id-ID")}
                                 </div>
+                              </div>
+                            )}
+                            {user.role === "admin" && (
+                              <div>
+                                <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-1.5">
+                                  Harga Jual ke Dapur
+                                </Label>
+                                <UnitPriceInput
+                                  item={item}
+                                  orderId={selectedOrder.id}
+                                  handleUpdateUnitPrice={handleUpdateUnitPrice}
+                                />
                               </div>
                             )}
                             {user.role === "supplier" && (
@@ -6384,12 +6411,14 @@ export default function App() {
                             {user.role === "supplier" && (
                               <div className="pt-3 border-t border-slate-300 flex justify-between items-center">
                                 <span className="text-sm font-semibold text-slate-600">
-                                  Jumlah Transfer
+                                  Subtotal Nota
                                 </span>
                                 <span className="font-bold text-indigo-700 text-lg">
                                   Rp{" "}
                                   {(
-                                    (item.hpp || item.supplierCost || 0) *
+                                    (item.unitPrice ||
+                                      item.supplierCost ||
+                                      0) *
                                     (typeof item.quantity === "string"
                                       ? parseFloat(item.quantity) || 0
                                       : item.quantity || 0)
@@ -6513,14 +6542,22 @@ export default function App() {
                           user.role === "supplier" ||
                           user.role === "kitchen") && (
                           <>
-                            {user.role === "supplier" && (
+                            {(user.role === "admin" ||
+                              user.role === "supplier") && (
                               <TableHead className="text-right w-[140px]">
-                                Harga Perolehan
+                                {user.role === "supplier"
+                                  ? "Harga Klien (Info)"
+                                  : "Harga dari Klien"}
                               </TableHead>
                             )}
                             {user.role === "admin" && (
+                              <TableHead className="text-right w-[150px]">
+                                Harga Jual ke Dapur
+                              </TableHead>
+                            )}
+                            {user.role === "supplier" && (
                               <TableHead className="text-right w-[140px]">
-                                Harga dari Klien
+                                Harga Perolehan
                               </TableHead>
                             )}
                             {user.role !== "supplier" && (
@@ -6530,7 +6567,7 @@ export default function App() {
                             )}
                             {user.role === "supplier" && (
                               <TableHead className="text-right w-[130px]">
-                                Jumlah Transfer
+                                Subtotal Nota
                               </TableHead>
                             )}
                             <TableHead className="text-center w-[120px]">
@@ -6735,6 +6772,34 @@ export default function App() {
                               user.role === "supplier" ||
                               user.role === "kitchen") && (
                               <>
+                                {(user.role === "admin" ||
+                                  user.role === "supplier") && (
+                                  <TableCell className="text-right font-medium text-slate-700">
+                                    Rp{" "}
+                                    {(
+                                      item.clientHpp !== undefined &&
+                                      item.clientHpp !== null
+                                        ? item.clientHpp
+                                        : (item.unitPrice || item.hpp || 0)
+                                    ).toLocaleString("id-ID")}
+                                    {user.role === "supplier" && (
+                                      <span className="block text-[10px] text-slate-400 font-normal">
+                                        (info harga)
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                )}
+                                {user.role === "admin" && (
+                                  <TableCell className="text-right">
+                                    <UnitPriceInput
+                                      item={item}
+                                      orderId={selectedOrder.id}
+                                      handleUpdateUnitPrice={
+                                        handleUpdateUnitPrice
+                                      }
+                                    />
+                                  </TableCell>
+                                )}
                                 {user.role === "supplier" && (
                                   <TableCell className="text-right">
                                     <HppInput
@@ -6742,17 +6807,6 @@ export default function App() {
                                       orderId={selectedOrder.id}
                                       handleUpdateHpp={handleUpdateHpp}
                                     />
-                                  </TableCell>
-                                )}
-                                {user.role === "admin" && (
-                                  <TableCell className="text-right font-medium text-slate-700">
-                                    Rp{" "}
-                                    {(
-                                      item.clientHpp !== undefined &&
-                                      item.clientHpp !== null
-                                        ? item.clientHpp
-                                        : (item.hpp || item.unitPrice || 0)
-                                    ).toLocaleString("id-ID")}
                                   </TableCell>
                                 )}
                                 {user.role !== "supplier" && (
@@ -6768,7 +6822,9 @@ export default function App() {
                                   <TableCell className="text-right font-medium text-indigo-600 whitespace-nowrap">
                                     Rp{" "}
                                     {(
-                                      (item.hpp || item.supplierCost || 0) *
+                                      (item.unitPrice ||
+                                        item.supplierCost ||
+                                        0) *
                                       (typeof item.quantity === "string"
                                         ? parseFloat(item.quantity) || 0
                                         : item.quantity || 0)
@@ -6817,8 +6873,6 @@ export default function App() {
                                         selectedOrder.items.some(
                                           (i) =>
                                             isSupplierMatch(i.supplier, item.supplier) &&
-                                            (!i.hpp || i.hpp === 0) &&
-                                            (!i.clientHpp || i.clientHpp === 0) &&
                                             (!i.unitPrice || i.unitPrice === 0),
                                         )
                                       }
@@ -6828,11 +6882,9 @@ export default function App() {
                                           : selectedOrder.items.some(
                                                 (i) =>
                                                   isSupplierMatch(i.supplier, item.supplier) &&
-                                                  (!i.hpp || i.hpp === 0) &&
-                                             (!i.clientHpp || i.clientHpp === 0) &&
-                                             (!i.unitPrice || i.unitPrice === 0),
+                                                  (!i.unitPrice || i.unitPrice === 0),
                                               )
-                                            ? "Mohon lengkapi harga untuk semua barang supplier ini sebelum cetak nota"
+                                            ? "Mohon lengkapi Harga Jual ke Dapur untuk semua barang supplier ini sebelum cetak nota"
                                             : ""
                                       }
                                     >
