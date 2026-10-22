@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Plus,
   Search,
@@ -350,6 +350,8 @@ export default function App() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const [currentView, setCurrentView] = useState<"kanban" | "finance">(
     "kanban",
   );
@@ -376,6 +378,44 @@ export default function App() {
   const [financeFilterYear, setFinanceFilterYear] = useState<string>("ALL");
   const [financeFilterStatus, setFinanceFilterStatus] = useState<string>("ALL");
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setIsSearchDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const searchMatchingOrders = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return orders
+      .filter(
+        (o) =>
+          ((o.clientName || "").toLowerCase().includes(q) ||
+            o.id.toLowerCase().includes(q) ||
+            ((o.poNumber || "").toLowerCase().includes(q)) ||
+            (o.items || []).some((item) =>
+              (item.name || "").toLowerCase().includes(q),
+            )) &&
+          !(user?.role === "driver" && o.deliveredBy === "Dikirim Supplier") &&
+          !(
+            (user?.role === "supplier" || user?.role === "kitchen") &&
+            !(o.items || []).some((item) =>
+              isSupplierMatch(item.supplier, user?.name),
+            )
+          ),
+      )
+      .slice(0, 8);
+  }, [orders, searchQuery, user]);
+
   const toggleCardExpand = (e: React.MouseEvent, orderId: string) => {
     e.stopPropagation();
     setExpandedCards((prev) => ({ ...prev, [orderId]: !prev[orderId] }));
@@ -389,6 +429,7 @@ export default function App() {
     if (e.key === "Enter" && searchQuery.trim() !== "") {
       setProductHistorySearchTerm(searchQuery.trim());
       setIsProductHistoryOpen(true);
+      setIsSearchDropdownOpen(false);
     }
   };
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
@@ -1533,22 +1574,48 @@ export default function App() {
     return `${seqNumString}/${getInitials(supplierName)}/${currentMonth}/${currentYear}`;
   };
 
-  const handleRekapSupplier = (supplierName: string) => {
-    if (!selectedOrder) return;
+  const handleRekapSupplier = (
+    supplierName: string,
+    targetOrder?: PurchaseOrder,
+  ) => {
+    const orderToUse = targetOrder || selectedOrder;
+    if (!orderToUse) return;
 
-    const supplierItems = selectedOrder.items.filter(
-      (item) => isSupplierMatch(item.supplier, supplierName),
+    const supplierItems = (orderToUse.items || []).filter((item) =>
+      isSupplierMatch(item.supplier, supplierName),
     );
     if (supplierItems.length === 0) return;
 
     const invoiceNumber = generateSupplierInvoiceNumber(
-      selectedOrder.id,
+      orderToUse.id,
       supplierName,
-      selectedOrder.date,
+      orderToUse.date,
     );
 
-    setRekapSupplierData({ order: selectedOrder, supplierName, invoiceNumber });
+    setRekapSupplierData({ order: orderToUse, supplierName, invoiceNumber });
     setIsDetailOpen(false);
+    setIsProductHistoryOpen(false);
+  };
+
+  const handleOpenNota = (order: PurchaseOrder) => {
+    if (!order) return;
+
+    if (user?.role === "supplier") {
+      const supplierName = user.name;
+      const supplierItems = (order.items || []).filter((item) =>
+        isSupplierMatch(item.supplier, supplierName),
+      );
+      if (supplierItems.length > 0) {
+        handleRekapSupplier(supplierName, order);
+        return;
+      }
+    }
+
+    setPrintDocType("NOTA");
+    setInvoiceOrder(order);
+    setSelectedInvoiceItems((order.items || []).map((item) => item.id));
+    setIsDetailOpen(false);
+    setIsProductHistoryOpen(false);
   };
 
   const handleExportToExcel = () => {
@@ -2822,10 +2889,21 @@ export default function App() {
     const lowerSearch = productHistorySearchTerm.toLowerCase();
 
     orders.forEach((order) => {
+      const isPoMatch =
+        (order.poNumber || "").toLowerCase().includes(lowerSearch) ||
+        order.id.toLowerCase().includes(lowerSearch);
+      const isClientMatch = (order.clientName || "")
+        .toLowerCase()
+        .includes(lowerSearch);
+
       order.items.forEach((item) => {
+        const isItemMatch = (item.name || "")
+          .toLowerCase()
+          .includes(lowerSearch);
         if (
-          item.name.toLowerCase().includes(lowerSearch) &&
-          (user?.role !== "supplier" || isSupplierMatch(item.supplier, user?.name))
+          (isItemMatch || isPoMatch || isClientMatch) &&
+          (user?.role !== "supplier" ||
+            isSupplierMatch(item.supplier, user?.name))
         ) {
           history.push({
             orderId: order.id,
@@ -2895,9 +2973,24 @@ export default function App() {
             <CardTitle className="text-sm font-bold text-slate-800 break-words">
               {order.poNumber || order.id}
             </CardTitle>
-            <Badge className={`${config.color} shrink-0`} variant="outline">
-              {config.label}
-            </Badge>
+            <div className="flex items-center gap-1 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-1.5 text-[11px] text-indigo-600 hover:bg-indigo-50 hover:text-indigo-800 font-medium shrink-0"
+                title="Buka Nota"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenNota(order);
+                }}
+              >
+                <Receipt className="w-3 h-3 mr-0.5" />
+                Nota
+              </Button>
+              <Badge className={`${config.color} shrink-0`} variant="outline">
+                {config.label}
+              </Badge>
+            </div>
           </div>
           <CardDescription className="text-xs mt-1 text-slate-500">
             {new Date(order.date).toLocaleDateString("id-ID", {
@@ -3921,15 +4014,112 @@ export default function App() {
           </div>
 
           <div className="flex flex-wrap w-full md:w-auto items-center gap-2">
-            <div className="relative flex-1 md:flex-none min-w-[150px]">
+            <div
+              ref={searchContainerRef}
+              className="relative flex-1 md:flex-none min-w-[150px]"
+            >
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <Input
                 placeholder="Cari PO, Klien, atau Barang..."
                 className="pl-9 w-full md:w-[250px] bg-slate-50 border-slate-200"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchDropdownOpen(true)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setIsSearchDropdownOpen(true);
+                }}
                 onKeyDown={handleSearchKeyDown}
               />
+              {/* Instant Search Dropdown */}
+              {isSearchDropdownOpen && searchQuery.trim().length > 0 && (
+                <div
+                  className="absolute left-0 top-full mt-1.5 w-[320px] sm:w-[380px] bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden divide-y divide-slate-100"
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <div className="p-2.5 bg-slate-50 flex justify-between items-center text-xs font-semibold text-slate-600">
+                    <span>Hasil Pencarian PO ({searchMatchingOrders.length})</span>
+                    <button
+                      type="button"
+                      className="text-[11px] text-indigo-600 hover:underline cursor-pointer"
+                      onClick={() => {
+                        setProductHistorySearchTerm(searchQuery.trim());
+                        setIsProductHistoryOpen(true);
+                        setIsSearchDropdownOpen(false);
+                      }}
+                    >
+                      Lihat Tabel Riwayat (Enter)
+                    </button>
+                  </div>
+                  <div className="max-h-[320px] overflow-y-auto divide-y divide-slate-100">
+                    {searchMatchingOrders.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-500">
+                        Tidak ditemukan PO yang cocok dengan "{searchQuery}"
+                      </div>
+                    ) : (
+                      searchMatchingOrders.map((order) => {
+                        const config = statusConfig[order.status] || {
+                          label: order.status,
+                          color: "bg-slate-100 text-slate-700",
+                        };
+                        return (
+                          <div
+                            key={order.id}
+                            className="p-3 hover:bg-indigo-50/70 cursor-pointer transition-colors flex items-center justify-between gap-3 group"
+                            title="Klik untuk membuka nota"
+                            onClick={() => {
+                              handleOpenNota(order);
+                              setIsSearchDropdownOpen(false);
+                            }}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors truncate">
+                                  {order.poNumber || order.id}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[10px] px-1.5 py-0 ${config.color} shrink-0`}
+                                >
+                                  {config.label}
+                                </Badge>
+                              </div>
+                              <div className="text-xs text-slate-500 truncate mt-0.5">
+                                {order.clientName} &bull;{" "}
+                                {new Date(order.date).toLocaleDateString(
+                                  "id-ID",
+                                  {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  },
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                                {(order.items || [])
+                                  .map((i) => i.name)
+                                  .join(", ")}
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="shrink-0 text-xs font-semibold text-indigo-700 bg-white border-indigo-200 hover:bg-indigo-600 hover:text-white group-hover:border-indigo-400 shadow-2xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenNota(order);
+                                setIsSearchDropdownOpen(false);
+                              }}
+                            >
+                              <Receipt className="w-3.5 h-3.5 mr-1" />
+                              Nota
+                            </Button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {user.role === "admin" && (
@@ -5788,20 +5978,21 @@ export default function App() {
       >
         <DialogContent className="max-w-6xl sm:max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl">
-              Riwayat Barang:{" "}
-              <span className="text-indigo-600">
-                {productHistorySearchTerm}
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Search className="w-5 h-5 text-indigo-600" />
+              Hasil Pencarian:{" "}
+              <span className="text-indigo-600 font-bold">
+                "{productHistorySearchTerm}"
               </span>
             </DialogTitle>
             <DialogDescription>
-              Menampilkan riwayat pemesanan untuk barang yang dicari.
+              Menampilkan hasil pencarian berdasarkan nomor PO, nama klien, atau barang. Klik pada nomor PO atau tombol &quot;Buka Nota&quot; untuk melihat nota yang dibuat.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             {getProductHistory().length === 0 ? (
               <div className="text-center text-slate-500 py-8">
-                Tidak ada riwayat pemesanan untuk barang ini.
+                Tidak ada hasil pencarian untuk &quot;{productHistorySearchTerm}&quot;.
               </div>
             ) : (
               <div className="border rounded-md overflow-x-auto">
@@ -5827,6 +6018,9 @@ export default function App() {
                           )}
                         </>
                       )}
+                      <TableHead className="text-center w-[130px]">
+                        Aksi
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -5853,39 +6047,21 @@ export default function App() {
                         </TableCell>
                         <TableCell>
                           <div
-                            className="font-medium text-indigo-600 hover:underline cursor-pointer"
+                            className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer flex items-center gap-1.5"
+                            title="Klik untuk membuka nota PO ini"
                             onClick={() => {
-                              setIsProductHistoryOpen(false);
-                              if (user?.role === "supplier" || user?.role !== "admin") {
-                                const orderObj = orders.find((o) => o.id === history.orderId);
-                                if (orderObj) {
-                                  setSelectedOrder(orderObj);
-                                  setIsDetailOpen(true);
-                                }
-                              } else {
-                                setCurrentView("finance");
-                                setExpandedFinanceCards((prev) => ({
-                                  ...prev,
-                                  [history.orderId]: true,
-                                }));
-                                // Add a small delay to allow the DOM to render the finance view before scrolling
-                                setTimeout(() => {
-                                  const element = document.getElementById(
-                                    `finance-card-${history.orderId}`,
-                                  );
-                                  if (element) {
-                                    element.scrollIntoView({
-                                      behavior: "smooth",
-                                      block: "start",
-                                    });
-                                  }
-                                }, 100);
+                              const orderObj = orders.find(
+                                (o) => o.id === history.orderId,
+                              );
+                              if (orderObj) {
+                                handleOpenNota(orderObj);
                               }
                             }}
                           >
-                            {history.poNumber}
+                            <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
+                            <span>{history.poNumber}</span>
                           </div>
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-slate-500 mt-0.5">
                             {history.clientName}
                           </div>
                         </TableCell>
@@ -5917,6 +6093,25 @@ export default function App() {
                             )}
                           </>
                         )}
+                        <TableCell className="text-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs font-semibold text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 shadow-2xs transition-colors"
+                            title="Buka nota untuk nomor PO ini"
+                            onClick={() => {
+                              const orderObj = orders.find(
+                                (o) => o.id === history.orderId,
+                              );
+                              if (orderObj) {
+                                handleOpenNota(orderObj);
+                              }
+                            }}
+                          >
+                            <Receipt className="w-3.5 h-3.5 mr-1" />
+                            Buka Nota
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
