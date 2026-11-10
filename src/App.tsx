@@ -979,6 +979,101 @@ export default function App() {
     }
   };
 
+  const ROMAN_MONTHS = [
+    "I",
+    "II",
+    "III",
+    "IV",
+    "V",
+    "VI",
+    "VII",
+    "VIII",
+    "IX",
+    "X",
+    "XI",
+    "XII",
+  ];
+
+  const getRomanMonth = (date: Date): string => {
+    const m = date.getMonth();
+    return ROMAN_MONTHS[m] || "I";
+  };
+
+  const CUTOFF_DATE_STR = "2026-11-10";
+
+  const isTodayOrLater = (dateStr?: string | null): boolean => {
+    if (!dateStr) return true;
+    const isoPrefix = dateStr.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(isoPrefix)) {
+      if (isoPrefix >= CUTOFF_DATE_STR) return true;
+      if (isoPrefix < CUTOFF_DATE_STR) return false;
+    }
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return true;
+    return d.getTime() >= new Date("2026-11-10T00:00:00+07:00").getTime();
+  };
+
+  const generateDefaultAdminPoNumber = (orderDateStr?: string): string => {
+    const nextSeq = (orders.length + 1).toString().padStart(3, "0");
+    const refDate = orderDateStr ? new Date(orderDateStr) : new Date();
+    const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
+    const currentMonth = getRomanMonth(validDate);
+    const currentYear = validDate.getFullYear();
+    return `${nextSeq}/KGMP/${currentMonth}/${currentYear}`;
+  };
+
+  const getAdminInvoiceNumber = (order: PurchaseOrder): string => {
+    const refDateStr = order.invoiceDate || order.date;
+    const poNum = (order.poNumber || "").trim();
+
+    // Past notes before cutoff date (10 Nov 2026): retain exact original numbering without change
+    if (!isTodayOrLater(refDateStr)) {
+      return poNum || order.id;
+    }
+
+    // Orders from today onwards: format as (nomor)/KGMP/(romawi bulan)/(tahun)
+    if (poNum) {
+      if (poNum.includes("/KGMP/SPPG/")) {
+        return poNum.replace(/\/KGMP\/SPPG\//g, "/KGMP/");
+      }
+      if (poNum.includes("/KGMP/")) {
+        return poNum;
+      }
+      if (poNum.includes("/SPPG/")) {
+        return poNum.replace(/\/SPPG\//g, "/KGMP/");
+      }
+      if (/^\d+$/.test(poNum)) {
+        const refDate = refDateStr ? new Date(refDateStr) : new Date();
+        const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
+        const currentMonth = getRomanMonth(validDate);
+        const currentYear = validDate.getFullYear();
+        return `${poNum.padStart(3, "0")}/KGMP/${currentMonth}/${currentYear}`;
+      }
+      const seqMatch = poNum.match(/^(\d+)\//);
+      if (seqMatch) {
+        const refDate = refDateStr ? new Date(refDateStr) : new Date();
+        const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
+        const currentMonth = getRomanMonth(validDate);
+        const currentYear = validDate.getFullYear();
+        return `${seqMatch[1].padStart(3, "0")}/KGMP/${currentMonth}/${currentYear}`;
+      }
+    }
+
+    // Default: calculate sequence index among orders
+    const sortedOrders = [...orders].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
+    const seqIndex = sortedOrders.findIndex((o) => o.id === order.id);
+    const seqNum = seqIndex >= 0 ? seqIndex + 1 : 1;
+    const seqNumString = seqNum.toString().padStart(3, "0");
+
+    const refDate = refDateStr ? new Date(refDateStr) : new Date();
+    const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
+    const currentMonth = getRomanMonth(validDate);
+    const currentYear = validDate.getFullYear();
+    return `${seqNumString}/KGMP/${currentMonth}/${currentYear}`;
+  };
+
   const handleCreatePO = async () => {
     setNewPoError(null);
     if (
@@ -996,10 +1091,16 @@ export default function App() {
     if (!client) return;
 
     const uniqueId = `PO-${new Date().getFullYear()}-${Date.now()}`;
+    const defaultPoNum = generateDefaultAdminPoNumber(newPoDate);
+    const assignedPoNumber = newPoNumber.trim()
+      ? (isTodayOrLater(newPoDate)
+          ? newPoNumber.trim().replace(/\/KGMP\/SPPG\//gi, "/KGMP/")
+          : newPoNumber.trim())
+      : defaultPoNum;
 
     const newPO: PurchaseOrder | any = {
       id: uniqueId,
-      poNumber: newPoNumber || uniqueId,
+      poNumber: assignedPoNumber,
       deliveredBy: newDeliveredBy,
       deliveryDate: newDeliveryDate
         ? new Date(newDeliveryDate).toISOString()
@@ -1414,7 +1515,9 @@ export default function App() {
       const updatedData = {
         clientId: client.uid,
         clientName: client.name,
-        poNumber: editPoNumber,
+        poNumber: isTodayOrLater(editInvoiceDate || editPoDate)
+          ? editPoNumber.replace(/\/KGMP\/SPPG\//gi, "/KGMP/")
+          : editPoNumber,
         date: new Date(editPoDate).toISOString(),
         invoiceDate: editInvoiceDate
           ? new Date(editInvoiceDate).toISOString()
@@ -1540,6 +1643,17 @@ export default function App() {
     supplierName: string,
     orderDateStr?: string,
   ) => {
+    if (
+      isSupplierMatch(supplierName, "Koperasi Garuda Merah Putih") ||
+      supplierName === "Koperasi Garuda Merah Putih" ||
+      supplierName === "KOPERASI GARUDA MERAH PUTIH"
+    ) {
+      const targetOrder = orders.find((o) => o.id === orderId);
+      if (targetOrder) {
+        return getAdminInvoiceNumber(targetOrder);
+      }
+    }
+
     const supplierOrders = orders
       .filter((o) => o.items.some((i) => isSupplierMatch(i.supplier, supplierName)))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -1554,23 +1668,10 @@ export default function App() {
         .map((n) => n[0])
         .join("")
         .toUpperCase();
-    const romanMonths = [
-      "I",
-      "II",
-      "III",
-      "IV",
-      "V",
-      "VI",
-      "VII",
-      "VIII",
-      "IX",
-      "X",
-      "XI",
-      "XII",
-    ];
     const refDate = orderDateStr ? new Date(orderDateStr) : new Date();
-    const currentMonth = romanMonths[refDate.getMonth()];
-    const currentYear = refDate.getFullYear();
+    const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
+    const currentMonth = getRomanMonth(validDate);
+    const currentYear = validDate.getFullYear();
     return `${seqNumString}/${getInitials(supplierName)}/${currentMonth}/${currentYear}`;
   };
 
@@ -2417,7 +2518,9 @@ export default function App() {
                       signerTitle: isPo ? "" : "Ketua Koperasi",
                       useSignatureImg: !isPo,
                       key: isPo ? "po-document" : "master-invoice",
-                      invoiceNumber: invoiceOrder.poNumber || invoiceOrder.id,
+                      invoiceNumber: isPo
+                        ? (invoiceOrder.poNumber || invoiceOrder.id)
+                        : getAdminInvoiceNumber(invoiceOrder),
                     },
                   ];
                 } else {
@@ -2435,7 +2538,8 @@ export default function App() {
 
                     if (
                       supplierName === "Koperasi Garuda Merah Putih" ||
-                      supplierName === "KOPERASI GARUDA MERAH PUTIH"
+                      supplierName === "KOPERASI GARUDA MERAH PUTIH" ||
+                      isSupplierMatch(supplierName, "Koperasi Garuda Merah Putih")
                     ) {
                       return {
                         title: "KOPERASI GARUDA MERAH PUTIH",
@@ -2451,7 +2555,7 @@ export default function App() {
                         signerTitle: "Ketua Koperasi",
                         useSignatureImg: true,
                         key: supplierName,
-                        invoiceNumber: invoiceOrder.poNumber || invoiceOrder.id,
+                        invoiceNumber: getAdminInvoiceNumber(invoiceOrder),
                       };
                     }
 
@@ -4224,7 +4328,7 @@ export default function App() {
                           </Label>
                           <Input
                             id="newPoNumber"
-                            placeholder="Masukkan Nomor PO"
+                            placeholder={`Contoh: ${generateDefaultAdminPoNumber(newPoDate)}`}
                             value={newPoNumber}
                             onChange={(e) => setNewPoNumber(e.target.value)}
                           />
@@ -4908,7 +5012,7 @@ export default function App() {
                       <Label htmlFor="editPoNumber">Nomor PO (Invoice)</Label>
                       <Input
                         id="editPoNumber"
-                        placeholder="Masukkan Nomor PO"
+                        placeholder="Contoh: 001/KGMP/XI/2026"
                         value={editPoNumber}
                         onChange={(e) => setEditPoNumber(e.target.value)}
                       />
