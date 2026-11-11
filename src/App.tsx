@@ -104,6 +104,7 @@ interface OrderItem {
 interface PurchaseOrder {
   id: string;
   poNumber?: string;
+  invoiceNumber?: string;
   deliveredBy?: "Dikirim Koperasi" | "Dikirim Supplier";
   deliveryDate?: string;
   invoiceDate?: string;
@@ -393,25 +394,175 @@ export default function App() {
     };
   }, []);
 
+  const ROMAN_MONTHS = [
+    "I",
+    "II",
+    "III",
+    "IV",
+    "V",
+    "VI",
+    "VII",
+    "VIII",
+    "IX",
+    "X",
+    "XI",
+    "XII",
+  ];
+
+  const getRomanMonth = (date: Date): string => {
+    const m = date.getMonth();
+    return ROMAN_MONTHS[m] || "I";
+  };
+
+  const CUTOFF_DATE_STR = "2026-11-10";
+
+  const isTodayOrLater = (dateStr?: string | null): boolean => {
+    if (!dateStr) return true;
+    const isoPrefix = dateStr.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(isoPrefix)) {
+      if (isoPrefix >= CUTOFF_DATE_STR) return true;
+      if (isoPrefix < CUTOFF_DATE_STR) return false;
+    }
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return true;
+    return d.getTime() >= new Date("2026-11-10T00:00:00+07:00").getTime();
+  };
+
+  const generateDefaultAdminPoNumber = (orderDateStr?: string): string => {
+    const nextSeq = (orders.length + 1).toString().padStart(3, "0");
+    const refDate = orderDateStr ? new Date(orderDateStr) : new Date();
+    const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
+    const currentMonth = getRomanMonth(validDate);
+    const currentYear = validDate.getFullYear();
+    return `${nextSeq}/KGMP/${currentMonth}/${currentYear}`;
+  };
+
+  const getAdminInvoiceNumber = (order: PurchaseOrder): string => {
+    const refDateStr = order.invoiceDate || order.date;
+    const poNum = (order.poNumber || "").trim();
+
+    // Past notes before cutoff date (10 Nov 2026): retain exact original numbering without change
+    if (!isTodayOrLater(refDateStr)) {
+      return poNum || order.id;
+    }
+
+    // Orders from today onwards: format as (nomor)/KGMP/(romawi bulan)/(tahun)
+    if (poNum) {
+      if (poNum.includes("/KGMP/SPPG/")) {
+        return poNum.replace(/\/KGMP\/SPPG\//g, "/KGMP/");
+      }
+      if (poNum.includes("/KGMP/")) {
+        return poNum;
+      }
+      if (poNum.includes("/SPPG/")) {
+        return poNum.replace(/\/SPPG\//g, "/KGMP/");
+      }
+      if (/^\d+$/.test(poNum)) {
+        const refDate = refDateStr ? new Date(refDateStr) : new Date();
+        const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
+        const currentMonth = getRomanMonth(validDate);
+        const currentYear = validDate.getFullYear();
+        return `${poNum.padStart(3, "0")}/KGMP/${currentMonth}/${currentYear}`;
+      }
+      const seqMatch = poNum.match(/^(\d+)\//);
+      if (seqMatch) {
+        const refDate = refDateStr ? new Date(refDateStr) : new Date();
+        const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
+        const currentMonth = getRomanMonth(validDate);
+        const currentYear = validDate.getFullYear();
+        return `${seqMatch[1].padStart(3, "0")}/KGMP/${currentMonth}/${currentYear}`;
+      }
+    }
+
+    // Default: calculate sequence index among orders
+    const sortedOrders = [...orders].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
+    const seqIndex = sortedOrders.findIndex((o) => o.id === order.id);
+    const seqNum = seqIndex >= 0 ? seqIndex + 1 : 1;
+    const seqNumString = seqNum.toString().padStart(3, "0");
+
+    const refDate = refDateStr ? new Date(refDateStr) : new Date();
+    const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
+    const currentMonth = getRomanMonth(validDate);
+    const currentYear = validDate.getFullYear();
+    return `${seqNumString}/KGMP/${currentMonth}/${currentYear}`;
+  };
+
+  const generateSupplierInvoiceNumber = (
+    orderId: string,
+    supplierName: string,
+    orderDateStr?: string,
+  ) => {
+    if (
+      isSupplierMatch(supplierName, "Koperasi Garuda Merah Putih") ||
+      supplierName === "Koperasi Garuda Merah Putih" ||
+      supplierName === "KOPERASI GARUDA MERAH PUTIH"
+    ) {
+      const targetOrder = orders.find((o) => o.id === orderId);
+      if (targetOrder) {
+        return getAdminInvoiceNumber(targetOrder);
+      }
+    }
+
+    const supplierOrders = orders
+      .filter((o) => o.items.some((i) => isSupplierMatch(i.supplier, supplierName)))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const seqIndex = supplierOrders.findIndex((o) => o.id === orderId);
+    const seqNum = seqIndex >= 0 ? seqIndex + 1 : 1;
+    const seqNumString = seqNum.toString().padStart(3, "0");
+
+    const getInitials = (name: string) =>
+      name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase();
+    const refDate = orderDateStr ? new Date(orderDateStr) : new Date();
+    const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
+    const currentMonth = getRomanMonth(validDate);
+    const currentYear = validDate.getFullYear();
+    return `${seqNumString}/${getInitials(supplierName)}/${currentMonth}/${currentYear}`;
+  };
+
+  const getOrderInvoiceNumber = (order: PurchaseOrder): string => {
+    if (order.invoiceNumber) {
+      if (isTodayOrLater(order.invoiceDate || order.date)) {
+        return order.invoiceNumber.replace(/\/KGMP\/SPPG\//gi, "/KGMP/");
+      }
+      return order.invoiceNumber;
+    }
+    if (user?.role === "supplier") {
+      return generateSupplierInvoiceNumber(order.id, user.name, order.date);
+    }
+    return getAdminInvoiceNumber(order);
+  };
+
   const searchMatchingOrders = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase();
     return orders
       .filter(
-        (o) =>
-          ((o.clientName || "").toLowerCase().includes(q) ||
-            o.id.toLowerCase().includes(q) ||
-            ((o.poNumber || "").toLowerCase().includes(q)) ||
-            (o.items || []).some((item) =>
-              (item.name || "").toLowerCase().includes(q),
-            )) &&
-          !(user?.role === "driver" && o.deliveredBy === "Dikirim Supplier") &&
-          !(
-            (user?.role === "supplier" || user?.role === "kitchen") &&
-            !(o.items || []).some((item) =>
-              isSupplierMatch(item.supplier, user?.name),
+        (o) => {
+          const invNum = getOrderInvoiceNumber(o).toLowerCase();
+          return (
+            ((o.clientName || "").toLowerCase().includes(q) ||
+              o.id.toLowerCase().includes(q) ||
+              ((o.poNumber || "").toLowerCase().includes(q)) ||
+              invNum.includes(q) ||
+              (o.items || []).some((item) =>
+                (item.name || "").toLowerCase().includes(q),
+              )) &&
+            !(user?.role === "driver" && o.deliveredBy === "Dikirim Supplier") &&
+            !(
+              (user?.role === "supplier" || user?.role === "kitchen") &&
+              !(o.items || []).some((item) =>
+                isSupplierMatch(item.supplier, user?.name),
+              )
             )
-          ),
+          );
+        },
       )
       .slice(0, 8);
   }, [orders, searchQuery, user]);
@@ -979,101 +1130,6 @@ export default function App() {
     }
   };
 
-  const ROMAN_MONTHS = [
-    "I",
-    "II",
-    "III",
-    "IV",
-    "V",
-    "VI",
-    "VII",
-    "VIII",
-    "IX",
-    "X",
-    "XI",
-    "XII",
-  ];
-
-  const getRomanMonth = (date: Date): string => {
-    const m = date.getMonth();
-    return ROMAN_MONTHS[m] || "I";
-  };
-
-  const CUTOFF_DATE_STR = "2026-11-10";
-
-  const isTodayOrLater = (dateStr?: string | null): boolean => {
-    if (!dateStr) return true;
-    const isoPrefix = dateStr.slice(0, 10);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(isoPrefix)) {
-      if (isoPrefix >= CUTOFF_DATE_STR) return true;
-      if (isoPrefix < CUTOFF_DATE_STR) return false;
-    }
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return true;
-    return d.getTime() >= new Date("2026-11-10T00:00:00+07:00").getTime();
-  };
-
-  const generateDefaultAdminPoNumber = (orderDateStr?: string): string => {
-    const nextSeq = (orders.length + 1).toString().padStart(3, "0");
-    const refDate = orderDateStr ? new Date(orderDateStr) : new Date();
-    const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
-    const currentMonth = getRomanMonth(validDate);
-    const currentYear = validDate.getFullYear();
-    return `${nextSeq}/KGMP/${currentMonth}/${currentYear}`;
-  };
-
-  const getAdminInvoiceNumber = (order: PurchaseOrder): string => {
-    const refDateStr = order.invoiceDate || order.date;
-    const poNum = (order.poNumber || "").trim();
-
-    // Past notes before cutoff date (10 Nov 2026): retain exact original numbering without change
-    if (!isTodayOrLater(refDateStr)) {
-      return poNum || order.id;
-    }
-
-    // Orders from today onwards: format as (nomor)/KGMP/(romawi bulan)/(tahun)
-    if (poNum) {
-      if (poNum.includes("/KGMP/SPPG/")) {
-        return poNum.replace(/\/KGMP\/SPPG\//g, "/KGMP/");
-      }
-      if (poNum.includes("/KGMP/")) {
-        return poNum;
-      }
-      if (poNum.includes("/SPPG/")) {
-        return poNum.replace(/\/SPPG\//g, "/KGMP/");
-      }
-      if (/^\d+$/.test(poNum)) {
-        const refDate = refDateStr ? new Date(refDateStr) : new Date();
-        const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
-        const currentMonth = getRomanMonth(validDate);
-        const currentYear = validDate.getFullYear();
-        return `${poNum.padStart(3, "0")}/KGMP/${currentMonth}/${currentYear}`;
-      }
-      const seqMatch = poNum.match(/^(\d+)\//);
-      if (seqMatch) {
-        const refDate = refDateStr ? new Date(refDateStr) : new Date();
-        const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
-        const currentMonth = getRomanMonth(validDate);
-        const currentYear = validDate.getFullYear();
-        return `${seqMatch[1].padStart(3, "0")}/KGMP/${currentMonth}/${currentYear}`;
-      }
-    }
-
-    // Default: calculate sequence index among orders
-    const sortedOrders = [...orders].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-    );
-    const seqIndex = sortedOrders.findIndex((o) => o.id === order.id);
-    const seqNum = seqIndex >= 0 ? seqIndex + 1 : 1;
-    const seqNumString = seqNum.toString().padStart(3, "0");
-
-    const refDate = refDateStr ? new Date(refDateStr) : new Date();
-    const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
-    const currentMonth = getRomanMonth(validDate);
-    const currentYear = validDate.getFullYear();
-    return `${seqNumString}/KGMP/${currentMonth}/${currentYear}`;
-  };
-
   const handleCreatePO = async () => {
     setNewPoError(null);
     if (
@@ -1607,15 +1663,27 @@ export default function App() {
     ) {
       try {
         const now = new Date().toISOString();
+        const targetOrder =
+          orders.find((o) => o.id === orderToUpdate) ||
+          invoiceOrder ||
+          rekapSupplierData?.order;
+        const notaNumber =
+          user?.role === "supplier"
+            ? generateSupplierInvoiceNumber(orderToUpdate, user.name, now)
+            : targetOrder
+              ? getAdminInvoiceNumber(targetOrder)
+              : undefined;
         await updateDoc(doc(db, "purchaseOrders", orderToUpdate), {
           status: "INVOICED",
           invoiceDate: now,
+          ...(notaNumber ? { invoiceNumber: notaNumber } : {}),
         });
         if (invoiceOrder && invoiceOrder.id === orderToUpdate) {
           setInvoiceOrder({
             ...invoiceOrder,
             status: "INVOICED",
             invoiceDate: now,
+            ...(notaNumber ? { invoiceNumber: notaNumber } : {}),
           } as PurchaseOrder);
         }
         if (rekapSupplierData && rekapSupplierData.order.id === orderToUpdate) {
@@ -1636,43 +1704,6 @@ export default function App() {
     setTimeout(() => {
       window.print();
     }, 100);
-  };
-
-  const generateSupplierInvoiceNumber = (
-    orderId: string,
-    supplierName: string,
-    orderDateStr?: string,
-  ) => {
-    if (
-      isSupplierMatch(supplierName, "Koperasi Garuda Merah Putih") ||
-      supplierName === "Koperasi Garuda Merah Putih" ||
-      supplierName === "KOPERASI GARUDA MERAH PUTIH"
-    ) {
-      const targetOrder = orders.find((o) => o.id === orderId);
-      if (targetOrder) {
-        return getAdminInvoiceNumber(targetOrder);
-      }
-    }
-
-    const supplierOrders = orders
-      .filter((o) => o.items.some((i) => isSupplierMatch(i.supplier, supplierName)))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    const seqIndex = supplierOrders.findIndex((o) => o.id === orderId);
-    const seqNum = seqIndex >= 0 ? seqIndex + 1 : 1;
-    const seqNumString = seqNum.toString().padStart(3, "0");
-
-    const getInitials = (name: string) =>
-      name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase();
-    const refDate = orderDateStr ? new Date(orderDateStr) : new Date();
-    const validDate = isNaN(refDate.getTime()) ? new Date() : refDate;
-    const currentMonth = getRomanMonth(validDate);
-    const currentYear = validDate.getFullYear();
-    return `${seqNumString}/${getInitials(supplierName)}/${currentMonth}/${currentYear}`;
   };
 
   const handleRekapSupplier = (
@@ -1760,13 +1791,15 @@ export default function App() {
 
     // Header
     csvContent +=
-      "Nomor PO,Status,Klien,Tanggal,Barang,Supplier,Qty,Satuan,Harga dari Klien,Harga Jual,HPP,Keuntungan\n";
+      "Nomor Nota,Nomor PO,Status,Klien,Tanggal,Barang,Supplier,Qty,Satuan,Harga dari Klien,Harga Jual,HPP,Keuntungan\n";
 
     let grandTotalProfit = 0;
 
     financeOrders.forEach((order) => {
       let orderTotalProfit = 0;
       const poNumber = order.poNumber || order.id;
+      const notaNumber =
+        order.status === "INVOICED" ? getOrderInvoiceNumber(order) : "-";
       const statusLabel =
         order.status === "COMPLETED" ? "Selesai (Diterima Klien)" : "Nota Dibuat";
       const clientName = (order.clientName || "").replace(/,/g, ""); // Remove commas to avoid CSV issues
@@ -1794,16 +1827,16 @@ export default function App() {
 
         orderTotalProfit += profit;
 
-        csvContent += `"${poNumber}","${statusLabel}","${clientName}","${date}","${itemName}","${supplierName}",${qty},"${unit}",${clientPrice},${price},${hpp},${profit}\n`;
+        csvContent += `"${notaNumber}","${poNumber}","${statusLabel}","${clientName}","${date}","${itemName}","${supplierName}",${qty},"${unit}",${clientPrice},${price},${hpp},${profit}\n`;
       });
 
       grandTotalProfit += orderTotalProfit;
       // Add a subtotal row for the PO
-      csvContent += `,,,,,,Total PO ${poNumber},,,,,${orderTotalProfit}\n`;
+      csvContent += `,,,,,,,Total PO ${poNumber},,,,,${orderTotalProfit}\n`;
     });
 
     // Add Grand Total
-    csvContent += `\n,,,,,,TOTAL KESELURUHAN,,,,,${grandTotalProfit}\n`;
+    csvContent += `\n,,,,,,,TOTAL KESELURUHAN,,,,,${grandTotalProfit}\n`;
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -1827,13 +1860,15 @@ export default function App() {
 
     // Header
     csvContent +=
-      "Nomor PO,Klien,Tanggal,Barang,Supplier,Qty,Satuan,Harga dari Klien,Harga Jual,HPP,Keuntungan\n";
+      "Nomor Nota,Nomor PO,Klien,Tanggal,Barang,Supplier,Qty,Satuan,Harga dari Klien,Harga Jual,HPP,Keuntungan\n";
 
     let grandTotalProfit = 0;
 
     columnOrders.forEach((order) => {
       let orderTotalProfit = 0;
       const poNumber = order.poNumber || order.id;
+      const notaNumber =
+        order.status === "INVOICED" ? getOrderInvoiceNumber(order) : "-";
       const clientName = (order.clientName || "").replace(/,/g, ""); // Remove commas to avoid CSV issues
       const date = new Date(order.invoiceDate || order.date).toLocaleDateString(
         "id-ID",
@@ -1859,7 +1894,7 @@ export default function App() {
 
         orderTotalProfit += profit;
 
-        csvContent += `"${poNumber}","${clientName}","${date}","${itemName}","${supplierName}",${qty},"${unit}",${clientPrice},${price},${hpp},${profit}\n`;
+        csvContent += `"${notaNumber}","${poNumber}","${clientName}","${date}","${itemName}","${supplierName}",${qty},"${unit}",${clientPrice},${price},${hpp},${profit}\n`;
       });
 
       grandTotalProfit += orderTotalProfit;
@@ -2993,8 +3028,10 @@ export default function App() {
     const lowerSearch = productHistorySearchTerm.toLowerCase();
 
     orders.forEach((order) => {
+      const invNum = getOrderInvoiceNumber(order).toLowerCase();
       const isPoMatch =
         (order.poNumber || "").toLowerCase().includes(lowerSearch) ||
+        invNum.includes(lowerSearch) ||
         order.id.toLowerCase().includes(lowerSearch);
       const isClientMatch = (order.clientName || "")
         .toLowerCase()
@@ -3014,7 +3051,10 @@ export default function App() {
             date: order.date,
             deliveryDate: order.deliveryDate,
             invoiceDate: order.invoiceDate,
-            poNumber: order.poNumber || order.id,
+            poNumber:
+              order.status === "INVOICED"
+                ? getOrderInvoiceNumber(order)
+                : order.poNumber || order.id,
             clientName: order.clientName,
             itemName: item.name,
             quantity: item.quantity,
@@ -3049,8 +3089,14 @@ export default function App() {
         ),
     )
     .sort((a, b) => {
-      const poA = a.poNumber || a.id;
-      const poB = b.poNumber || b.id;
+      const poA =
+        a.status === "INVOICED"
+          ? getOrderInvoiceNumber(a)
+          : a.poNumber || a.id;
+      const poB =
+        b.status === "INVOICED"
+          ? getOrderInvoiceNumber(b)
+          : b.poNumber || b.id;
       return poB.localeCompare(poA, undefined, {
         numeric: true,
         sensitivity: "base",
@@ -3063,6 +3109,12 @@ export default function App() {
     customConfig?: { color: string; label: string },
   ) => {
     const config = customConfig || statusConfig[status];
+    const isNotaDibuat = status === "INVOICED" || order.status === "INVOICED";
+    const notaNumber = getOrderInvoiceNumber(order);
+    const displayDocNumber = isNotaDibuat
+      ? notaNumber
+      : order.poNumber || order.id;
+
     return (
       <Card
         key={order.id}
@@ -3074,9 +3126,18 @@ export default function App() {
       >
         <CardHeader className="p-4 pb-2">
           <div className="flex justify-between items-start gap-2">
-            <CardTitle className="text-sm font-bold text-slate-800 break-words">
-              {order.poNumber || order.id}
-            </CardTitle>
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-sm font-bold text-slate-800 break-words">
+                {displayDocNumber}
+              </CardTitle>
+              {isNotaDibuat &&
+                order.poNumber &&
+                order.poNumber !== displayDocNumber && (
+                  <span className="text-[11px] font-medium text-slate-500 block mt-0.5">
+                    PO: {order.poNumber}
+                  </span>
+                )}
+            </div>
             <div className="flex items-center gap-1 shrink-0">
               <Button
                 variant="ghost"
@@ -3785,13 +3846,24 @@ export default function App() {
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+                          <CardTitle className="text-lg text-slate-800 flex items-center gap-2 flex-wrap">
                             {expandedFinanceCards[order.id] ? (
                               <ChevronUp className="w-5 h-5 text-slate-500" />
                             ) : (
                               <ChevronDown className="w-5 h-5 text-slate-500" />
                             )}
-                            PO: {order.poNumber || order.id}
+                            {order.status === "INVOICED" ? (
+                              <span>Nota: {getOrderInvoiceNumber(order)}</span>
+                            ) : (
+                              <span>PO: {order.poNumber || order.id}</span>
+                            )}
+                            {order.status === "INVOICED" &&
+                              order.poNumber &&
+                              order.poNumber !== getOrderInvoiceNumber(order) && (
+                                <span className="text-xs font-normal text-slate-500">
+                                  (PO: {order.poNumber})
+                                </span>
+                              )}
                           </CardTitle>
                           <CardDescription className="mt-1 text-slate-600 space-y-1">
                             <div>
@@ -4178,7 +4250,9 @@ export default function App() {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors truncate">
-                                  {order.poNumber || order.id}
+                                  {order.status === "INVOICED"
+                                    ? getOrderInvoiceNumber(order)
+                                    : (order.poNumber || order.id)}
                                 </span>
                                 <Badge
                                   variant="outline"
@@ -4187,6 +4261,13 @@ export default function App() {
                                   {config.label}
                                 </Badge>
                               </div>
+                              {order.status === "INVOICED" &&
+                                order.poNumber &&
+                                order.poNumber !== getOrderInvoiceNumber(order) && (
+                                  <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                                    Nomor PO: {order.poNumber}
+                                  </div>
+                                )}
                               <div className="text-xs text-slate-500 truncate mt-0.5">
                                 {order.clientName} &bull;{" "}
                                 {new Date(order.date).toLocaleDateString(
@@ -6239,7 +6320,20 @@ export default function App() {
               <DialogHeader>
                 <div className="flex items-center justify-between pr-6">
                   <DialogTitle className="text-xl flex items-center gap-3">
-                    {selectedOrder.poNumber || selectedOrder.id}
+                    {selectedOrder.status === "INVOICED" ? (
+                      <div className="flex flex-col">
+                        <span>{getOrderInvoiceNumber(selectedOrder)}</span>
+                        {selectedOrder.poNumber &&
+                          selectedOrder.poNumber !==
+                            getOrderInvoiceNumber(selectedOrder) && (
+                            <span className="text-xs font-normal text-slate-500 mt-0.5">
+                              Nomor PO: {selectedOrder.poNumber}
+                            </span>
+                          )}
+                      </div>
+                    ) : (
+                      selectedOrder.poNumber || selectedOrder.id
+                    )}
                     <Badge
                       className={statusConfig[selectedOrder.status].color}
                       variant="outline"
@@ -6277,11 +6371,13 @@ export default function App() {
                             if (selectedOrder.status === "COMPLETED" || selectedOrder.status === "AT_KITCHEN") {
                               try {
                                 const now = new Date().toISOString();
+                                const notaNum = getAdminInvoiceNumber(selectedOrder);
                                 await updateDoc(
                                   doc(db, "purchaseOrders", selectedOrder.id),
                                   {
                                     status: "INVOICED",
                                     invoiceDate: now,
+                                    invoiceNumber: notaNum,
                                   },
                                 );
                               } catch (error) {
@@ -6346,11 +6442,17 @@ export default function App() {
                             if (selectedOrder.status === "COMPLETED" || selectedOrder.status === "AT_KITCHEN") {
                               try {
                                 const now = new Date().toISOString();
+                                const notaNum = generateSupplierInvoiceNumber(
+                                  selectedOrder.id,
+                                  user.name,
+                                  now,
+                                );
                                 await updateDoc(
                                   doc(db, "purchaseOrders", selectedOrder.id),
                                   {
                                     status: "INVOICED",
                                     invoiceDate: now,
+                                    invoiceNumber: notaNum,
                                   },
                                 );
                               } catch (error) {
