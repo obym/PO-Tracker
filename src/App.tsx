@@ -1921,7 +1921,7 @@ export default function App() {
   const handleExportSupplierToExcel = (columnOrders: PurchaseOrder[]) => {
     if (columnOrders.length === 0) return;
 
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+    let csvContent = "\uFEFF";
 
     // Header
     csvContent +=
@@ -1931,33 +1931,37 @@ export default function App() {
 
     columnOrders.forEach((order) => {
       let orderTotal = 0;
-      const poNumber = order.poNumber || order.id;
-      const clientName = (order.clientName || "").replace(/,/g, "");
+      const poNumber = (order.poNumber || order.id).replace(/"/g, '""');
+      const clientName = (order.clientName || "").replace(/,/g, "").replace(/"/g, '""');
       const date = new Date(order.invoiceDate || order.date).toLocaleDateString(
         "id-ID",
       );
-      const invoiceNumber = user?.name
-        ? generateSupplierInvoiceNumber(order.id, user.name, order.date)
-        : poNumber;
+      const invoiceNumber = (
+        user?.name
+          ? generateSupplierInvoiceNumber(order.id, user.name, order.date)
+          : poNumber
+      ).replace(/"/g, '""');
 
-      order.items
-        .filter((item) => isSupplierMatch(item.supplier, user?.name))
-        .forEach((item) => {
-          const itemName = item.name.replace(/,/g, "");
-          const qty =
-            typeof item.quantity === "string"
-              ? parseFloat(item.quantity)
-              : item.quantity;
-          const unit = item.unit.replace(/,/g, "");
-          const price = item.supplierCost || item.unitPrice || 0;
-          const subtotal = price * qty;
+      const supplierItems = order.items.filter((item) =>
+        isSupplierMatch(item.supplier, user?.name),
+      );
 
-          orderTotal += subtotal;
+      supplierItems.forEach((item) => {
+        const itemName = (item.name || "").replace(/,/g, "").replace(/"/g, '""');
+        const qty =
+          typeof item.quantity === "string"
+            ? parseFloat(item.quantity) || 0
+            : item.quantity || 0;
+        const unit = (item.unit || "").replace(/,/g, "").replace(/"/g, '""');
+        const price = item.unitPrice || item.supplierCost || 0;
+        const subtotal = qty * price;
 
-          csvContent += `"${invoiceNumber}","${poNumber}","${clientName}","${date}","${itemName}",${qty},"${unit}",${price},${subtotal}\n`;
-        });
+        orderTotal += subtotal;
 
-      if (orderTotal > 0) {
+        csvContent += `"${invoiceNumber}","${poNumber}","${clientName}","${date}","${itemName}",${qty},"${unit}",${price},${subtotal}\n`;
+      });
+
+      if (supplierItems.length > 0 && orderTotal > 0) {
         grandTotal += orderTotal;
         // Add a subtotal row for the PO
         csvContent += `,,,,Total PO ${poNumber},,,,${orderTotal}\n`;
@@ -1969,9 +1973,10 @@ export default function App() {
       csvContent += `\n,,,,TOTAL KESELURUHAN,,,,${grandTotal}\n`;
     }
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute(
       "download",
       `Rekap_Penjualan_Supplier_${new Date().toISOString().split("T")[0]}.csv`,
@@ -1979,6 +1984,7 @@ export default function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleDeletePO = async () => {
